@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import Notice from '../models/Notice.js'
 import User from '../models/User.js'
 
@@ -85,6 +86,10 @@ export const createNotice = async (req, res, next) => {
 
       if (!recipientIds.length) {
         return res.status(400).json({ success: false, message: 'Select at least one user' })
+      }
+
+      if (recipientIds.some(id => !mongoose.isValidObjectId(id))) {
+        return res.status(400).json({ success: false, message: 'One or more selected users are invalid' })
       }
 
       const users = await User.find({
