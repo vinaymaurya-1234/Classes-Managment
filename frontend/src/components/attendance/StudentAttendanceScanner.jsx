@@ -96,7 +96,7 @@ export default function StudentAttendanceScanner() {
   }, [loadSummary, stopCamera, token])
 
   const scanFrame = useCallback(async () => {
-    if (!scannerOpen || !videoRef.current || !detectorRef.current || busyRef.current) return
+    if (!videoRef.current || !detectorRef.current || busyRef.current) return
 
     const video = videoRef.current
     if (video.readyState < 2) {
