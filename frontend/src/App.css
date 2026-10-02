@@ -223,3 +223,65 @@
   .manual-attendance-row{grid-template-columns:1fr}
   .manual-attendance-row button{width:100%;justify-content:center}
 }
+
+
+/* Principal attendance management dashboard */
+.principal-attendance-dashboard{display:grid;gap:15px}
+.attendance-date-bar{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.attendance-date-bar .icon-button{flex:0 0 38px;width:38px;height:38px}
+.attendance-date-bar .icon-button:disabled{opacity:.4;cursor:not-allowed}
+.attendance-selected-date{display:flex;align-items:center;gap:9px;flex:1;color:var(--dark)}
+.attendance-selected-date span{display:block;color:var(--muted);font-size:7px;letter-spacing:1.2px;font-weight:850}
+.attendance-selected-date strong{display:block;margin-top:3px;font-size:11px}
+.attendance-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.attendance-stat-card{position:relative;min-height:112px;padding:17px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 10px 28px rgba(39,86,58,.045)}
+.attendance-stat-card span{display:block;color:var(--muted);font-size:8px;letter-spacing:1px;font-weight:800}
+.attendance-stat-card strong{display:block;margin-top:12px;color:var(--dark);font-size:30px;letter-spacing:-1px}
+.attendance-stat-card svg{position:absolute;right:17px;bottom:17px;color:#9db9a8}
+.attendance-stat-card.present{background:#f3faf5}.attendance-stat-card.present strong{color:#286b47}
+.attendance-stat-card.absent{background:#fff8f5}.attendance-stat-card.absent strong{color:#a65b45}
+.attendance-stat-card.percentage{background:#f4f8ff}.attendance-stat-card.percentage strong{color:#466b93}
+.attendance-live-banner{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:13px;padding:15px;border:1px solid #cce3d3;border-radius:15px;background:#f4faf6}
+.attendance-live-banner-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:#e2f2e7;color:var(--dark)}
+.attendance-live-banner strong,.attendance-live-banner span{display:block}.attendance-live-banner strong{font-size:11px}.attendance-live-banner span{margin-top:4px;color:var(--muted);font-size:8px}
+.attendance-mini-qr{width:58px;height:58px;padding:3px;border:1px solid var(--line);border-radius:7px;background:#fff}.attendance-mini-qr img{width:100%;height:100%;display:block}
+.attendance-people-card,.attendance-history-card{border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(39,86,58,.045);overflow:hidden}
+.attendance-people-head{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:19px 20px;border-bottom:1px solid #edf2ef}
+.attendance-people-head h3{margin:4px 0 0;font-size:16px;letter-spacing:-.4px}
+.attendance-list-switch,.attendance-history-switch{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#f6faf7}
+.attendance-list-switch button,.attendance-history-switch button{padding:7px 10px;border:0;border-radius:7px;background:transparent;color:#72857b;font-size:8px;font-weight:750}
+.attendance-list-switch button.active,.attendance-history-switch button.active{background:#fff;color:var(--dark);box-shadow:0 2px 7px rgba(39,86,58,.08)}
+.attendance-people-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 17px;border-bottom:1px solid #edf2ef}
+.attendance-people-tools>span{color:var(--muted);font-size:8px}
+.attendance-search{width:min(330px,100%);height:36px;display:flex;align-items:center;gap:7px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#f9fcfa;color:#81948a}
+.attendance-search input{width:100%;border:0;outline:0;background:transparent;font-size:9px;color:var(--ink)}
+.attendance-student-list{padding:0 17px}
+.attendance-student-row{width:100%;min-height:62px;display:grid;grid-template-columns:35px 1fr auto 18px;align-items:center;gap:10px;border:0;border-bottom:1px solid #edf2ef;background:transparent;text-align:left;color:var(--ink)}
+.attendance-student-row:last-child{border-bottom:0}.attendance-student-row:hover{background:#f8fbf9}
+.attendance-student-row img,.attendance-student-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.attendance-student-avatar{display:grid;place-items:center;background:var(--soft);color:var(--dark);font-size:10px;font-weight:800}
+.attendance-student-row strong,.attendance-student-row span{display:block}.attendance-student-row strong{font-size:10px}.attendance-student-row div span{margin-top:3px;color:var(--muted);font-size:8px}
+.attendance-student-time{color:var(--dark);font-size:8px;font-weight:700}
+.attendance-empty{padding:28px;text-align:center;color:var(--muted);font-size:9px}
+.attendance-history-range{padding:12px 20px;color:var(--muted);font-size:8px}
+.attendance-history-table{padding:0 17px 10px}
+.attendance-history-row{width:100%;min-height:48px;display:grid;grid-template-columns:1.4fr 1fr .7fr .7fr .6fr;align-items:center;gap:8px;border:0;border-bottom:1px solid #edf2ef;background:transparent;text-align:left;color:var(--ink);font-size:9px}
+.attendance-history-row:hover,.attendance-history-row.selected{background:#f6faf7}.attendance-history-row.header{min-height:34px;color:var(--muted);font-size:7px;letter-spacing:.8px;font-weight:850}
+.attendance-history-row strong{font-size:9px}.history-session-active{color:var(--dark);font-weight:750}.history-session-none{color:#a4aea8}
+.attendance-detail-backdrop{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:20px;background:rgba(22,45,33,.35);backdrop-filter:blur(6px)}
+.attendance-detail-modal{position:relative;width:min(620px,100%);max-height:85vh;overflow:auto;padding:24px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 25px 80px rgba(23,56,39,.25)}
+.attendance-detail-close{position:absolute;right:18px;top:18px;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#f7faf8;color:#60776b}
+.attendance-detail-profile{display:flex;align-items:center;gap:12px;padding-right:40px}
+.attendance-detail-profile img,.attendance-detail-profile>span{width:52px;height:52px;border-radius:50%;object-fit:cover}
+.attendance-detail-profile>span{display:grid;place-items:center;background:var(--soft);color:var(--dark);font-weight:800}
+.attendance-detail-profile h3{margin:3px 0;font-size:19px}.attendance-detail-profile p{margin:3px 0;color:var(--muted);font-size:8px}
+.attendance-detail-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
+.attendance-detail-stats div{padding:13px;border:1px solid var(--line);border-radius:11px;background:#f9fcfa}
+.attendance-detail-stats span{display:block;color:var(--muted);font-size:7px;font-weight:800;letter-spacing:1px}.attendance-detail-stats strong{display:block;margin-top:5px;color:var(--dark);font-size:22px}
+.attendance-detail-days{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.attendance-detail-days>div{display:grid;grid-template-columns:1fr auto;gap:3px;padding:10px;border:1px solid var(--line);border-radius:9px}
+.attendance-detail-days span{font-size:8px}.attendance-detail-days strong{font-size:8px;text-align:right}.attendance-detail-days small{grid-column:1/-1;color:var(--muted);font-size:7px}
+.attendance-detail-days .present strong{color:var(--dark)}.attendance-detail-days .absent strong{color:#a65b45}
+@media(max-width:900px){.attendance-stat-grid{grid-template-columns:repeat(2,1fr)}.attendance-live-banner{grid-template-columns:auto 1fr auto}.attendance-mini-qr{display:none}}
+@media(max-width:620px){.attendance-date-bar{flex-wrap:wrap}.attendance-selected-date{order:0;min-width:calc(100% - 100px)}.attendance-date-bar .secondary{margin-left:auto}.attendance-people-head{align-items:flex-start;flex-direction:column}.attendance-people-tools{align-items:flex-start;flex-direction:column}.attendance-search{width:100%}.attendance-history-row{grid-template-columns:1.5fr .8fr .55fr .55fr .55fr}.attendance-history-row.header{font-size:6px}.attendance-student-row{grid-template-columns:35px 1fr 18px}.attendance-student-time{display:none}.attendance-live-banner{grid-template-columns:auto 1fr}.attendance-live-banner .secondary{grid-column:1/-1;width:100%;justify-content:center}.attendance-detail-days{grid-template-columns:1fr}}
+@media(max-width:480px){.attendance-stat-grid{gap:7px}.attendance-stat-card{min-height:100px;padding:13px}.attendance-stat-card strong{font-size:25px}.attendance-stat-card svg{right:13px;bottom:13px}.attendance-history-table{overflow-x:auto}.attendance-history-row{min-width:460px}.attendance-detail-modal{padding:18px}}
