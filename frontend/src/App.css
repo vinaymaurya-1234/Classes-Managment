@@ -304,3 +304,53 @@
 .attendance-qr-preview-image{width:min(420px,80vw);aspect-ratio:1;margin:18px auto 0;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 12px 30px rgba(39,86,58,.08)}
 .attendance-qr-preview-image img{width:100%;height:100%;display:block;object-fit:contain}
 @media(max-width:560px){.attendance-qr-preview-modal{padding:22px 16px}.attendance-qr-preview-image{width:min(360px,82vw)}}
+
+
+/* Timetable calendar */
+.timetable-page{display:grid;gap:15px}
+.timetable-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.timetable-head h2{margin:0;font-size:24px;letter-spacing:-.8px}
+.timetable-head p{margin:7px 0 0;color:var(--muted);font-size:10px}
+.timetable-toolbar{display:flex;align-items:center;gap:8px;padding:11px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.timetable-period{display:flex;align-items:center;gap:9px;flex:1;color:var(--dark)}
+.timetable-period span,.timetable-date-picker span{display:block;color:var(--muted);font-size:7px;letter-spacing:1.1px;font-weight:850}
+.timetable-period strong{display:block;margin-top:3px;font-size:10px}
+.timetable-date-picker{display:flex;align-items:center;gap:7px;padding-left:10px;border-left:1px solid var(--line)}
+.timetable-date-picker input{height:36px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:#f9fcfa;color:var(--ink);font-size:9px}
+.timetable-selected-day{display:flex;align-items:center;justify-content:space-between;padding:17px 20px;border:1px solid var(--line);border-radius:15px;background:#fff}
+.timetable-selected-day h3{margin:3px 0 0;font-size:17px}
+.timetable-selected-day>span{padding:7px 10px;border-radius:8px;background:var(--soft);color:var(--dark);font-size:8px;font-weight:800}
+.timetable-grid-wrap{border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(39,86,58,.045);overflow:auto}
+.timetable-grid{min-width:1050px;display:grid;grid-template-columns:repeat(7,minmax(145px,1fr))}
+.timetable-day{min-height:430px;border-right:1px solid #edf2ef}
+.timetable-day:last-child{border-right:0}
+.timetable-day.selected{background:#fbfefc;box-shadow:inset 0 3px 0 var(--green)}
+.timetable-day-head{width:100%;min-height:70px;padding:12px;border:0;border-bottom:1px solid #edf2ef;background:transparent;text-align:left;color:var(--ink)}
+.timetable-day-head:hover{background:#f6faf7}
+.timetable-day-head span{display:block;color:var(--muted);font-size:7px;letter-spacing:1px;font-weight:850}
+.timetable-day-head strong{display:inline-block;margin-top:5px;font-size:14px}
+.timetable-day-head em{display:inline-block;margin-left:6px;padding:3px 5px;border-radius:5px;background:var(--soft);color:var(--dark);font-size:6px;font-style:normal;font-weight:800;vertical-align:middle}
+.timetable-day-body{display:grid;gap:8px;padding:10px}
+.timetable-lecture{position:relative;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;box-shadow:0 5px 15px rgba(39,86,58,.035)}
+.timetable-lecture:hover{border-color:#bcd9c7;transform:translateY(-1px)}
+.timetable-lecture-time{display:flex;align-items:center;gap:5px;color:var(--dark);font-size:8px}
+.timetable-lecture-time span{color:var(--muted)}
+.timetable-lecture h4{margin:8px 0 3px;font-size:11px}
+.timetable-lecture p{margin:0;color:var(--muted);font-size:8px;line-height:1.4}
+.timetable-teacher{display:flex!important;align-items:center;gap:4px;margin-top:8px;color:#5d7568!important;font-size:7px!important}
+.timetable-lecture-actions{position:absolute;top:7px;right:7px;display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.timetable-lecture:hover .timetable-lecture-actions{opacity:1}
+.timetable-lecture-actions button{width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--dark)}
+.timetable-lecture-actions button:last-child{color:#a65b45}
+.timetable-empty{min-height:100px;display:grid;place-items:center;color:var(--muted);font-size:8px}
+.timetable-empty button{display:inline-flex;align-items:center;gap:4px;padding:7px 9px;border:1px dashed #bcd9c7;border-radius:8px;background:#f8fcf9;color:var(--dark);font-size:8px;font-weight:750}
+.timetable-state{min-height:350px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:9px}
+.timetable-modal-backdrop{position:fixed;inset:0;z-index:115;display:grid;place-items:center;padding:20px;background:rgba(22,45,33,.35);backdrop-filter:blur(6px)}
+.timetable-modal{width:min(560px,100%);max-height:90vh;overflow:auto;padding:24px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 25px 80px rgba(23,56,39,.25)}
+.timetable-form{display:grid;gap:13px}
+.timetable-form label{display:block;color:#526b5e;font-size:9px;font-weight:750}
+.timetable-form input,.timetable-form select{width:100%;height:42px;margin-top:7px;padding:0 10px;border:1px solid var(--line);border-radius:10px;outline:0;background:#f9fcfa;color:var(--ink);font-size:10px}
+.timetable-form input:focus,.timetable-form select:focus{border-color:#a8cdb5;box-shadow:0 0 0 3px rgba(63,143,99,.08)}
+.timetable-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:800px){.timetable-head{align-items:flex-start;flex-direction:column}.timetable-toolbar{flex-wrap:wrap}.timetable-period{order:3;flex-basis:100%}.timetable-date-picker{border-left:0;padding-left:0;margin-left:auto}}
+@media(max-width:560px){.timetable-selected-day{align-items:flex-start;gap:10px;flex-direction:column}.timetable-form-row{grid-template-columns:1fr}.timetable-modal{padding:18px}}
