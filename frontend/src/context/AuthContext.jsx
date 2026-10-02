@@ -39,13 +39,11 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const updateUser = nextUser => setUser(nextUser)
+
   const value = useMemo(() => ({
-    token,
-    user,
-    loading,
-    isAuthenticated: Boolean(token && user),
-    login,
-    logout,
+    token, user, loading, isAuthenticated: Boolean(token && user),
+    login, logout, updateUser,
   }), [token, user, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
