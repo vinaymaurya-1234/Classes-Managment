@@ -2,4 +2,72 @@ import { CheckCircle2, QrCode, ChevronRight } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { students } from '../data/mockData'
-export default function AttendancePage(){const {role}=useOutletContext();if(role==='student')return <><SectionIntro eyebrow="ATTENDANCE" title="Mark your attendance" text="Scan the classroom QR code to register your presence."/><div className="attendance-grid"><section className="scanner-card"><div className="scanner-frame"><QrCode size={105}/><span>QR SCANNER</span></div><button className="primary big">Open camera & scan</button><p>Your attendance is only recorded for an active lecture.</p></section><Card title="Attendance summary"><div className="attendance-summary"><strong>94%</strong><span>Excellent attendance</span><div className="progress"><i style={{width:'94%'}}/></div><p>47 present · 3 absent · 50 lectures</p></div></Card></div></>;return <><SectionIntro eyebrow="ATTENDANCE" title={role==='teacher'?'Your lecture attendance':'Attendance overview'} text={role==='teacher'?'Confirm your presence for each scheduled lecture.':'Review attendance across students and classes.'}><button className="primary"><CheckCircle2 size={16}/>Mark present</button></SectionIntro><Card title={role==='teacher'?"Today's attendance":'Attendance overview'}><div className="attendance-table">{students.map(s=><div className="table-row" key={s.name}><span className="person"><span className="avatar green">{s.name[0]}</span><b>{s.name}</b></span><strong>{s.attendance}%</strong><span className="pill success">Present</span><ChevronRight size={15}/></div>)}</div></Card></>}
+import PrincipalAttendanceQr from '../components/attendance/PrincipalAttendanceQr'
+
+export default function AttendancePage() {
+  const { role } = useOutletContext()
+
+  if (role === 'principal') {
+    return <PrincipalAttendanceQr />
+  }
+
+  if (role === 'student') {
+    return (
+      <>
+        <SectionIntro
+          eyebrow="ATTENDANCE"
+          title="Mark your attendance"
+          text="Scan the classroom QR code to register your presence."
+        />
+        <div className="attendance-grid">
+          <section className="scanner-card">
+            <div className="scanner-frame">
+              <QrCode size={105} />
+              <span>QR SCANNER</span>
+            </div>
+            <button className="primary big">Open camera & scan</button>
+            <p>Your attendance is only recorded for an active lecture.</p>
+          </section>
+          <Card title="Attendance summary">
+            <div className="attendance-summary">
+              <strong>94%</strong>
+              <span>Excellent attendance</span>
+              <div className="progress"><i style={{ width: '94%' }} /></div>
+              <p>47 present · 3 absent · 50 lectures</p>
+            </div>
+          </Card>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <SectionIntro
+        eyebrow="ATTENDANCE"
+        title="Your lecture attendance"
+        text="Confirm your presence for each scheduled lecture."
+      >
+        <button className="primary">
+          <CheckCircle2 size={16} />
+          Mark present
+        </button>
+      </SectionIntro>
+      <Card title="Today's attendance">
+        <div className="attendance-table">
+          {students.map(s => (
+            <div className="table-row" key={s.name}>
+              <span className="person">
+                <span className="avatar green">{s.name[0]}</span>
+                <b>{s.name}</b>
+              </span>
+              <strong>{s.attendance}%</strong>
+              <span className="pill success">Present</span>
+              <ChevronRight size={15} />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </>
+  )
+}
