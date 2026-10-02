@@ -1,5 +1,6 @@
 import express from 'express'
 import Chapter from '../models/Chapter.js'
+import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = express.Router()
 
@@ -10,9 +11,22 @@ const normalisePayload = body => ({
   title: body.title?.trim(),
 })
 
-router.get('/', async (_req, res, next) => {
+const requireTeacher = (req, res, next) => {
+  if (req.user?.role !== 'teacher') {
+    return res.status(403).json({ success: false, message: 'Only teachers can manage chapters.' })
+  }
+  next()
+}
+
+router.use(requireAuth, requireTeacher)
+
+router.get('/', async (req, res, next) => {
   try {
-    const chapters = await Chapter.find().sort({ status: 1, updatedAt: -1, chapterNumber: 1 })
+    const className = String(req.query.className || '').trim()
+    const filter = { teacher: req.user._id }
+    if (className) filter.className = className
+
+    const chapters = await Chapter.find(filter).sort({ status: 1, updatedAt: -1, chapterNumber: 1 })
     res.json({ success: true, data: chapters })
   } catch (error) {
     next(error)
@@ -26,7 +40,7 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Subject, class, chapter number and title are required.' })
     }
 
-    const chapter = await Chapter.create(payload)
+    const chapter = await Chapter.create({ ...payload, teacher: req.user._id })
     res.status(201).json({ success: true, data: chapter })
   } catch (error) {
     if (error.code === 11000) {
@@ -38,7 +52,7 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const chapter = await Chapter.findById(req.params.id)
+    const chapter = await Chapter.findOne({ _id: req.params.id, teacher: req.user._id })
     if (!chapter) return res.status(404).json({ success: false, message: 'Chapter not found.' })
 
     if (req.body.action === 'start') {
@@ -75,7 +89,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const chapter = await Chapter.findByIdAndDelete(req.params.id)
+    const chapter = await Chapter.findOneAndDelete({ _id: req.params.id, teacher: req.user._id })
     if (!chapter) return res.status(404).json({ success: false, message: 'Chapter not found.' })
     res.status(204).send()
   } catch (error) {
