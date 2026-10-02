@@ -435,3 +435,22 @@
 .notice-role-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.notice-role-button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#f7faf8;color:#5f7469;font-size:9px;font-weight:750;cursor:pointer}.notice-role-button.active{border-color:#8fbea1;background:var(--soft);color:var(--dark)}
 .notice-user-picker{margin-top:10px;border:1px solid var(--line);border-radius:13px;background:#fbfdfc;overflow:hidden}.notice-picker-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid #e8f0eb}.notice-picker-head strong{font-size:10px}.notice-picker-head span{font-size:8px;color:#819087}.notice-picker-state{min-height:80px;display:flex;align-items:center;justify-content:center;gap:8px;color:#819087;font-size:9px}.notice-user-groups{max-height:230px;overflow:auto}.notice-user-group-title{display:block;padding:9px 13px 5px;color:var(--dark);font-size:8px;font-weight:850;letter-spacing:.8px}.notice-user-option{display:flex;align-items:center;gap:9px;padding:9px 13px;border-top:1px solid #edf2ef;cursor:pointer}.notice-user-option:hover{background:#f6faf7}.notice-user-option.selected{background:#f0f8f3}.notice-user-option input{accent-color:#286b47}.notice-user-avatar{width:29px;height:29px;display:grid;place-items:center;flex:0 0 29px;border-radius:50%;background:var(--soft);color:var(--dark);font-size:9px;font-weight:800}.notice-user-details{min-width:0}.notice-user-details strong,.notice-user-details small{display:block}.notice-user-details strong{font-size:9px}.notice-user-details small{margin-top:2px;color:#819087;font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:560px){.notice-audience-grid{grid-template-columns:1fr}.notice-modal{padding:18px}.notice-meta{align-items:flex-start;flex-direction:column;gap:4px}.notice-meta time{white-space:normal}}
+
+/* Header notifications */
+.notification-menu{position:relative;display:flex;align-items:center}
+.notification-button{position:relative;transition:background .18s ease,color .18s ease}
+.notification-button.active{background:#e7f3eb;color:var(--dark)}
+.notification-button i{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:#3f8f63;box-shadow:0 0 0 2px white}
+.notification-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:min(390px,calc(100vw - 28px));z-index:80;border:1px solid var(--line);border-radius:15px;background:white;box-shadow:0 20px 55px rgba(23,56,39,.16);overflow:hidden}
+.notification-dropdown-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid #e8f0eb}
+.notification-dropdown-head strong,.notification-dropdown-head span{display:block}
+.notification-dropdown-head strong{font-size:12px}.notification-dropdown-head span{margin-top:3px;color:#819087;font-size:8px}
+.notification-dropdown-head>button{border:0;background:transparent;color:var(--dark);font-size:8px;font-weight:800;cursor:pointer}
+.notification-dropdown-list{max-height:360px;overflow:auto}
+.notification-item{width:100%;display:flex;align-items:flex-start;gap:9px;padding:12px 13px;border:0;border-bottom:1px solid #edf2ef;background:white;color:var(--ink);text-align:left;cursor:pointer}
+.notification-item:last-child{border-bottom:0}.notification-item:hover{background:#f5faf7}
+.notification-item-icon{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:9px;background:var(--soft);color:var(--dark)}
+.notification-item-body{min-width:0;flex:1}.notification-item-body strong,.notification-item-body small,.notification-item-body time{display:block}
+.notification-item-body strong{font-size:9px}.notification-item-body small{margin-top:3px;color:#718279;font-size:8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.notification-item-body time{margin-top:5px;color:#9aa69f;font-size:7px}
+.notification-dropdown-state{min-height:110px;display:flex;align-items:center;justify-content:center;gap:8px;padding:18px;color:#819087;font-size:9px;text-align:center}
+@media(max-width:560px){.notification-dropdown{right:-45px}}
