@@ -6,6 +6,7 @@ import chapterRoutes from './routes/chapter.routes.js'
 import authRoutes from './routes/auth.routes.js'
 import userRoutes from './routes/users.routes.js'
 import attendanceRoutes from './routes/attendance.routes.js'
+import timetableRoutes from './routes/timetable.routes.js'
 
 const app = express()
 
@@ -36,6 +37,7 @@ app.use('/api/chapters', chapterRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/attendance', attendanceRoutes)
+app.use('/api/timetable', timetableRoutes)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' })
