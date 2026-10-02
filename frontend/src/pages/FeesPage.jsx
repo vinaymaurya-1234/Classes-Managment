@@ -1,0 +1,5 @@
+import { CalendarDays, CheckCircle2, CreditCard } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
+import { Card, Stat } from '../components/common/UI'
+import { students } from '../data/mockData'
+export default function FeesPage(){const {role}=useOutletContext();return <><div className="stats"><Stat icon={CreditCard} label="Total fees" value="₹2.40L" detail="Current academic year"/><Stat icon={CheckCircle2} label="Paid" value="₹2.06L" detail="85.8% collected"/><Stat icon={CreditCard} label="Pending" value="₹34,000" detail="12 students"/><Stat icon={CalendarDays} label="Next due" value="10 Oct" detail="Fee cycle · October"/></div><Card title={role==='parent'?'Fee details':'Student fee records'}><div className="attendance-table">{students.map(s=><div className="table-row" key={s.name}><span className="person"><span className="avatar green">{s.name[0]}</span><b>{s.name}</b></span><span>{s.className}</span><b>{s.fee==='Paid'?'₹20,000 paid':'₹20,000 pending'}</b><span className={'pill '+(s.fee==='Paid'?'success':'warning')}>{s.fee}</span></div>)}</div></Card></>}
