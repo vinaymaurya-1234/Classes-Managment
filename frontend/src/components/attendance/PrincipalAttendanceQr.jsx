@@ -13,7 +13,8 @@ const offset = (value, days) => {
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
-const monthRange = value => { const d = new Date(value + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); const y=d.getUTCFullYear(); const m=d.getUTCMonth(); return { from:y+'-'+String(m+1).padStart(2,'0')+'-01', to:y+'-'+String(m+1).padStart(2,'0')+'-'+String(new Date(Date.UTC(y,m+1,0)).getUTCDate()).padStart(2,'0') } }\nconst dateLabel = value => new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value + 'T00:00:00'))
+const monthRange = value => { const d = new Date(value + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); const y=d.getUTCFullYear(); const m=d.getUTCMonth(); return { from:y+'-'+String(m+1).padStart(2,'0')+'-01', to:y+'-'+String(m+1).padStart(2,'0')+'-'+String(new Date(Date.UTC(y,m+1,0)).getUTCDate()).padStart(2,'0') } }
+const dateLabel = value => new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value + 'T00:00:00'))
 const timeLabel = value => value ? new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(value)) : ''
 const qrUrl = token => 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=18&data=' + encodeURIComponent(window.location.origin + '/student/attendance?attendanceToken=' + encodeURIComponent(token))
 
