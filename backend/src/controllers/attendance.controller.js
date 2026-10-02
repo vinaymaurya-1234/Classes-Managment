@@ -303,21 +303,23 @@ export const getPrincipalAttendanceDashboard = async (req, res, next) => {
       status: record.status,
     }))
 
-    const absentStudents = students.filter(student => !presentIds.has(String(student._id))).map(student => ({
-      id: student._id.toString(),
-      name: student.name,
-      email: student.email,
-      phone: student.phone || '',
-      avatarUrl: student.avatarUrl || '',
-    }))
+    const absentStudents = session
+      ? students.filter(student => !presentIds.has(String(student._id))).map(student => ({
+          id: student._id.toString(),
+          name: student.name,
+          email: student.email,
+          phone: student.phone || '',
+          avatarUrl: student.avatarUrl || '',
+        }))
+      : []
 
     return res.json({
       success: true, date,
       session: session ? { id: session._id.toString(), date: session.date, createdAt: session.createdAt, active: session.active } : null,
       totalStudents: students.length,
       presentCount: presentStudents.length,
-      absentCount: absentStudents.length,
-      attendancePercentage: students.length ? Math.round((presentStudents.length / students.length) * 100) : 0,
+      absentCount: session ? absentStudents.length : 0,
+      attendancePercentage: session && students.length ? Math.round((presentStudents.length / students.length) * 100) : 0,
       presentStudents,
       absentStudents,
     })
@@ -371,7 +373,22 @@ export const getPrincipalAttendanceHistory = async (req, res, next) => {
       })
     }
 
-    return res.json({ success: true, from, to, totalStudents: students, days })
+    const recordedDays = days.filter(day => day.hasSession)
+    const totalPresent = recordedDays.reduce((sum, day) => sum + day.present, 0)
+    const totalPossible = recordedDays.length * students
+    const averagePercentage = totalPossible ? Math.round((totalPresent / totalPossible) * 100) : 0
+
+    return res.json({
+      success: true,
+      from,
+      to,
+      totalStudents: students,
+      recordedDays: recordedDays.length,
+      totalPresent,
+      totalPossible,
+      averagePercentage,
+      days,
+    })
   } catch (error) {
     next(error)
   }
