@@ -1,4 +1,8 @@
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+const configuredUrl = (import.meta.env.VITE_API_URL || '').trim()
+const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
+const BASE_URL = ((configuredUrl && !/localhost|127\.0\.0\.1/i.test(configuredUrl))
+  ? configuredUrl
+  : `http://${host}:5000`).replace(/\/$/, '')
 const ATTENDANCE_URL = `${BASE_URL}/api/attendance`
 
 const request = async (path, token, options = {}) => {
@@ -16,29 +20,11 @@ const request = async (path, token, options = {}) => {
   return data
 }
 
-export const getTodayAttendanceSessionApi = token =>
-  request('/today', token)
-
-export const createTodayAttendanceSessionApi = token =>
-  request('/today', token, { method: 'POST' })
-
-export const getTodayAttendanceSummaryApi = token =>
-  request('/today/summary', token)
-
-export const markAttendanceApi = (token, accessToken) =>
-  request('/mark', token, {
-    method: 'POST',
-    body: JSON.stringify({ accessToken }),
-  })
-
-export const getStudentAttendanceSummaryApi = token =>
-  request('/my', token)
-
-export const getPrincipalAttendanceDashboardApi = (token, date) =>
-  request(`/principal/dashboard?date=${encodeURIComponent(date)}`, token)
-
-export const getPrincipalAttendanceHistoryApi = (token, from, to) =>
-  request(`/principal/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)
-
-export const getPrincipalStudentAttendanceApi = (token, studentId, from, to) =>
-  request(`/principal/student/${encodeURIComponent(studentId)}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)
+export const getTodayAttendanceSessionApi = token => request('/today', token)
+export const createTodayAttendanceSessionApi = token => request('/today', token, { method: 'POST' })
+export const getTodayAttendanceSummaryApi = token => request('/today/summary', token)
+export const markAttendanceApi = (token, accessToken) => request('/mark', token, { method: 'POST', body: JSON.stringify({ accessToken }) })
+export const getStudentAttendanceSummaryApi = token => request('/my', token)
+export const getPrincipalAttendanceDashboardApi = (token, date) => request(`/principal/dashboard?date=${encodeURIComponent(date)}`, token)
+export const getPrincipalAttendanceHistoryApi = (token, from, to) => request(`/principal/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)
+export const getPrincipalStudentAttendanceApi = (token, studentId, from, to) => request(`/principal/student/${encodeURIComponent(studentId)}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)

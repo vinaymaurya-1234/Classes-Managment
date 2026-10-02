@@ -3,30 +3,27 @@ const host = typeof window !== 'undefined' ? window.location.hostname : 'localho
 const BASE_URL = ((configuredUrl && !/localhost|127\.0\.0\.1/i.test(configuredUrl))
   ? configuredUrl
   : `http://${host}:5000`).replace(/\/$/, '')
-const USERS_URL = `${BASE_URL}/api/users`
+const NOTICES_URL = `${BASE_URL}/api/notices`
 
-const request = async (path = '', options = {}) => {
-  const response = await fetch(`${USERS_URL}${path}`, {
+const request = async (path = '', token, options = {}) => {
+  const response = await fetch(`${NOTICES_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
       ...(options.headers || {}),
     },
   })
 
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.message || 'Request failed')
+  if (!response.ok) throw new Error(data.message || 'Notice request failed')
   return data
 }
 
-export const listUsersApi = (token, role = '') =>
-  request(role ? `?role=${encodeURIComponent(role)}` : '', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+export const listNoticesApi = token => request('', token)
 
-export const createUserApi = (token, payload) =>
-  request('', {
+export const createNoticeApi = (token, payload) =>
+  request('', token, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   })
