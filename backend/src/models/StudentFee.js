@@ -17,7 +17,6 @@ const studentFeeSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
     index: true,
   },
   academicYear: { type: String, required: true, trim: true },
@@ -31,6 +30,6 @@ const studentFeeSchema = new mongoose.Schema({
   },
 }, { timestamps: true })
 
-studentFeeSchema.index({ academicYear: 1, student: 1 })
+studentFeeSchema.index({ academicYear: 1, student: 1 }, { unique: true })
 
 export default mongoose.model('StudentFee', studentFeeSchema)
