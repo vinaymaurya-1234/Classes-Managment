@@ -212,3 +212,50 @@ export const getTodayAttendanceSummary = async (req, res, next) => {
     next(error)
   }
 }
+
+
+export const getStudentAttendanceSummary = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'student')) {
+      return res.status(403).json({ success: false, message: 'Only student accounts can view student attendance' })
+    }
+
+    const totalSessions = await AttendanceSession.countDocuments({ active: true })
+    const present = await AttendanceRecord.countDocuments({
+      student: req.user._id,
+      status: 'present',
+    })
+    const todaySession = await AttendanceSession.findOne({
+      date: getIndiaDate(),
+      active: true,
+    })
+
+    const todayRecord = todaySession
+      ? await AttendanceRecord.findOne({
+          session: todaySession._id,
+          student: req.user._id,
+        })
+      : null
+
+    const percentage = totalSessions > 0
+      ? Math.round((present / totalSessions) * 100)
+      : 0
+
+    return res.json({
+      success: true,
+      date: getIndiaDate(),
+      totalSessions,
+      present,
+      absent: Math.max(totalSessions - present, 0),
+      percentage,
+      today: {
+        active: Boolean(todaySession),
+        marked: Boolean(todayRecord),
+        markedAt: todayRecord?.markedAt || null,
+        status: todayRecord?.status || null,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
