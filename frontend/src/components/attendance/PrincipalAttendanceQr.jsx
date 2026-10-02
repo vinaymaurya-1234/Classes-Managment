@@ -85,9 +85,6 @@ export default function PrincipalAttendanceQr() {
     finally { setCreating(false) }
   }
 
-  const setRange = next => {
-    setRangeState(next)
-  }
   const setRangeState = next => {
     setRange(next)
     if (next === 'month') {
