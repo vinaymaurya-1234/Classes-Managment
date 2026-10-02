@@ -30,6 +30,7 @@ export default function PrincipalAttendanceQr() {
   const [date, setDate] = useState(today)
   const [dashboard, setDashboard] = useState(null)
   const [history, setHistory] = useState([])
+  const [historyMeta, setHistoryMeta] = useState({ recordedDays: 0, averagePercentage: 0, totalPresent: 0 })
   const [from, setFrom] = useState(offset(today, -29))
   const [to, setTo] = useState(today)
   const [range, setRange] = useState('30')
@@ -62,6 +63,7 @@ export default function PrincipalAttendanceQr() {
     try {
       const result = await getPrincipalAttendanceHistoryApi(token, from, to)
       setHistory(result.days || [])
+      setHistoryMeta({ recordedDays: result.recordedDays || 0, averagePercentage: result.averagePercentage || 0, totalPresent: result.totalPresent || 0 })
     } catch (e) { setError(e.message || 'Unable to load attendance history.') }
     finally { setHistoryLoading(false) }
   }, [token, from, to])
@@ -152,6 +154,11 @@ export default function PrincipalAttendanceQr() {
     <section className="attendance-history-card">
       <div className="attendance-people-head"><div><span className="eyebrow">HISTORY</span><h3>Previous attendance</h3></div><div className="attendance-history-switch"><button className={range === '30' ? 'active' : ''} onClick={() => setRangeState('30')}>Last 30 days</button><button className={range === 'month' ? 'active' : ''} onClick={() => setRangeState('month')}>Last month</button></div></div>
       <div className="attendance-history-range">{dateLabel(from)} — {dateLabel(to)}</div>
+      <div className="attendance-history-summary">
+        <div><span>RECORDED DAYS</span><strong>{historyMeta.recordedDays}</strong></div>
+        <div><span>TOTAL PRESENT MARKS</span><strong>{historyMeta.totalPresent}</strong></div>
+        <div><span>AVERAGE ATTENDANCE</span><strong>{historyMeta.averagePercentage}%</strong></div>
+      </div>
       <div className="attendance-history-table"><div className="attendance-history-row header"><span>Date</span><span>Status</span><span>Present</span><span>Absent</span><span>Rate</span></div>{historyLoading ? <div className="attendance-empty">Loading history...</div> : history.map(day => <button key={day.date} className={'attendance-history-row ' + (day.date === date ? 'selected' : '')} onClick={() => setDate(day.date)}><strong>{dateLabel(day.date)}</strong><span className={day.hasSession ? 'history-session-active' : 'history-session-none'}>{day.hasSession ? 'Recorded' : 'No session'}</span><span>{day.hasSession ? day.present : '—'}</span><span>{day.hasSession ? day.absent : '—'}</span><span>{day.hasSession ? day.percentage + '%' : '—'}</span></button>)}</div>
     </section>
 
