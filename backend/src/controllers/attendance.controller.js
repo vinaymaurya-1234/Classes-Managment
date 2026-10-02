@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import AttendanceRecord from '../models/AttendanceRecord.js'
 import AttendanceSession from '../models/AttendanceSession.js'
+import User from '../models/User.js'
 
 const INDIA_TIME_ZONE = 'Asia/Kolkata'
 
