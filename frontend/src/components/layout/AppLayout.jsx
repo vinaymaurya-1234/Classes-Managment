@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 
 const nav = {
   principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exams & Results','results'],['Notices','notices']],
-  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Tests & Marks','results']],
+  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Tests & Marks','results'],['Notices','notices']],
   student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Tests & Results','results'],['Notices','notices']],
   parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Tests & Reports','results'],['Notices','notices'],['Timetable','timetable']],
 }
