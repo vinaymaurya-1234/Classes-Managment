@@ -13,13 +13,7 @@ const offset = (value, days) => {
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
-const monthRange = (value, previous = true) => {
-  const d = new Date(value + 'T00:00:00Z')
-  if (previous) d.setUTCMonth(d.getUTCMonth() - 1)
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth()
-  return { from: y + '-' + String(m + 1).padStart(2, '0') + '-01', to: y + '-' + String(m + 1).padStart(2, '0') + '-' + String(new Date(Date.UTC(y, m + 1, 0)).getUTCDate()).padStart(2, '0') }
-}
+const monthRange = value => { const d = new Date(value + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); const y=d.getUTCFullYear(); const m=d.getUTCMonth(); return { from:y+'-'+String(m+1).padStart(2,'0')+'-01', to:y+'-'+String(m+1).padStart(2,'0')+'-'+String(new Date(Date.UTC(y,m+1,0)).getUTCDate()).padStart(2,'0') } }
 const dateLabel = value => new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value + 'T00:00:00'))
 const timeLabel = value => value ? new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(value)) : ''
 const qrUrl = token => 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=18&data=' + encodeURIComponent(window.location.origin + '/student/attendance?attendanceToken=' + encodeURIComponent(token))
@@ -93,9 +87,18 @@ export default function PrincipalAttendanceQr() {
     if (next === 'month') {
       const r = monthRange(today)
       setFrom(r.from); setTo(r.to)
-    } else {
+    } else if (next === '30') {
       setFrom(offset(today, -29)); setTo(today)
     }
+  }
+
+  const applyCustomRange = () => {
+    if (!from || !to || from > to) {
+      setError('Please select a valid attendance date range.')
+      return
+    }
+    setRange('custom')
+    loadHistory()
   }
 
   const students = tab === 'present' ? dashboard?.presentStudents || [] : dashboard?.absentStudents || []
@@ -120,7 +123,7 @@ export default function PrincipalAttendanceQr() {
 
   return <div className="principal-attendance-dashboard">
     <div className="attendance-admin-head">
-      <div><span className="eyebrow">ATTENDANCE MANAGEMENT</span><h2>Student attendance</h2><p>See who is present, who is absent, and review attendance for previous days and months.</p></div>
+      <div><span className="eyebrow">ATTENDANCE MANAGEMENT</span><h2>Student attendance</h2><p>See who is present, who is absent, and review attendance for any date or custom date range.</p></div>
       <button className="secondary" onClick={() => { loadDashboard(date); loadHistory() }}><RefreshCw size={15}/> Refresh</button>
     </div>
 
@@ -153,7 +156,7 @@ export default function PrincipalAttendanceQr() {
     </section>
 
     <section className="attendance-history-card">
-      <div className="attendance-people-head"><div><span className="eyebrow">HISTORY</span><h3>Previous attendance</h3></div><div className="attendance-history-switch"><button className={range === '30' ? 'active' : ''} onClick={() => setRangeState('30')}>Last 30 days</button><button className={range === 'month' ? 'active' : ''} onClick={() => setRangeState('month')}>Last month</button></div></div>
+      <div className="attendance-people-head attendance-history-head"><div><span className="eyebrow">HISTORY</span><h3>Attendance history</h3></div><div className="attendance-history-switch"><button className={range === '30' ? 'active' : ''} onClick={() => setRangeState('30')}>Last 30 days</button><button className={range === 'month' ? 'active' : ''} onClick={() => setRangeState('month')}>Last month</button><button className={range === 'custom' ? 'active' : ''} onClick={() => setRange('custom')}>Custom range</button></div></div><div className="attendance-history-custom"><label>From<input type="date" value={from} onChange={e => setFrom(e.target.value)}/></label><span>to</span><label>To<input type="date" value={to} onChange={e => setTo(e.target.value)}/></label><button className="primary" onClick={applyCustomRange}>Apply</button></div>
       <div className="attendance-history-range">{dateLabel(from)} — {dateLabel(to)}</div>
       <div className="attendance-history-summary">
         <div><span>RECORDED DAYS</span><strong>{historyMeta.recordedDays}</strong></div>
