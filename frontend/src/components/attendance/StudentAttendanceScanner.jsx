@@ -132,7 +132,7 @@ export default function StudentAttendanceScanner() {
 
     if (!('BarcodeDetector' in window)) {
       setScannerSupported(false)
-      setScannerOpen(true)
+      setScannerOpen(false)
       return
     }
 
@@ -223,9 +223,9 @@ export default function StudentAttendanceScanner() {
               Close scanner
             </button>
           ) : (
-            <button className="primary big" onClick={openCamera} disabled={loading}>
+            <button className="primary big" onClick={openCamera} disabled={loading || !scannerSupported}>
               <Camera size={17} />
-              Open camera & scan
+              {scannerSupported ? 'Open camera & scan' : 'Camera scanner unavailable'}
             </button>
           )}
 
