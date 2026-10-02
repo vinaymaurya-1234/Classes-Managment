@@ -4,6 +4,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute'
 import LoginPage from '../pages/LoginPage'
 import ProfilePage from '../pages/ProfilePage'
 import OverviewPage from '../pages/OverviewPage'
+import TeacherOverviewPage from '../pages/TeacherOverviewPage'
 import TimetablePage from '../pages/TimetablePage'
 import AttendancePage from '../pages/AttendancePage'
 import HomeworkPage from '../pages/HomeworkPage'
@@ -25,12 +26,13 @@ export default function AppRouter() {
       <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/" element={<Navigate to={user ? '/' + user.role + '/overview' : '/login'} replace />} />
+        <Route path="/teacher/overview" element={<TeacherOverviewPage />} />
+        <Route path="/teacher/classes" element={<TeacherClassesPage />} />
         <Route path="/:role/overview" element={<OverviewPage />} />
         <Route path="/:role/timetable" element={<TimetablePage />} />
         <Route path="/:role/attendance" element={<AttendancePage />} />
         <Route path="/:role/homework" element={<HomeworkPage />} />
         <Route path="/:role/chapters" element={<ChaptersPage />} />
-        <Route path="/teacher/classes" element={<TeacherClassesPage />} />
         <Route path="/:role/fees" element={<FeesPage />} />
         <Route path="/:role/results" element={<ResultsPage />} />
         <Route path="/:role/students" element={<PeoplePage type="student" />} />
