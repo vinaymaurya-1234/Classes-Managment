@@ -33,3 +33,12 @@ export const markAttendanceApi = (token, accessToken) =>
 
 export const getStudentAttendanceSummaryApi = token =>
   request('/my', token)
+
+export const getPrincipalAttendanceDashboardApi = (token, date) =>
+  request(`/principal/dashboard?date=${encodeURIComponent(date)}`, token)
+
+export const getPrincipalAttendanceHistoryApi = (token, from, to) =>
+  request(`/principal/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)
+
+export const getPrincipalStudentAttendanceApi = (token, studentId, from, to) =>
+  request(`/principal/student/${encodeURIComponent(studentId)}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token)
