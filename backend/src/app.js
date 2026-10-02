@@ -5,6 +5,7 @@ import morgan from 'morgan'
 import chapterRoutes from './routes/chapter.routes.js'
 import authRoutes from './routes/auth.routes.js'
 import userRoutes from './routes/users.routes.js'
+import attendanceRoutes from './routes/attendance.routes.js'
 
 const app = express()
 
@@ -34,6 +35,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/chapters', chapterRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/attendance', attendanceRoutes)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' })
