@@ -1,4 +1,4 @@
-import { CheckCircle2, QrCode, ChevronRight } from 'lucide-react'
+import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { students } from '../data/mockData'
