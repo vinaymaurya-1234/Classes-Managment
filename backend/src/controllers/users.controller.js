@@ -10,6 +10,7 @@ const publicUser = user => ({
   role: user.role,
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
+  className: user.className || '',
   createdAt: user.createdAt,
 })
 
