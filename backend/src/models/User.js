@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema({
   },
   phone: { type: String, trim: true, default: '' },
   avatarUrl: { type: String, trim: true, default: '' },
+  className: { type: String, trim: true, default: '' },
+  teachingClasses: { type: [String], default: [] },
 }, { timestamps: true })
 
 userSchema.set('toJSON', {
@@ -19,5 +21,7 @@ userSchema.set('toJSON', {
     return ret
   },
 })
+
+userSchema.index({ role: 1, className: 1 })
 
 export default mongoose.model('User', userSchema)

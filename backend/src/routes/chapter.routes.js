@@ -6,8 +6,12 @@ const router = express.Router()
 
 const requireTeacher = (req, res, next) => {
   if (req.user?.role !== 'teacher') {
-    return res.status(403).json({ success: false, message: 'Only teachers can manage chapters.' })
+    return res.status(403).json({
+      success: false,
+      message: 'Only teachers can manage chapters.',
+    })
   }
+
   next()
 }
 
@@ -20,21 +24,47 @@ const normalisePayload = body => ({
 
 router.use(requireAuth, requireTeacher)
 
+// GET chapters
+// Returns only chapters owned by the logged-in teacher.
+// Optional className filter can be used.
 router.get('/', async (req, res, next) => {
   try {
-    const chapters = await Chapter.find({ teacher: req.user._id })
-      .sort({ status: 1, updatedAt: -1, chapterNumber: 1 })
+    const className = String(req.query.className || '').trim()
 
-    res.json({ success: true, data: chapters })
+    const filter = {
+      teacher: req.user._id,
+    }
+
+    if (className) {
+      filter.className = className
+    }
+
+    const chapters = await Chapter.find(filter).sort({
+      status: 1,
+      updatedAt: -1,
+      chapterNumber: 1,
+    })
+
+    res.json({
+      success: true,
+      data: chapters,
+    })
   } catch (error) {
     next(error)
   }
 })
 
+// CREATE chapter
 router.post('/', async (req, res, next) => {
   try {
     const payload = normalisePayload(req.body)
-    if (!payload.subject || !payload.className || !payload.chapterNumber || !payload.title) {
+
+    if (
+      !payload.subject ||
+      !payload.className ||
+      !payload.chapterNumber ||
+      !payload.title
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Subject, class, chapter number and title are required.',
@@ -46,45 +76,67 @@ router.post('/', async (req, res, next) => {
       teacher: req.user._id,
     })
 
-    res.status(201).json({ success: true, data: chapter })
+    res.status(201).json({
+      success: true,
+      data: chapter,
+    })
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'This chapter number already exists for this subject and class in your chapters.',
+        message:
+          'This chapter number already exists for this subject and class in your chapters.',
       })
     }
+
     next(error)
   }
 })
 
+// UPDATE chapter / start / complete / add session
 router.put('/:id', async (req, res, next) => {
   try {
+    // IMPORTANT:
+    // Teacher ownership is checked here.
     const chapter = await Chapter.findOne({
       _id: req.params.id,
       teacher: req.user._id,
     })
 
     if (!chapter) {
-      return res.status(404).json({ success: false, message: 'Chapter not found.' })
+      return res.status(404).json({
+        success: false,
+        message: 'Chapter not found.',
+      })
     }
 
     if (req.body.action === 'start') {
       chapter.status = 'started'
       chapter.startedAt = chapter.startedAt || new Date()
-      if (chapter.progress === 100) chapter.progress = 0
+
+      if (chapter.progress === 100) {
+        chapter.progress = 0
+      }
     } else if (req.body.action === 'complete') {
       chapter.status = 'completed'
       chapter.progress = 100
       chapter.completedAt = new Date()
     } else if (req.body.action === 'session') {
       const note = String(req.body.note || '').trim()
+
       if (!note) {
-        return res.status(400).json({ success: false, message: 'Session note is required.' })
+        return res.status(400).json({
+          success: false,
+          message: 'Session note is required.',
+        })
       }
 
-      chapter.sessionNotes.push({ note })
+      chapter.sessionNotes.push({
+        note,
+      })
+
       chapter.sessions += 1
+
       if (chapter.status === 'not-started') {
         chapter.status = 'started'
         chapter.startedAt = new Date()
@@ -95,18 +147,25 @@ router.put('/:id', async (req, res, next) => {
     }
 
     await chapter.save()
-    res.json({ success: true, data: chapter })
+
+    res.json({
+      success: true,
+      data: chapter,
+    })
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'This chapter number already exists for this subject and class in your chapters.',
+        message:
+          'This chapter number already exists for this subject and class in your chapters.',
       })
     }
+
     next(error)
   }
 })
 
+// DELETE chapter
 router.delete('/:id', async (req, res, next) => {
   try {
     const chapter = await Chapter.findOneAndDelete({
@@ -115,7 +174,10 @@ router.delete('/:id', async (req, res, next) => {
     })
 
     if (!chapter) {
-      return res.status(404).json({ success: false, message: 'Chapter not found.' })
+      return res.status(404).json({
+        success: false,
+        message: 'Chapter not found.',
+      })
     }
 
     res.status(204).send()

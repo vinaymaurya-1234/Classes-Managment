@@ -3,6 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import chapterRoutes from './routes/chapter.routes.js'
+import teacherRoutes from './routes/teacher.routes.js'
 import authRoutes from './routes/auth.routes.js'
 import userRoutes from './routes/users.routes.js'
 import attendanceRoutes from './routes/attendance.routes.js'
@@ -34,6 +35,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/chapters', chapterRoutes)
+app.use('/api/teacher', teacherRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/attendance', attendanceRoutes)
