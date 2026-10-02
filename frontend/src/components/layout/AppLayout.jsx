@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, Menu, MessageSquare, Search, Settings, Trophy, Users, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { roles } from '../../data/mockData'
 import { useAuth } from '../../context/AuthContext'
+import { listNoticesApi } from '../../api/notices.api'
 
 const nav = {
   principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exams & Results','results'],['Notices','notices']],
@@ -19,6 +20,9 @@ export default function AppLayout({ children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [notifications,setNotifications] = useState([])
+  const [notificationOpen,setNotificationOpen] = useState(false)
+  const [notificationLoading,setNotificationLoading] = useState(false)
   const role = user?.role && roles[user.role] ? user.role : (roles[routeRole] ? routeRole : 'student')
   const [mobileNav,setMobileNav] = useState(false)
   const [search,setSearch] = useState('')
@@ -28,7 +32,20 @@ export default function AppLayout({ children }) {
   const pageLabel = nav[role].find(x => x[1] === currentKey)?.[0] || 'Overview'
   const filtered = useMemo(() => search, [search])
   const go = key => { navigate(`/${role}/${key}`); setMobileNav(false) }
-  const signOut = () => { setProfileOpen(false); logout(); navigate('/login', { replace:true }) }
+  const signOut = () => { setProfileOpen(false); setNotificationOpen(false); logout(); navigate('/login', { replace:true }) }
+  useEffect(() => {
+    let active = true
+    if (!user) return undefined
+    setNotificationLoading(true)
+    listNoticesApi(localStorage.getItem('classleaf_auth_token')).then(result => {
+      if (active) setNotifications((result.notices || []).slice(0, 5))
+    }).catch(() => {
+      if (active) setNotifications([])
+    }).finally(() => { if (active) setNotificationLoading(false) })
+    return () => { active = false }
+  }, [user, location.pathname])
+  const openNotice = () => { setNotificationOpen(false); navigate(`/${role}/notices`) }
+  const notificationDate = value => new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value))
 
   return <div className="app-shell">
     <aside className={'sidebar ' + (mobileNav ? 'open' : '')}>
@@ -39,7 +56,26 @@ export default function AppLayout({ children }) {
     </aside>
     {mobileNav && <button className="sidebar-backdrop" onClick={()=>setMobileNav(false)} aria-label="Close navigation"/>}
     <main className="main">
-      <header className="topbar"><button className="mobile-menu" onClick={()=>setMobileNav(true)}><Menu size={20}/></button><div className="breadcrumb"><Link to={`/${role}/overview`}>ClassLeaf</Link><ChevronRight size={13}/><strong>{pageLabel}</strong></div><div className="topbar-actions"><div className="search"><Search size={16}/><input value={filtered} onChange={e=>setSearch(e.target.value)} placeholder="Search students, classes..."/></div><button className="icon-button"><Bell size={18}/><i/></button><div className="profile-menu"><button className="top-avatar-button" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu"><Avatar user={user} className="top-avatar"/></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
+      <header className="topbar"><button className="mobile-menu" onClick={()=>setMobileNav(true)}><Menu size={20}/></button><div className="breadcrumb"><Link to={`/${role}/overview`}>ClassLeaf</Link><ChevronRight size={13}/><strong>{pageLabel}</strong></div><div className="topbar-actions"><div className="search"><Search size={16}/><input value={filtered} onChange={e=>setSearch(e.target.value)} placeholder="Search students, classes..."/></div><div className="notification-menu">
+  <button className={'icon-button notification-button ' + (notificationOpen ? 'active' : '')} onClick={()=>setNotificationOpen(v=>!v)} aria-label="Open notifications">
+    <Bell size={18}/>{notifications.length>0&&<i/>}
+  </button>
+  {notificationOpen&&<div className="notification-dropdown">
+    <div className="notification-dropdown-head">
+      <div><strong>Notifications</strong><span>{notifications.length ? `${notifications.length} recent notice${notifications.length===1?'':'s'}` : 'No new notices'}</span></div>
+      <button onClick={openNotice}>View all</button>
+    </div>
+    <div className="notification-dropdown-list">
+      {notificationLoading ? <div className="notification-dropdown-state">Loading notifications...</div> :
+       notifications.length ? notifications.map(notice=><button className="notification-item" key={notice.id} onClick={()=>openNotice()}>
+         <span className="notification-item-icon"><Bell size={14}/></span>
+         <span className="notification-item-body"><strong>{notice.title}</strong><small>{notice.message}</small><time>{notificationDate(notice.createdAt)}</time></span>
+         <ChevronRight size={14}/>
+       </button>) :
+       <div className="notification-dropdown-state"><Bell size={20}/><span>No notifications yet.</span></div>}
+    </div>
+  </div>}
+</div><div className="profile-menu"><button className="top-avatar-button" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu"><Avatar user={user} className="top-avatar"/></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
       <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{({principal:'Good morning, Principal.',teacher:'Ready for today’s lessons?',student:'Good morning, Aarav.',parent:'Welcome back.'})[role]}</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>Friday, 2 October 2026</span></div></div>{children || <Outlet context={{role,search,setSearch,go}}/>}</div>
     </main>
   </div>
