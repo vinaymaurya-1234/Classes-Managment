@@ -15,8 +15,8 @@ const request = async (path = '', options = {}) => {
   return data
 }
 
-export const listUsersApi = (token, role) =>
-  request(`?role=${encodeURIComponent(role)}`, {
+export const listUsersApi = (token, role = '') =>
+  request(role ? `?role=${encodeURIComponent(role)}` : '', {
     headers: { Authorization: `Bearer ${token}` },
   })
 
