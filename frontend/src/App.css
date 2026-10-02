@@ -383,3 +383,5 @@
 .timetable-other-days .timetable-grid{min-width:900px}
 .timetable-other-days .timetable-day{min-height:300px}
 @media(max-width:650px){.timetable-today-head{align-items:flex-start;flex-direction:column}.timetable-today-lecture{flex-basis:205px}.timetable-other-head{align-items:flex-start;gap:8px;flex-direction:column}}
+
+.timetable-other-head-right{display:flex;align-items:center;gap:10px}.timetable-other-head-right>span{font-size:8px;color:var(--muted)}@media(max-width:650px){.timetable-other-head-right{align-items:flex-start;flex-direction:column}}
