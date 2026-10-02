@@ -1,0 +1,4 @@
+import { Trophy } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
+import { SectionIntro } from '../components/common/UI'
+export default function ResultsPage(){const {role}=useOutletContext();const marks=[88,92,81,89];return <><SectionIntro eyebrow="ACADEMICS" title={role==='parent'?'Test reports':role==='student'?'My results':'Tests & results'} text="Track assessments, marks and academic performance."><button className="primary"><Trophy size={16}/>New test</button></SectionIntro><div className="result-grid">{['Physics','Mathematics','Chemistry','Biology'].map((subject,i)=><div className="result-card" key={subject}><span>{subject}</span><strong>{marks[i]}%</strong><small>Mid-term test · 1 Oct</small><div className="progress"><i style={{width:marks[i]+'%'}}/></div></div>)}</div></>}
