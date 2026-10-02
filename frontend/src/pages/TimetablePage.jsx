@@ -16,7 +16,7 @@ const month=v=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).fo
 const blank=date=>({date,startTime:'08:00',endTime:'09:00',subject:'',className:'',room:'',teacherId:'',notes:''})
 
 export default function TimetablePage(){
-  const {role}=useOutletContext(); const {token}=useAuth(); const principal=role==='principal'; const today=useMemo(todayIndia,[])
+  const {role}=useOutletContext(); const {token,user}=useAuth(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
   const [selected,setSelected]=useState(today),[entries,setEntries]=useState([]),[teachers,setTeachers]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[open,setOpen]=useState(false),[editId,setEditId]=useState(null),[form,setForm]=useState(blank(today))
   const days=useMemo(()=>weekDays(selected),[selected]), from=days[0], to=days[6]
   const load=useCallback(async()=>{setLoading(true);setError('');try{const r=await getTimetableRangeApi(token,from,to);setEntries(r.entries||[])}catch(e){setError(e.message||'Unable to load timetable.')}finally{setLoading(false)}},[token,from,to])
