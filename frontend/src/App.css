@@ -285,3 +285,9 @@
 @media(max-width:900px){.attendance-stat-grid{grid-template-columns:repeat(2,1fr)}.attendance-live-banner{grid-template-columns:auto 1fr auto}.attendance-mini-qr{display:none}}
 @media(max-width:620px){.attendance-date-bar{flex-wrap:wrap}.attendance-selected-date{order:0;min-width:calc(100% - 100px)}.attendance-date-bar .secondary{margin-left:auto}.attendance-people-head{align-items:flex-start;flex-direction:column}.attendance-people-tools{align-items:flex-start;flex-direction:column}.attendance-search{width:100%}.attendance-history-row{grid-template-columns:1.5fr .8fr .55fr .55fr .55fr}.attendance-history-row.header{font-size:6px}.attendance-student-row{grid-template-columns:35px 1fr 18px}.attendance-student-time{display:none}.attendance-live-banner{grid-template-columns:auto 1fr}.attendance-live-banner .secondary{grid-column:1/-1;width:100%;justify-content:center}.attendance-detail-days{grid-template-columns:1fr}}
 @media(max-width:480px){.attendance-stat-grid{gap:7px}.attendance-stat-card{min-height:100px;padding:13px}.attendance-stat-card strong{font-size:25px}.attendance-stat-card svg{right:13px;bottom:13px}.attendance-history-table{overflow-x:auto}.attendance-history-row{min-width:460px}.attendance-detail-modal{padding:18px}}
+
+.attendance-history-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px 14px}
+.attendance-history-summary div{padding:12px;border:1px solid var(--line);border-radius:10px;background:#f9fcfa}
+.attendance-history-summary span{display:block;color:var(--muted);font-size:7px;letter-spacing:.8px;font-weight:800}
+.attendance-history-summary strong{display:block;margin-top:5px;color:var(--dark);font-size:17px}
+@media(max-width:560px){.attendance-history-summary{grid-template-columns:1fr}}
