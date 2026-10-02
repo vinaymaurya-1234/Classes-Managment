@@ -20,6 +20,17 @@ const formatDate = value => {
   })
 }
 
+const formatSessionDate = value => {
+  if (!value) return ''
+  return new Date(value).toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const statusLabel = status => ({
   'not-started': 'Not started',
   started: 'Started',
@@ -63,6 +74,11 @@ export default function ChaptersPage() {
     () => chapters.find(chapter => chapter._id === selectedId) || null,
     [chapters, selectedId]
   )
+
+  const sessionNotes = useMemo(() => {
+    if (!currentChapter?.sessionNotes) return []
+    return [...currentChapter.sessionNotes].reverse()
+  }, [currentChapter])
 
   const handleCreate = async event => {
     event.preventDefault()
@@ -144,57 +160,88 @@ export default function ChaptersPage() {
         </div>
       </Card>
     ) : (
-      <div className="chapter-layout">
-        <Card title="Current chapter">
-          {currentChapter && <div className="active-chapter">
-            <div className="chapter-top">
-              <div>
-                <span>{currentChapter.subject.toUpperCase()} · {currentChapter.className.toUpperCase()}</span>
-                <h2>{currentChapter.title}</h2>
-                <p>Chapter {currentChapter.chapterNumber} · {currentChapter.startedAt ? `Started ${formatDate(currentChapter.startedAt)}` : 'Not started'}</p>
+      <div className="chapter-page-stack">
+        <div className="chapter-layout">
+          <Card title="Current chapter">
+            {currentChapter && <div className="active-chapter">
+              <div className="chapter-top">
+                <div>
+                  <span>{currentChapter.subject.toUpperCase()} · {currentChapter.className.toUpperCase()}</span>
+                  <h2>{currentChapter.title}</h2>
+                  <p>Chapter {currentChapter.chapterNumber} · {currentChapter.startedAt ? `Started ${formatDate(currentChapter.startedAt)}` : 'Not started'}</p>
+                </div>
+                <span className={`pill ${currentChapter.status === 'started' ? 'success' : 'neutral'}`}>
+                  {statusLabel(currentChapter.status)}
+                </span>
               </div>
-              <span className={`pill ${currentChapter.status === 'started' ? 'success' : 'neutral'}`}>
-                {statusLabel(currentChapter.status)}
-              </span>
-            </div>
-            <div className="progress large"><i style={{ width: `${currentChapter.progress}%` }} /></div>
-            <div className="chapter-meta">
-              <span>{currentChapter.progress}% completed</span>
-              <span>{currentChapter.sessions} sessions logged</span>
-            </div>
-            <div className="chapter-actions">
-              {currentChapter.status === 'not-started' && <button className="primary" disabled={saving} onClick={() => runAction('start')}>
-                <PlayCircle size={16} />Start chapter
-              </button>}
-              {currentChapter.status !== 'completed' && <>
-                <button className="secondary" disabled={saving} onClick={() => setShowNote(true)}>
-                  <ClipboardList size={16} />Add session note
+              <div className="progress large"><i style={{ width: `${currentChapter.progress}%` }} /></div>
+              <div className="chapter-meta">
+                <span>{currentChapter.progress}% completed</span>
+                <span>{currentChapter.sessions} sessions logged</span>
+              </div>
+              <div className="chapter-actions">
+                {currentChapter.status === 'not-started' && <button className="primary" disabled={saving} onClick={() => runAction('start')}>
+                  <PlayCircle size={16} />Start chapter
+                </button>}
+                {currentChapter.status !== 'completed' && <>
+                  <button className="secondary" disabled={saving} onClick={() => setShowNote(true)}>
+                    <ClipboardList size={16} />Add session note
+                  </button>
+                  <button className="primary" disabled={saving} onClick={() => runAction('complete')}>
+                    <CheckCircle2 size={16} />Mark chapter completed
+                  </button>
+                </>}
+                <button className="chapter-delete" disabled={saving} onClick={() => handleDelete(currentChapter)} title="Delete chapter">
+                  <Trash2 size={16} />
                 </button>
-                <button className="primary" disabled={saving} onClick={() => runAction('complete')}>
-                  <CheckCircle2 size={16} />Mark chapter completed
-                </button>
-              </>}
-              <button className="chapter-delete" disabled={saving} onClick={() => handleDelete(currentChapter)} title="Delete chapter">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>}
-        </Card>
+              </div>
+            </div>}
+          </Card>
 
-        <Card title="My chapters">
-          <div className="chapter-list">
-            {chapters.map(chapter => <button
-              key={chapter._id}
-              className={`chapter-list-item ${chapter._id === selectedId ? 'selected' : ''}`}
-              onClick={() => setSelectedId(chapter._id)}
-            >
-              <span className="chapter-list-copy">
-                <b>{chapter.title}</b>
-                <span>{chapter.subject} · {chapter.progress}%</span>
-              </span>
-              <i className={`pill ${chapter.status === 'started' ? 'success' : 'neutral'}`}>{statusLabel(chapter.status)}</i>
-            </button>)}
-          </div>
+          <Card title="My chapters">
+            <div className="chapter-list">
+              {chapters.map(chapter => <button
+                key={chapter._id}
+                className={`chapter-list-item ${chapter._id === selectedId ? 'selected' : ''}`}
+                onClick={() => setSelectedId(chapter._id)}
+              >
+                <span className="chapter-list-copy">
+                  <b>{chapter.title}</b>
+                  <span>{chapter.subject} · {chapter.progress}%</span>
+                </span>
+                <i className={`pill ${chapter.status === 'started' ? 'success' : 'neutral'}`}>{statusLabel(chapter.status)}</i>
+              </button>)}
+            </div>
+          </Card>
+        </div>
+
+        <Card title="Session history">
+          {sessionNotes.length === 0 ? (
+            <div className="session-empty">
+              <ClipboardList size={24} />
+              <div>
+                <b>No session notes yet</b>
+                <p>Add a session note after teaching to keep a record of what was covered.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="session-history">
+              {sessionNotes.map((session, index) => (
+                <article className="session-item" key={session._id || `${session.date}-${index}`}>
+                  <div className="session-marker">{sessionNotes.length - index}</div>
+                  <div className="session-content">
+                    <div className="session-heading">
+                      <div>
+                        <span>SESSION {sessionNotes.length - index}</span>
+                        <strong>{formatSessionDate(session.date)}</strong>
+                      </div>
+                    </div>
+                    <p>{session.note}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     )}
