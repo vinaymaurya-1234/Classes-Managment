@@ -1,11 +1,19 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const TOKEN_KEY = 'classleaf_auth_token'
 
 async function request(path, options = {}) {
   let response
 
+  const token = localStorage.getItem(TOKEN_KEY)
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {}
+
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader,
+        ...(options.headers || {}),
+      },
       ...options,
     })
   } catch (error) {
