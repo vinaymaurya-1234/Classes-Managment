@@ -259,3 +259,173 @@ export const getStudentAttendanceSummary = async (req, res, next) => {
     next(error)
   }
 }
+
+
+const isValidDateString = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
+
+const getDateOffset = (dateString, days) => {
+  const date = new Date(dateString + 'T00:00:00Z')
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+export const getPrincipalAttendanceDashboard = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'principal')) {
+      return res.status(403).json({ success: false, message: 'Only the principal can view attendance details' })
+    }
+
+    const date = String(req.query.date || getIndiaDate())
+    if (!isValidDateString(date)) {
+      return res.status(400).json({ success: false, message: 'Invalid date. Use YYYY-MM-DD.' })
+    }
+
+    const [students, session] = await Promise.all([
+      User.find({ role: 'student' }).select('name email phone avatarUrl').sort({ name: 1 }).lean(),
+      AttendanceSession.findOne({ date, active: true }),
+    ])
+
+    const records = session
+      ? await AttendanceRecord.find({ session: session._id, status: 'present' })
+          .populate('student', 'name email phone avatarUrl')
+          .sort({ markedAt: 1 }).lean()
+      : []
+
+    const presentIds = new Set(records.map(record => String(record.student?._id)))
+    const presentStudents = records.filter(record => record.student).map(record => ({
+      id: record.student._id.toString(),
+      name: record.student.name,
+      email: record.student.email,
+      phone: record.student.phone || '',
+      avatarUrl: record.student.avatarUrl || '',
+      markedAt: record.markedAt,
+      status: record.status,
+    }))
+
+    const absentStudents = students.filter(student => !presentIds.has(String(student._id))).map(student => ({
+      id: student._id.toString(),
+      name: student.name,
+      email: student.email,
+      phone: student.phone || '',
+      avatarUrl: student.avatarUrl || '',
+    }))
+
+    return res.json({
+      success: true, date,
+      session: session ? { id: session._id.toString(), date: session.date, createdAt: session.createdAt, active: session.active } : null,
+      totalStudents: students.length,
+      presentCount: presentStudents.length,
+      absentCount: absentStudents.length,
+      attendancePercentage: students.length ? Math.round((presentStudents.length / students.length) * 100) : 0,
+      presentStudents,
+      absentStudents,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getPrincipalAttendanceHistory = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'principal')) {
+      return res.status(403).json({ success: false, message: 'Only the principal can view attendance history' })
+    }
+
+    const today = getIndiaDate()
+    const from = String(req.query.from || getDateOffset(today, -29))
+    const to = String(req.query.to || today)
+
+    if (!isValidDateString(from) || !isValidDateString(to) || from > to) {
+      return res.status(400).json({ success: false, message: 'Invalid date range. Use YYYY-MM-DD.' })
+    }
+
+    const [students, sessions] = await Promise.all([
+      User.countDocuments({ role: 'student' }),
+      AttendanceSession.find({ date: { $gte: from, $lte: to }, active: true }).sort({ date: -1 }).lean(),
+    ])
+
+    const records = sessions.length
+      ? await AttendanceRecord.find({ session: { $in: sessions.map(session => session._id) }, status: 'present' })
+          .select('session student markedAt').lean()
+      : []
+
+    const presentBySession = new Map()
+    records.forEach(record => {
+      const key = String(record.session)
+      presentBySession.set(key, (presentBySession.get(key) || 0) + 1)
+    })
+
+    const sessionByDate = new Map(sessions.map(session => [session.date, session]))
+    const days = []
+    for (let current = to; current >= from; current = getDateOffset(current, -1)) {
+      const session = sessionByDate.get(current)
+      const present = session ? (presentBySession.get(String(session._id)) || 0) : 0
+      days.push({
+        date: current,
+        hasSession: Boolean(session),
+        present,
+        absent: session ? Math.max(students - present, 0) : 0,
+        totalStudents: students,
+        percentage: session && students ? Math.round((present / students) * 100) : 0,
+      })
+    }
+
+    return res.json({ success: true, from, to, totalStudents: students, days })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getPrincipalStudentAttendance = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'principal')) {
+      return res.status(403).json({ success: false, message: 'Only the principal can view student attendance' })
+    }
+
+    const student = await User.findOne({ _id: req.params.studentId, role: 'student' })
+      .select('name email phone avatarUrl').lean()
+
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' })
+
+    const today = getIndiaDate()
+    const from = String(req.query.from || getDateOffset(today, -29))
+    const to = String(req.query.to || today)
+
+    if (!isValidDateString(from) || !isValidDateString(to) || from > to) {
+      return res.status(400).json({ success: false, message: 'Invalid date range. Use YYYY-MM-DD.' })
+    }
+
+    const sessions = await AttendanceSession.find({ date: { $gte: from, $lte: to }, active: true })
+      .sort({ date: -1 }).lean()
+
+    const records = sessions.length
+      ? await AttendanceRecord.find({
+          session: { $in: sessions.map(session => session._id) },
+          student: student._id,
+          status: 'present',
+        }).select('session markedAt status').lean()
+      : []
+
+    const recordBySession = new Map(records.map(record => [String(record.session), record]))
+    const days = sessions.map(session => ({
+      date: session.date,
+      present: Boolean(recordBySession.get(String(session._id))),
+      markedAt: recordBySession.get(String(session._id))?.markedAt || null,
+    }))
+    const present = days.filter(day => day.present).length
+
+    return res.json({
+      success: true,
+      student: {
+        id: student._id.toString(), name: student.name, email: student.email,
+        phone: student.phone || '', avatarUrl: student.avatarUrl || '',
+      },
+      from, to, totalSessions: sessions.length, present,
+      absent: Math.max(sessions.length - present, 0),
+      percentage: sessions.length ? Math.round((present / sessions.length) * 100) : 0,
+      days,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
