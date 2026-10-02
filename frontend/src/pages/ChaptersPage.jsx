@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, CheckCircle2, ClipboardList, Loader2, PlayCircle, Plus, Trash2, X } from 'lucide-react'
 import { Card, SectionIntro } from '../components/common/UI'
+import { useAuth } from '../context/AuthContext'
 import { createChapter, deleteChapter, getChapters, updateChapter } from '../api/chapters.api'
 import './ChaptersPage.css'
 
+const CLASS_OPTIONS = ['Class 10', 'Class 11', 'Class 12']
+
 const emptyForm = {
   subject: '',
-  className: '',
+  className: 'Class 10',
   chapterNumber: '',
   title: '',
 }
@@ -38,8 +41,10 @@ const statusLabel = status => ({
 }[status] || status)
 
 export default function ChaptersPage() {
+  const { token } = useAuth()
   const [chapters, setChapters] = useState([])
   const [selectedId, setSelectedId] = useState(null)
+  const [selectedClass, setSelectedClass] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [showNote, setShowNote] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -48,11 +53,11 @@ export default function ChaptersPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const loadChapters = async (keepSelected = true) => {
+  const loadChapters = async keepSelected => {
     try {
       setLoading(true)
       setError('')
-      const response = await getChapters()
+      const response = await getChapters(token, selectedClass === 'all' ? '' : selectedClass)
       const data = response.data || []
       setChapters(data)
       if (!keepSelected || !data.some(chapter => chapter._id === selectedId)) {
@@ -67,8 +72,8 @@ export default function ChaptersPage() {
   }
 
   useEffect(() => {
-    loadChapters(false)
-  }, [])
+    if (token) loadChapters(false)
+  }, [token, selectedClass])
 
   const currentChapter = useMemo(
     () => chapters.find(chapter => chapter._id === selectedId) || null,
@@ -85,11 +90,11 @@ export default function ChaptersPage() {
     try {
       setSaving(true)
       setError('')
-      const response = await createChapter({ ...form, chapterNumber: Number(form.chapterNumber) })
-      setChapters(prev => [response.data, ...prev])
-      setSelectedId(response.data._id)
-      setForm(emptyForm)
+      const response = await createChapter({ ...form, chapterNumber: Number(form.chapterNumber) }, token)
       setShowForm(false)
+      setForm(emptyForm)
+      setSelectedClass(response.data.className)
+      setSelectedId(response.data._id)
     } catch (err) {
       setError(err.message || 'Unable to create chapter.')
     } finally {
@@ -102,7 +107,7 @@ export default function ChaptersPage() {
     try {
       setSaving(true)
       setError('')
-      const response = await updateChapter(currentChapter._id, { action, ...body })
+      const response = await updateChapter(currentChapter._id, { action, ...body }, token)
       setChapters(prev => prev.map(item => item._id === response.data._id ? response.data : item))
     } catch (err) {
       setError(err.message || 'Unable to update chapter.')
@@ -124,7 +129,7 @@ export default function ChaptersPage() {
     try {
       setSaving(true)
       setError('')
-      await deleteChapter(chapter._id)
+      await deleteChapter(chapter._id, token)
       const remaining = chapters.filter(item => item._id !== chapter._id)
       setChapters(remaining)
       setSelectedId(remaining[0]?._id || null)
@@ -139,12 +144,23 @@ export default function ChaptersPage() {
     <SectionIntro
       eyebrow="TEACHING · CHAPTERS"
       title="Chapter progress"
-      text="Create chapters for subjects and keep one chapter active until it is completed."
+      text="Create and track chapters separately for each class you teach."
     >
       <button className="primary" onClick={() => { setForm(emptyForm); setShowForm(true) }}>
         <BookOpen size={16} />New chapter
       </button>
     </SectionIntro>
+
+    <div className="chapter-filter-bar">
+      <div>
+        <span className="chapter-filter-label">VIEW CLASS</span>
+        <strong>{selectedClass === 'all' ? 'All classes' : selectedClass}</strong>
+      </div>
+      <select value={selectedClass} onChange={event => setSelectedClass(event.target.value)} aria-label="Filter chapters by class">
+        <option value="all">All classes</option>
+        {CLASS_OPTIONS.map(className => <option key={className} value={className}>{className}</option>)}
+      </select>
+    </div>
 
     {error && <div className="chapter-alert" role="alert">{error}</div>}
 
@@ -154,8 +170,8 @@ export default function ChaptersPage() {
       <Card>
         <div className="chapter-empty">
           <BookOpen size={30} />
-          <h3>No chapters yet</h3>
-          <p>Create your first chapter to start tracking teaching progress.</p>
+          <h3>No chapters for this class</h3>
+          <p>Create a chapter for {selectedClass === 'all' ? 'one of your classes' : selectedClass} to start tracking teaching progress.</p>
           <button className="primary" onClick={() => setShowForm(true)}><Plus size={16} />Create chapter</button>
         </div>
       </Card>
@@ -207,7 +223,7 @@ export default function ChaptersPage() {
               >
                 <span className="chapter-list-copy">
                   <b>{chapter.title}</b>
-                  <span>{chapter.subject} · {chapter.progress}%</span>
+                  <span>{chapter.subject} · {chapter.className} · {chapter.progress}%</span>
                 </span>
                 <i className={`pill ${chapter.status === 'started' ? 'success' : 'neutral'}`}>{statusLabel(chapter.status)}</i>
               </button>)}
@@ -251,7 +267,7 @@ export default function ChaptersPage() {
         <div className="chapter-modal-header"><div><span className="eyebrow">TEACHING</span><h3>New chapter</h3></div><button type="button" className="chapter-close" onClick={() => setShowForm(false)}><X size={18} /></button></div>
         <div className="chapter-form-grid">
           <label>Subject<input required value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Physics" /></label>
-          <label>Class<input required value={form.className} onChange={e => setForm({ ...form, className: e.target.value })} placeholder="Class 12" /></label>
+          <label>Class<select required value={form.className} onChange={e => setForm({ ...form, className: e.target.value })}>{CLASS_OPTIONS.map(className => <option key={className} value={className}>{className}</option>)}</select></label>
           <label>Chapter number<input required min="1" type="number" value={form.chapterNumber} onChange={e => setForm({ ...form, chapterNumber: e.target.value })} placeholder="4" /></label>
           <label className="full">Chapter title<input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Electrostatics" /></label>
         </div>
@@ -262,7 +278,7 @@ export default function ChaptersPage() {
     {showNote && currentChapter && <div className="chapter-modal-backdrop" onMouseDown={() => !saving && setShowNote(false)}>
       <form className="chapter-modal" onSubmit={handleSessionNote} onMouseDown={event => event.stopPropagation()}>
         <div className="chapter-modal-header"><div><span className="eyebrow">SESSION</span><h3>Add session note</h3></div><button type="button" className="chapter-close" onClick={() => setShowNote(false)}><X size={18} /></button></div>
-        <p className="chapter-modal-copy">{currentChapter.title} · Session {currentChapter.sessions + 1}</p>
+        <p className="chapter-modal-copy">{currentChapter.className} · {currentChapter.subject} · {currentChapter.title} · Session {currentChapter.sessions + 1}</p>
         <label className="note-field">What was covered?<textarea required rows="5" value={note} onChange={e => setNote(e.target.value)} placeholder="Topics covered, homework given, student observations..." /></label>
         <div className="chapter-modal-actions"><button type="button" className="secondary" onClick={() => setShowNote(false)}>Cancel</button><button className="primary" disabled={saving}>{saving ? 'Saving...' : 'Save note'}</button></div>
       </form>
