@@ -86,9 +86,18 @@ export default function PrincipalAttendanceQr() {
     if (next === 'month') {
       const r = monthRange(today)
       setFrom(r.from); setTo(r.to)
-    } else {
+    } else if (next === '30') {
       setFrom(offset(today, -29)); setTo(today)
     }
+  }
+
+  const applyCustomRange = () => {
+    if (!from || !to || from > to) {
+      setError('Please select a valid attendance date range.')
+      return
+    }
+    setRange('custom')
+    loadHistory()
   }
 
   const students = tab === 'present' ? dashboard?.presentStudents || [] : dashboard?.absentStudents || []
