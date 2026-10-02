@@ -1,0 +1,5 @@
+import { UserPlus, ChevronRight } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
+import { Card, SectionIntro } from '../components/common/UI'
+import { students, teachers } from '../data/mockData'
+export default function PeoplePage({type,title}){const {search}=useOutletContext();const isStudent=type==='student';const source=isStudent?students:teachers;const data=source.filter(x=>x.name.toLowerCase().includes((search||'').toLowerCase()));const heading=title||(isStudent?'Students':'Teachers');return <><SectionIntro eyebrow="MANAGEMENT" title={heading} text={isStudent?'Manage student records and academic details':'Manage faculty and teaching assignments.'}><button className="primary"><UserPlus size={16}/>Add {type}</button></SectionIntro><Card title={heading+' directory'}><div className="attendance-table">{data.map(s=><div className="table-row" key={s.name}><span className="person"><span className="avatar green">{s.name[0]}</span><div><b>{s.name}</b><small>{s.className}</small></div></span><strong>{s.attendance}% attendance</strong><span className="pill success">Active</span><ChevronRight size={15}/></div>)}</div></Card></>}
