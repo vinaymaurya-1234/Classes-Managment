@@ -30,3 +30,6 @@ export const markAttendanceApi = (token, accessToken) =>
     method: 'POST',
     body: JSON.stringify({ accessToken }),
   })
+
+export const getStudentAttendanceSummaryApi = token =>
+  request('/my', token)
