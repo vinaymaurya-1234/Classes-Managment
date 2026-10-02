@@ -8,6 +8,7 @@ import TimetablePage from '../pages/TimetablePage'
 import AttendancePage from '../pages/AttendancePage'
 import HomeworkPage from '../pages/HomeworkPage'
 import ChaptersPage from '../pages/ChaptersPage'
+import TeacherClassesPage from '../pages/TeacherClassesPage'
 import FeesPage from '../pages/FeesPage'
 import ResultsPage from '../pages/ResultsPage'
 import PeoplePage from '../pages/PeoplePage'
@@ -29,6 +30,7 @@ export default function AppRouter() {
         <Route path="/:role/attendance" element={<AttendancePage />} />
         <Route path="/:role/homework" element={<HomeworkPage />} />
         <Route path="/:role/chapters" element={<ChaptersPage />} />
+        <Route path="/teacher/classes" element={<TeacherClassesPage />} />
         <Route path="/:role/fees" element={<FeesPage />} />
         <Route path="/:role/results" element={<ResultsPage />} />
         <Route path="/:role/students" element={<PeoplePage type="student" />} />
