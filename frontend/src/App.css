@@ -291,3 +291,16 @@
 .attendance-history-summary span{display:block;color:var(--muted);font-size:7px;letter-spacing:.8px;font-weight:800}
 .attendance-history-summary strong{display:block;margin-top:5px;color:var(--dark);font-size:17px}
 @media(max-width:560px){.attendance-history-summary{grid-template-columns:1fr}}
+
+
+/* Principal attendance QR preview */
+.attendance-mini-qr{border:1px solid var(--line);cursor:zoom-in;padding:3px;transition:transform .15s ease,box-shadow .15s ease}
+.attendance-mini-qr:hover{transform:scale(1.04);box-shadow:0 8px 20px rgba(39,86,58,.12)}
+.attendance-qr-preview-backdrop{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:20px;background:rgba(15,35,25,.48);backdrop-filter:blur(7px)}
+.attendance-qr-preview-modal{position:relative;width:min(520px,100%);padding:28px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 28px 90px rgba(23,56,39,.3);text-align:center}
+.attendance-qr-preview-modal h3{margin:3px 38px 5px;font-size:18px;letter-spacing:-.4px}
+.attendance-qr-preview-modal>p{margin:10px 0 0;color:var(--muted);font-size:9px;line-height:1.5}
+.attendance-qr-preview-close{position:absolute;right:16px;top:16px;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;background:#f7faf8;color:#60776b}
+.attendance-qr-preview-image{width:min(420px,80vw);aspect-ratio:1;margin:18px auto 0;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 12px 30px rgba(39,86,58,.08)}
+.attendance-qr-preview-image img{width:100%;height:100%;display:block;object-fit:contain}
+@media(max-width:560px){.attendance-qr-preview-modal{padding:22px 16px}.attendance-qr-preview-image{width:min(360px,82vw)}}
