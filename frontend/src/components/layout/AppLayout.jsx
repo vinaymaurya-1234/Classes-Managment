@@ -12,7 +12,7 @@ const nav = {
 }
 const icons = { overview:LayoutDashboard, students:Users, teachers:Users, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users }
 
-export default function AppLayout() {
+export default function AppLayout({ children }) {
   const { role: routeRole } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -39,7 +39,7 @@ export default function AppLayout() {
     {mobileNav && <button className="sidebar-backdrop" onClick={()=>setMobileNav(false)} aria-label="Close navigation"/>}
     <main className="main">
       <header className="topbar"><button className="mobile-menu" onClick={()=>setMobileNav(true)}><Menu size={20}/></button><div className="breadcrumb"><Link to={`/${role}/overview`}>ClassLeaf</Link><ChevronRight size={13}/><strong>{pageLabel}</strong></div><div className="topbar-actions"><div className="search"><Search size={16}/><input value={filtered} onChange={e=>setSearch(e.target.value)} placeholder="Search students, classes..."/></div><button className="icon-button"><Bell size={18}/><i/></button><div className="profile-menu"><button className="top-avatar" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu">{(user?.name || info.label).charAt(0).toUpperCase()}</button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><div className="avatar">{(user?.name || info.label).charAt(0).toUpperCase()}</div><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
-      <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{({principal:'Good morning, Principal.',teacher:'Ready for today’s lessons?',student:'Good morning, Aarav.',parent:'Welcome back.'})[role]}</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>Friday, 2 October 2026</span></div></div><Outlet context={{role,search,setSearch,go}}/></div>
+      <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{({principal:'Good morning, Principal.',teacher:'Ready for today’s lessons?',student:'Good morning, Aarav.',parent:'Welcome back.'})[role]}</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>Friday, 2 October 2026</span></div></div>{children || <Outlet context={{role,search,setSearch,go}}/>}</div>
     </main>
   </div>
 }
