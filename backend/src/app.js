@@ -11,10 +11,15 @@ import noticesRoutes from './routes/notices.routes.js'
 
 const app = express()
 
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
+const allowedOrigins = [
+  ...(process.env.CLIENT_URL || '').split(','),
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://10.22.194.69:5173',
+]
   .map(origin => origin.trim())
   .filter(Boolean)
+  .filter((origin, index, origins) => origins.indexOf(origin) === index)
 
 app.use(helmet())
 app.use(cors({ origin: allowedOrigins, credentials: true }))
