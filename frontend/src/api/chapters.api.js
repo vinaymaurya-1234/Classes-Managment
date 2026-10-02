@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export const getChapters = () => api.get('/api/chapters')
-export const createChapter = payload => api.post('/api/chapters', payload)
-export const updateChapter = (id, payload) => api.put(`/api/chapters/${id}`, payload)
-export const deleteChapter = id => api.delete(`/api/chapters/${id}`)
+export const getChapters = token => api.get('/api/chapters', token)
+export const createChapter = (payload, token) => api.post('/api/chapters', payload, token)
+export const updateChapter = (id, payload, token) => api.put(`/api/chapters/${id}`, payload, token)
+export const deleteChapter = (id, token) => api.delete(`/api/chapters/${id}`, token)
