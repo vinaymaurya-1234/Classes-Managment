@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { students } from '../data/mockData'
 import PrincipalAttendanceQr from '../components/attendance/PrincipalAttendanceQr'
+import StudentAttendanceScanner from '../components/attendance/StudentAttendanceScanner'
 
 export default function AttendancePage() {
   const { role } = useOutletContext()
@@ -12,33 +13,7 @@ export default function AttendancePage() {
   }
 
   if (role === 'student') {
-    return (
-      <>
-        <SectionIntro
-          eyebrow="ATTENDANCE"
-          title="Mark your attendance"
-          text="Scan the classroom QR code to register your presence."
-        />
-        <div className="attendance-grid">
-          <section className="scanner-card">
-            <div className="scanner-frame">
-              <QrCode size={105} />
-              <span>QR SCANNER</span>
-            </div>
-            <button className="primary big">Open camera & scan</button>
-            <p>Your attendance is only recorded for an active lecture.</p>
-          </section>
-          <Card title="Attendance summary">
-            <div className="attendance-summary">
-              <strong>94%</strong>
-              <span>Excellent attendance</span>
-              <div className="progress"><i style={{ width: '94%' }} /></div>
-              <p>47 present · 3 absent · 50 lectures</p>
-            </div>
-          </Card>
-        </div>
-      </>
-    )
+    return <StudentAttendanceScanner />
   }
 
   return (
