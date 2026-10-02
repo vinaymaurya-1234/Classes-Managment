@@ -413,3 +413,14 @@
   .timetable-other-head-right{width:100%}
   .timetable-other-head-right .secondary{width:100%;justify-content:center}
 }
+
+
+@media(max-width:800px){
+  html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+  .app-shell,.main,.content{width:100%;min-width:0;max-width:100%}
+  .main{overflow-x:hidden}
+  .content{padding-left:14px;padding-right:14px}
+  .role-banner,.timetable-page,.timetable-schedule-wrap,.timetable-today-panel,.timetable-other-days{width:100%;min-width:0;max-width:100%}
+  .timetable-today-scroll{width:100%;min-width:0;max-width:100%;overflow-x:auto}
+  .timetable-other-days{overflow:hidden}
+}
