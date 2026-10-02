@@ -10,6 +10,12 @@ const sessionNoteSchema = new mongoose.Schema(
 
 const chapterSchema = new mongoose.Schema(
   {
+    teacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     subject: { type: String, required: true, trim: true },
     className: { type: String, required: true, trim: true },
     chapterNumber: { type: Number, required: true, min: 1 },
@@ -28,6 +34,9 @@ const chapterSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-chapterSchema.index({ subject: 1, className: 1, chapterNumber: 1 }, { unique: true })
+chapterSchema.index(
+  { teacher: 1, subject: 1, className: 1, chapterNumber: 1 },
+  { unique: true }
+)
 
 export default mongoose.model('Chapter', chapterSchema)
