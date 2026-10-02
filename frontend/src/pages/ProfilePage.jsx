@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { changePasswordApi, updateProfileApi } from '../api/auth.api'
 
 export default function ProfilePage() {
-  const { user, token } = useAuth()
+  const { user, token, updateUser } = useAuth()
   const [form, setForm] = useState({ name: '', phone: '', avatarUrl: '' })
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '' })
   const [message, setMessage] = useState('')
@@ -20,7 +20,7 @@ export default function ProfilePage() {
     setError('')
     try {
       const result = await updateProfileApi(token, form)
-      window.dispatchEvent(new CustomEvent('classleaf:user-updated', { detail: result.user }))
+      updateUser(result.user)
       setMessage('Profile updated successfully.')
     } catch (err) {
       setError(err.message)
@@ -61,4 +61,3 @@ export default function ProfilePage() {
       </form>
     </div>
   </div>
-}
