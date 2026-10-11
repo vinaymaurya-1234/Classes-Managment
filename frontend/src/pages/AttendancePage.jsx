@@ -1,4 +1,5 @@
 import { ClipboardCheck } from 'lucide-react'
+import './workflow.css'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import PrincipalAttendanceQr from '../components/attendance/PrincipalAttendanceQr'
