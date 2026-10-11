@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   avatarUrl: { type: String, trim: true, default: '' },
   className: { type: String, trim: true, default: '' },
   std: { type: Number, enum: [10, 11, 12] },
+  division: { type: String, enum: ['A', 'B', 'C'] },
   teachingClasses: { type: [String], default: [] },
   children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }, { timestamps: true })
