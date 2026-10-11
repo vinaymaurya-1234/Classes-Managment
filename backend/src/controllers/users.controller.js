@@ -12,6 +12,8 @@ const publicUser = user => ({
   avatarUrl: user.avatarUrl || '',
   className: user.className || '',
   std: user.std ?? null,
+  division: user.division || '',
+  teachingClasses: user.teachingClasses || [],
   createdAt: user.createdAt,
 })
 
@@ -53,6 +55,8 @@ export const createUser = async (req, res, next) => {
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
+    const division = String(req.body.division || '').trim().toUpperCase()
+    const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(value => String(value).trim()).filter(Boolean))] : []
     const childIds = Array.isArray(req.body.childIds)
       ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
       : []
@@ -108,7 +112,7 @@ export const createUser = async (req, res, next) => {
       role,
       phone,
       avatarUrl,
-      ...(role === 'student' ? { std } : {}),
+      ...(role === 'student' ? { std, division, className: `Class ${std}` } : {}),\n      ...(role === 'teacher' ? { teachingClasses } : {}),
       ...(role === 'parent' ? { children: childIds } : {}),
     })
 
