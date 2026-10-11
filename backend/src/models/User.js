@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   className: { type: String, trim: true, default: '' },
   std: { type: Number, enum: [10, 11, 12] },
   teachingClasses: { type: [String], default: [] },
+  children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }, { timestamps: true })
 
 userSchema.set('toJSON', {
