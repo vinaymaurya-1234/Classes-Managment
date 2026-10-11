@@ -18,7 +18,12 @@ router.get('/', async (req, res, next) => {
       const data = user.className ? await Homework.find({ className: user.className, status: 'published' }).sort({ dueDate: 1, createdAt: -1 }).lean() : []
       return res.json({ success: true, data })
     }
-    if (user.role === 'parent') return res.json({ success: true, data: [], message: 'Parent-child linking is not configured yet, so homework is hidden to protect student privacy.' })
+    if (user.role === 'parent') {
+      const parent = await User.findById(user._id).populate('children', 'className').lean()
+      const classes = [...new Set((parent?.children || []).map(child => child.className).filter(Boolean))]
+      const data = classes.length ? await Homework.find({ className: { $in: classes }, status: 'published' }).sort({ dueDate: 1, createdAt: -1 }).lean() : []
+      return res.json({ success: true, data, message: classes.length ? '' : 'No students are linked to this parent account yet. Ask the principal to link the child account.' })
+    }
     return res.json({ success: true, data: await Homework.find({}).sort({ createdAt: -1 }).lean() })
   } catch (error) { next(error) }
 })
