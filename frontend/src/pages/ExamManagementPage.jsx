@@ -294,7 +294,7 @@ export default function ExamManagementPage() {
   }
 
   const tabs = isTeacher
-    ? [['questions','Question bank'],['generator','Paper generator'],['papers','My papers'],['exams','Online exams'],['evaluation','Evaluation']]
+    ? [['questions','Question bank'],['generator','Paper generator'],['papers','My papers'],['exams','Online exams'],['evaluation','Evaluation'],['results','Results & analysis']]
     : isPrincipal
       ? [['schedule','Exam schedule'],['approvals','Paper approvals'],['results','Results & reports']]
       : isStudent
