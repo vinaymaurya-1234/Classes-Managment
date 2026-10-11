@@ -4,6 +4,7 @@ import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 import { createUserApi, listUsersApi } from '../api/users.api'
+import { api } from '../api/client'
 import { students, teachers } from '../data/mockData'
 
 const labels = { student: 'Students', teacher: 'Teachers', parent: 'Parents' }
@@ -52,6 +53,17 @@ export default function PeoplePage({ type, title }) {
     finally { setSaving(false) }
   }
 
+  const updatePlacement = async person => {
+    const stdInput = window.prompt('Student standard (10, 11 or 12)', String(person.std || 10))
+    if (stdInput === null) return
+    const divisionInput = window.prompt('Student division (A, B or C)', person.division || 'A')
+    if (divisionInput === null) return
+    try {
+      await api.put('/api/users/' + person.id + '/class-placement', { std: Number(stdInput), division: divisionInput.trim().toUpperCase() }, token)
+      await loadUsers()
+    } catch (err) { setError(err.message) }
+  }
+
   return (
     <>
       <SectionIntro eyebrow="MANAGEMENT" title={heading} text={descriptions[type] || 'Manage people connected to your tuition centre.'}>
@@ -66,7 +78,7 @@ export default function PeoplePage({ type, title }) {
                 {person.avatarUrl ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" /> : <span className="avatar green">{person.name[0]}</span>}
                 <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `Class ${person.std} - ${person.division || 'A'}` : '') || (type === 'teacher' && person.teachingClasses?.length ? person.teachingClasses.join(', ') : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
               </span>
-              <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
+              <div className="people-row-actions"><strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>{canManage && type === 'student' && <button type="button" className="secondary people-placement-edit" onClick={event => { event.stopPropagation(); updatePlacement(person) }}>Edit class</button>}</div>
               <span className="pill success">Active</span><ChevronRight size={15} />
             </div>)}
           </div>
