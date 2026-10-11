@@ -77,12 +77,13 @@ router.post('/questions', async (req, res, next) => {
     const subject = String(body.subject || '').trim(), text = String(body.text || '').trim()
     const type = ['mcq', 'short', 'long', 'true_false'].includes(body.type) ? body.type : 'mcq'
     const marks = Number(body.marks || 1)
-    if (!stds.includes(std) || !divisions.includes(division) || !subject || !text || !Number.isFinite(marks) || marks <= 0) return fail(res, 400, 'Class, division, subject, question text and valid marks are required.')
+    if (!stds.includes(std) || !divisions.includes(division) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) return fail(res, 400, 'Class, division, subject, question text and valid marks are required.')
     if (!await canTeach(req.user, std, division)) return forbidden(res)
     const options = Array.isArray(body.options) ? body.options.map((o, i) => ({ key: String(o.key || String.fromCharCode(65 + i)), text: String(o.text || '').trim() })).filter(o => o.text) : []
     const correctAnswer = String(body.correctAnswer || '').trim()
     if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) return fail(res, 400, 'Objective questions require options and a correct answer matching an option.')
-    const question = await Question.create({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(body.chapter || '').trim(), topic: String(body.topic || '').trim(), type, text, options, correctAnswer, explanation: String(body.explanation || '').trim(), marks, difficulty: ['easy', 'medium', 'hard'].includes(body.difficulty) ? body.difficulty : 'medium', tags: Array.isArray(body.tags) ? body.tags.map(String).slice(0, 20) : [] })
+    const normalizedAnswer = options.find(o => o.key === correctAnswer || o.text === correctAnswer)?.key || correctAnswer
+    const question = await Question.create({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(body.chapter || '').trim(), topic: String(body.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(body.explanation || '').trim(), marks, difficulty: ['easy', 'medium', 'hard'].includes(body.difficulty) ? body.difficulty : 'medium', tags: Array.isArray(body.tags) ? body.tags.map(String).slice(0, 20) : [] })
     res.status(201).json({ success: true, data: question })
   } catch (error) { next(error) }
 })
@@ -101,12 +102,13 @@ router.post('/questions/import', async (req, res, next) => {
       const marks = Number(row.marks || 1)
       const options = Array.isArray(row.options) ? row.options.map((o, j) => ({ key: String(o.key || String.fromCharCode(65 + j)), text: String(o.text || '').trim() })).filter(o => o.text) : ['A','B','C','D'].map(k => ({ key: k, text: String(row['option' + k] || row[k] || '').trim() })).filter(o => o.text)
       const correctAnswer = String(row.correctAnswer || row.answer || '').trim()
-      if (!stds.includes(std) || !divisions.includes(division) || !subject || !text || !Number.isFinite(marks) || marks <= 0) { errors.push({ row: i + 2, message: 'Missing class, division, subject, question text or valid marks.' }); continue }
+      if (!stds.includes(std) || !divisions.includes(division) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, division, subject, question text or valid marks.' }); continue }
       if (!await canTeach(req.user, std, division)) { errors.push({ row: i + 2, message: `Class ${std}-${division} is not assigned to you.` }); continue }
       if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) { errors.push({ row: i + 2, message: 'Objective question has missing options or an invalid answer.' }); continue }
       const duplicate = await Question.exists({ teacher: req.user._id, className: `Class ${std}`, division, subject, text })
       if (duplicate) { errors.push({ row: i + 2, message: 'Duplicate question skipped.' }); continue }
-      created.push({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(row.chapter || '').trim(), topic: String(row.topic || '').trim(), type, text, options, correctAnswer, explanation: String(row.explanation || '').trim(), marks, difficulty: ['easy','medium','hard'].includes(String(row.difficulty).toLowerCase()) ? String(row.difficulty).toLowerCase() : 'medium' })
+      const normalizedAnswer = options.find(o => o.key === correctAnswer || o.text === correctAnswer)?.key || correctAnswer
+      created.push({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(row.chapter || '').trim(), topic: String(row.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(row.explanation || '').trim(), marks, difficulty: ['easy','medium','hard'].includes(String(row.difficulty).toLowerCase()) ? String(row.difficulty).toLowerCase() : 'medium' })
     }
     const data = created.length ? await Question.insertMany(created) : []
     res.status(201).json({ success: true, imported: data.length, skipped: errors.length, errors })
@@ -154,7 +156,9 @@ router.post('/papers', async (req, res, next) => {
     let questions = []
     if (Array.isArray(body.questionIds) && body.questionIds.length) {
       if (body.questionIds.some(id => !validId(id))) return fail(res, 400, 'One or more question IDs are invalid.')
-      questions = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, className: `Class ${std}`, division, subject })
+      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, className: `Class ${std}`, division, subject })
+      const byId = new Map(found.map(question => [String(question._id), question]))
+      questions = body.questionIds.map(id => byId.get(String(id))).filter(Boolean)
     } else {
       const count = Math.min(100, Math.max(1, Number(body.questionCount || 10)))
       const filter = { teacher: req.user._id, className: `Class ${std}`, division, subject }
@@ -237,6 +241,7 @@ router.put('/exams/:id', async (req, res, next) => {
     if (req.body.durationMinutes !== undefined) exam.durationMinutes = Math.max(1, Number(req.body.durationMinutes))
     if (req.body.status === 'cancelled') exam.status = 'cancelled'
     if (req.body.resultsPublished !== undefined && req.body.resultsPublished === true) {
+      if (Date.now() < new Date(exam.startsAt).getTime() + exam.durationMinutes * 60000) return fail(res, 409, 'The exam must finish before results can be published.')
       if (await ExamAttempt.exists({ exam: exam._id, status: 'in_progress' })) return fail(res, 409, 'Wait until all active attempts are submitted before publishing results.')
       if (await ExamResult.exists({ exam: exam._id, pendingManualCount: { $gt: 0 } })) return fail(res, 409, 'Teachers must finish grading descriptive answers before results can be published.')
       exam.resultsPublished = true
