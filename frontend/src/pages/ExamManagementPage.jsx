@@ -182,8 +182,10 @@ export default function ExamManagementPage() {
     try {
       const mapped = importRows.map(row => {
         const value = key => columnMap[key] ? row[columnMap[key]] : ''
-        const stdValue = String(value('std') || filters.std).match(/\d+/)?.[0] || filters.std
-        return { std: Number(stdValue), division: String(value('division') || filters.division).trim().toUpperCase(), subject: String(value('subject') || filters.subject).trim(), chapter: String(value('chapter') || '').trim(), text: String(value('text') || '').trim(), optionA: String(value('optionA') || '').trim(), optionB: String(value('optionB') || '').trim(), optionC: String(value('optionC') || '').trim(), optionD: String(value('optionD') || '').trim(), correctAnswer: String(value('correctAnswer') || '').trim(), type: String(value('type') || 'mcq').toLowerCase(), marks: Number(value('marks') || 1), difficulty: String(value('difficulty') || 'medium').toLowerCase(), explanation: String(value('explanation') || '').trim() }
+        const classValue = String(value('std') || filters.std)
+        const stdValue = classValue.match(/\d+/)?.[0] || filters.std
+        const divisionValue = String(value('division') || classValue.match(/([ABC])$/i)?.[1] || filters.division).trim().toUpperCase()
+        return { std: Number(stdValue), division: divisionValue, subject: String(value('subject') || filters.subject).trim(), chapter: String(value('chapter') || '').trim(), text: String(value('text') || '').trim(), optionA: String(value('optionA') || '').trim(), optionB: String(value('optionB') || '').trim(), optionC: String(value('optionC') || '').trim(), optionD: String(value('optionD') || '').trim(), correctAnswer: String(value('correctAnswer') || '').trim(), type: String(value('type') || 'mcq').toLowerCase(), marks: Number(value('marks') || 1), difficulty: String(value('difficulty') || 'medium').toLowerCase(), explanation: String(value('explanation') || '').trim() }
       })
       const response = await api.post('/api/exams/questions/import', { rows: mapped }, token)
       setNotice(`Imported ${response.imported} questions; skipped ${response.skipped}.`)
