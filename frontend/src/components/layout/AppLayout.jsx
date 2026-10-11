@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, Menu, MessageSquare, Search, Settings, Trophy, Users, X } from 'lucide-react'
+import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, Menu, MessageSquare, Search, Trophy, Users, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { roles } from '../../data/mockData'
 import { useAuth } from '../../context/AuthContext'
@@ -28,6 +28,7 @@ export default function AppLayout({ children }) {
   const [search,setSearch] = useState('')
   const [profileOpen,setProfileOpen] = useState(false)
   const profileMenuRef = useRef(null)
+  const sidebarProfileRef = useRef(null)
   const info = roles[role]
   const currentKey = location.pathname.split('/')[2] || 'overview'
   const pageLabel = nav[role].find(x => x[1] === currentKey)?.[0] || 'Overview'
@@ -49,7 +50,7 @@ export default function AppLayout({ children }) {
     if (!profileOpen) return undefined
 
     const handleOutsidePointer = event => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+      if (!(profileMenuRef.current && profileMenuRef.current.contains(event.target)) && !(sidebarProfileRef.current && sidebarProfileRef.current.contains(event.target))) {
         setProfileOpen(false)
       }
     }
@@ -72,7 +73,7 @@ export default function AppLayout({ children }) {
       <div className="brand"><div className="brand-mark"><GraduationCap size={21}/></div><div><strong>ClassLeaf</strong><span>Tuition management</span></div><button className="mobile-close" onClick={()=>setMobileNav(false)}><X size={18}/></button></div>
       <div className="role-switcher"><span>YOUR ROLE</span><div className="role-fixed"><strong>{info.label}</strong><small>{info.color}</small></div></div>
       <nav><div className="nav-caption">WORKSPACE</div>{nav[role].map(([label,key])=>{const Icon=icons[key]||LayoutDashboard;return <NavLink key={key} to={`/${role}/${key}`} onClick={()=>setMobileNav(false)} className={({isActive})=>'nav-item '+(isActive?'active':'')}><Icon size={17}/><span>{label}</span><ChevronRight size={14}/></NavLink>})}</nav>
-      <div className="sidebar-bottom"><button className="nav-item"><Settings size={17}/><span>Settings</span></button><div className="sidebar-profile"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{info.label}</span></div></div></div>
+      <div className="sidebar-bottom"><div className="profile-menu sidebar-profile-menu" ref={sidebarProfileRef}><button className="sidebar-profile" onClick={()=>setProfileOpen(v=>!v)} aria-expanded={profileOpen}><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{info.label}</span></div><ChevronRight size={15}/></button>{profileOpen && <div className="profile-dropdown sidebar-profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div>
     </aside>
     {mobileNav && <button className="sidebar-backdrop" onClick={()=>setMobileNav(false)} aria-label="Close navigation"/>}
     <main className="main">
