@@ -12,6 +12,7 @@ const publicUser = user => ({
   avatarUrl: user.avatarUrl || '',
   className: user.className || '',
   std: user.std ?? null,
+  teachingClasses: Array.isArray(user.teachingClasses) ? user.teachingClasses : [],
   createdAt: user.createdAt,
 })
 
@@ -53,6 +54,10 @@ export const createUser = async (req, res, next) => {
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
+    const teachingClasses = Array.isArray(req.body.teachingClasses)
+      ? [...new Set(req.body.teachingClasses.map(value => String(value).trim().toUpperCase()).filter(Boolean))]
+      : []
+    const allowedTeachingClasses = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `${classNumber}-${section}`)))
     const childIds = Array.isArray(req.body.childIds)
       ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
       : []
@@ -73,6 +78,10 @@ export const createUser = async (req, res, next) => {
 
     if (role === 'student' && ![10, 11, 12].includes(std)) {
       return res.status(400).json({ success: false, message: 'STD must be 10, 11 or 12' })
+    }
+
+    if (role === 'teacher' && (!teachingClasses.length || teachingClasses.some(value => !allowedTeachingClasses.has(value)))) {
+      return res.status(400).json({ success: false, message: 'Select at least one valid Class 11 or 12 section (A, B or C) for the teacher.' })
     }
 
     if (password.length < 8) {
@@ -109,6 +118,7 @@ export const createUser = async (req, res, next) => {
       phone,
       avatarUrl,
       ...(role === 'student' ? { std } : {}),
+      ...(role === 'teacher' ? { teachingClasses } : {}),
       ...(role === 'parent' ? { children: childIds } : {}),
     })
 
