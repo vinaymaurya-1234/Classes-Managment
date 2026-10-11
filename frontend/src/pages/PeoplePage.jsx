@@ -89,11 +89,7 @@ export default function PeoplePage({ type, title }) {
                 const [classValue = '', sectionValue = ''] = assignment.split('-')
                 return <div className="teacher-assignment-row" key={index}>
                   <label>Class
-                    <select value={classValue} onChange={event => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.map((item, itemIndex) => itemIndex === index ? `${event.target.value}-${item.split('-')[1] || ''}` : item) }))} required>
-                      <option value="">Select class</option>
-                      <option value="11">11</option>
-                      <option value="12">12</option>
-                    </select>
+                    <input type="number" min="11" max="12" step="1" value={classValue} onChange={event => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.map((item, itemIndex) => itemIndex === index ? `${event.target.value}-${item.split('-')[1] || ''}` : item) }))} placeholder="11 or 12" required />
                   </label>
                   <label>Section
                     <input value={sectionValue} onChange={event => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.map((item, itemIndex) => itemIndex === index ? `${item.split('-')[0] || ''}-${event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)}` : item) }))} placeholder="e.g. A" maxLength={4} required />
