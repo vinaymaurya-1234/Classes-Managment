@@ -8,6 +8,15 @@ const router = Router()
 router.use(requireAuth)
 const role = (req, res, allowed) => allowed.includes(req.user?.role) || res.status(403).json({ success: false, message: 'You do not have permission to perform this action.' })
 
+// Teacher assignments are stored as section labels such as "11-A", while
+// homework's class selector sends labels such as "Class 11". Compare the
+// standard number so both supported formats resolve to the same class.
+const getStd = value => {
+  const match = String(value ?? '').match(/\d+/)
+  const std = match ? Number(match[0]) : NaN
+  return [10, 11, 12].includes(std) ? std : null
+}
+
 router.get('/', async (req, res, next) => {
   try {
     const user = req.user
@@ -36,8 +45,23 @@ router.post('/', async (req, res, next) => {
     const subject = String(req.body.subject || '').trim()
     const title = String(req.body.title || '').trim()
     if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
-    const taught = (req.user.teachingClasses || []).includes(className) || await Chapter.exists({ teacher: req.user._id, className })
-    if (!taught) return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
+
+    const requestedStd = getStd(className)
+    if (!requestedStd) return res.status(400).json({ success: false, message: 'Choose a valid class.' })
+
+    const assignedClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
+    const teachesClass = assignedClasses.some(assigned => getStd(assigned) === requestedStd)
+    const hasChapterForClass = teachesClass
+      ? false
+      : Boolean(await Chapter.exists({
+          teacher: req.user._id,
+          className: { $in: [className, `Class ${requestedStd}`, String(requestedStd), `11-${requestedStd}`] },
+        }))
+
+    if (!teachesClass && !hasChapterForClass) {
+      return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
+    }
+
     const item = await Homework.create({ teacher: req.user._id, className, subject, title, instructions: String(req.body.instructions || '').trim(), dueDate: req.body.dueDate || null, status: req.body.status === 'draft' ? 'draft' : 'published' })
     res.status(201).json({ success: true, data: item })
   } catch (error) { next(error) }
