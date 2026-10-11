@@ -75,8 +75,12 @@ export const createUser = async (req, res, next) => {
       })
     }
 
-    if (role === 'student' && ![10, 11, 12].includes(std)) {
-      return res.status(400).json({ success: false, message: 'STD must be 10, 11 or 12' })
+    if (role === 'student' && (![10, 11, 12].includes(std) || !['A', 'B', 'C'].includes(division))) {
+      return res.status(400).json({ success: false, message: 'Choose a valid standard (10, 11 or 12) and division (A, B or C).' })
+    }
+
+    if (role === 'teacher' && !teachingClasses.length) {
+      return res.status(400).json({ success: false, message: 'Assign the teacher to at least one class and division.' })
     }
 
     if (password.length < 8) {
@@ -112,7 +116,8 @@ export const createUser = async (req, res, next) => {
       role,
       phone,
       avatarUrl,
-      ...(role === 'student' ? { std, division, className: `Class ${std}` } : {}),\n      ...(role === 'teacher' ? { teachingClasses } : {}),
+      ...(role === 'student' ? { std, division, className: `Class ${std}` } : {}),
+      ...(role === 'teacher' ? { teachingClasses } : {}),
       ...(role === 'parent' ? { children: childIds } : {}),
     })
 
