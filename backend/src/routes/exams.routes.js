@@ -321,6 +321,24 @@ router.post('/exams/:id/submit', async (req, res, next) => {
   } catch (error) { next(error) }
 })
 
+router.get('/attempts', async (req, res, next) => {
+  try {
+    let filter = {}
+    if (isTeacher(req.user)) {
+      const examIds = (await Exam.find({ teacher: req.user._id }).select('_id').lean()).map(exam => exam._id)
+      filter = { exam: { $in: examIds }, status: { $in: ['submitted', 'graded'] } }
+    } else if (isPrincipal(req.user)) {
+      filter = { status: { $in: ['submitted', 'graded'] } }
+    } else return forbidden(res)
+    const attempts = await ExamAttempt.find(filter).sort({ submittedAt: -1 }).populate('student', 'name email std division').populate({ path: 'exam', select: 'title subject startsAt totalMarks className division teacher paper', populate: { path: 'paper' } }).lean()
+    const data = attempts.map(attempt => {
+      const paperQuestions = attempt.exam?.paper?.questions || []
+      return { ...attempt, answers: attempt.answers.map(answer => ({ ...answer, question: paperQuestions.find(question => String(question._id) === String(answer.questionId)) || null })) }
+    })
+    res.json({ success: true, data })
+  } catch (error) { next(error) }
+})
+
 router.get('/results', async (req, res, next) => {
   try {
     const user = req.user
