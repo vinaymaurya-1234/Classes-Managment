@@ -34,7 +34,7 @@ router.post('/', async (req, res, next) => {
     const maxMarks = Number(req.body.maxMarks)
     if (!className || !subject || !title || !Number.isFinite(maxMarks) || maxMarks < 1) return res.status(400).json({ success: false, message: 'Class, subject, test title and valid maximum marks are required.' })
     const students = await User.find({ role: 'student', className }).select('_id').lean()
-    const item = await Assessment.create({ teacher: req.user._id, className, subject, title, examDate: req.body.examDate || null, maxMarks, marks: students.map(student => ({ student: student._id, marks: 0 })), status: 'draft' })
+    const item = await Assessment.create({ teacher: req.user._id, className, subject, title, examDate: req.body.examDate || null, maxMarks, marks: students.map(student => ({ student: student._id, marks: 0, entered: false })), status: 'draft' })
     const data = await Assessment.findById(item._id).populate('marks.student', 'name className')
     res.status(201).json({ success: true, data })
   } catch (error) { next(error) }
@@ -52,8 +52,9 @@ router.put('/:id/marks', async (req, res, next) => {
     for (const entry of req.body.marks) {
       const studentId = String(entry.student || ''), marks = Number(entry.marks)
       if (!allowed.has(studentId) || !Number.isFinite(marks) || marks < 0 || marks > item.maxMarks) return res.status(400).json({ success: false, message: 'Each mark must belong to a student in this class and be within the test maximum.' })
-      nextMarks.push({ student: studentId, marks })
+      nextMarks.push({ student: studentId, marks, entered: entry.entered === true })
     }
+    if (req.body.submitForReview && (nextMarks.length !== allowed.size || nextMarks.some(entry => !entry.entered))) return res.status(400).json({ success: false, message: 'Enter marks for every student before submitting this test for review.' })
     item.marks = nextMarks
     item.status = req.body.submitForReview ? 'review' : 'draft'
     await item.save()
