@@ -496,3 +496,11 @@
 .teacher-assignment-remove{width:30px;height:30px;margin-bottom:5px;border:1px solid #ead8d2;border-radius:8px;background:white;color:#a45d46;font-size:20px;line-height:1;cursor:pointer}
 .teacher-assignment-add{margin-top:10px}
 @media(max-width:560px){.teacher-assignment-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:6px}.teacher-assignment-row input,.teacher-assignment-row select{padding:0 7px}}
+
+
+/* Principal: teacher class and division inputs */
+.teacher-class-div-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;min-width:0}
+.teacher-class-div-row label{display:block;min-width:0;color:#526b5e;font-size:9px;font-weight:750}
+.teacher-class-div-row label span{color:var(--red)}
+.teacher-class-div-row input{display:block;width:100%;min-width:0;min-height:40px;margin-top:6px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:#f9fcfa;color:var(--ink);font-size:10px}
+@media(max-width:420px){.teacher-class-div-row{gap:8px}}
