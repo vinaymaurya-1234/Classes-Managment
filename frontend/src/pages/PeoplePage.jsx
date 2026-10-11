@@ -84,7 +84,7 @@ export default function PeoplePage({ type, title }) {
             {type === 'student' && <label>STD (10, 11, or 12)<input type="number" min="10" max="12" step="1" value={form.std} onChange={event => setForm({ ...form, std: event.target.value })} placeholder="Enter 10, 11, or 12" required onInvalid={event => event.currentTarget.setCustomValidity('Enter 10, 11, or 12')} onInput={event => event.currentTarget.setCustomValidity('')} /></label>}
             {type === 'teacher' && <div className="teacher-class-div-row">
               <label>Class <span>*</span><input type="number" min="11" max="12" step="1" value={form.classStd} onChange={event => setForm({ ...form, classStd: event.target.value })} placeholder="11 or 12" required /></label>
-              <label>Div <span>*</span><input value={form.division} onChange={event => setForm({ ...form, division: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) })} placeholder="e.g. A" maxLength={4} required /></label>
+              <label>Div <span>*</span><input value={form.division} onChange={event => setForm({ ...form, division: event.target.value.toUpperCase().replace(/[^A-C]/g, '').slice(0, 1) })} placeholder="A, B or C" maxLength={1} pattern="[A-Ca-c]" title="Enter A, B or C" required /></label>
             </div>}
             {error && <div className="login-error user-modal-error">{error}</div>}
             <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
