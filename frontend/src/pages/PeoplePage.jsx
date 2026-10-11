@@ -21,7 +21,7 @@ export default function PeoplePage({ type, title }) {
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', std: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', std: '', division: 'A', teachingClasses: [] })
 
   const loadUsers = async () => {
     if (!canManage) return
@@ -40,7 +40,7 @@ export default function PeoplePage({ type, title }) {
     return source.filter(item => item.name.toLowerCase().includes(query))
   }, [canManage, data, search, type])
 
-  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '', std: '' }); setError(''); setModalOpen(true) }
+  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '', std: '', division: 'A', teachingClasses: [] }); setError(''); setModalOpen(true) }
   const closeModal = () => { if (!saving) setModalOpen(false) }
 
   const submit = async event => {
@@ -64,7 +64,7 @@ export default function PeoplePage({ type, title }) {
             {visibleData.map(person => <div className="table-row" key={person.id || person.email || person.name}>
               <span className="person">
                 {person.avatarUrl ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" /> : <span className="avatar green">{person.name[0]}</span>}
-                <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `STD ${person.std}` : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
+                <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `Class ${person.std} - ${person.division || 'A'}` : '') || (type === 'teacher' && person.teachingClasses?.length ? person.teachingClasses.join(', ') : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
               </span>
               <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
               <span className="pill success">Active</span><ChevronRight size={15} />
@@ -81,6 +81,8 @@ export default function PeoplePage({ type, title }) {
             <label>Temporary password<input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required /></label>
             <label>Phone<input value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="Optional" /></label>
             {type === 'student' && <label>STD (10, 11, or 12)<input type="number" min="10" max="12" step="1" value={form.std} onChange={event => setForm({ ...form, std: event.target.value })} placeholder="Enter 10, 11, or 12" required onInvalid={event => event.currentTarget.setCustomValidity('Enter 10, 11, or 12')} onInput={event => event.currentTarget.setCustomValidity('')} /></label>}
+            {type === 'student' && <label>Division<select required value={form.division} onChange={event => setForm({ ...form, division: event.target.value })}><option value="A">Division A</option><option value="B">Division B</option><option value="C">Division C</option></select></label>}
+            {type === 'teacher' && <fieldset className="teacher-assignment-fieldset"><legend>Assign classes and divisions</legend><p>Select every class this teacher can teach.</p><div className="teacher-assignment-grid">{[10,11,12].flatMap(std => ['A','B','C'].map(division => { const value = `Class ${std} - ${division}`; return <label key={value}><input type="checkbox" checked={form.teachingClasses.includes(value)} onChange={event => setForm(current => ({ ...current, teachingClasses: event.target.checked ? [...current.teachingClasses, value] : current.teachingClasses.filter(item => item !== value) }))} />{value}</label> }))}</div></fieldset>}
             {error && <div className="login-error user-modal-error">{error}</div>}
             <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
           </form>
