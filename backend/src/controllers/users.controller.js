@@ -137,3 +137,37 @@ export const createUser = async (req, res, next) => {
     next(error)
   }
 }
+
+
+export const updateTeacherAssignments = async (req, res, next) => {
+  try {
+    if (!requirePrincipal(req)) {
+      return res.status(403).json({ success: false, message: 'Only the principal can manage users' })
+    }
+
+    const teachingClasses = Array.isArray(req.body.teachingClasses)
+      ? [...new Set(req.body.teachingClasses.map(value => String(value).trim().toUpperCase()).filter(Boolean))]
+      : []
+    const allowedTeachingClasses = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `${classNumber}-${section}`)))
+
+    if (!teachingClasses.length || teachingClasses.some(value => !allowedTeachingClasses.has(value))) {
+      return res.status(400).json({ success: false, message: 'Provide at least one valid Class 11 or 12 division (A, B or C).' })
+    }
+
+    const teacher = await User.findOne({ _id: req.params.id, role: 'teacher' })
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: 'Teacher not found' })
+    }
+
+    teacher.teachingClasses = teachingClasses
+    await teacher.save()
+
+    return res.json({
+      success: true,
+      message: 'Teacher assignments updated successfully',
+      user: publicUser(teacher),
+    })
+  } catch (error) {
+    next(error)
+  }
+}
