@@ -238,6 +238,7 @@ router.put('/exams/:id', async (req, res, next) => {
     if (req.body.status === 'cancelled') exam.status = 'cancelled'
     if (req.body.resultsPublished !== undefined && req.body.resultsPublished === true) {
       if (await ExamAttempt.exists({ exam: exam._id, status: 'in_progress' })) return fail(res, 409, 'Wait until all active attempts are submitted before publishing results.')
+      if (await ExamResult.exists({ exam: exam._id, pendingManualCount: { $gt: 0 } })) return fail(res, 409, 'Teachers must finish grading descriptive answers before results can be published.')
       exam.resultsPublished = true
       await ExamResult.updateMany({ exam: exam._id }, { published: true })
     }
@@ -336,6 +337,22 @@ router.get('/attempts', async (req, res, next) => {
       return { ...attempt, answers: attempt.answers.map(answer => ({ ...answer, question: paperQuestions.find(question => String(question._id) === String(answer.questionId)) || null })) }
     })
     res.json({ success: true, data })
+  } catch (error) { next(error) }
+})
+
+router.get('/exams/:id/review', async (req, res, next) => {
+  try {
+    if (!isStudent(req.user) || !validId(req.params.id)) return forbidden(res)
+    const exam = await Exam.findOne({ _id: req.params.id, std: Number(req.user.std), division: req.user.division, resultsPublished: true, answerReviewEnabled: true })
+    if (!exam) return fail(res, 404, 'Answer review is not available for this exam.')
+    const attempt = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: { $in: ['submitted', 'graded'] } }).lean()
+    if (!attempt) return fail(res, 404, 'Submitted attempt not found.')
+    const paper = await QuestionPaper.findById(exam.paper).lean()
+    const data = paper.questions.map(question => {
+      const answer = attempt.answers.find(item => String(item.questionId) === String(question._id))
+      return { _id: question._id, text: question.text, type: question.type, options: question.options, marks: question.marks, correctAnswer: question.correctAnswer, explanation: question.explanation, answer: answer?.answer || '', marksAwarded: answer?.marksAwarded || 0 }
+    })
+    res.json({ success: true, exam: sanitizeExam(exam), answers: data })
   } catch (error) { next(error) }
 })
 
