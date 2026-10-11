@@ -18,7 +18,8 @@ router.get('/classes', async (req, res, next) => {
     const chapters = await Chapter.find({ teacher: req.user._id }).select('className subject').lean()
     const configuredClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
     const classMap = new Map()
-    for (const value of [...configuredClasses, ...chapters.map(item => item.className)]) {
+    const classSources = configuredClasses.length ? configuredClasses : chapters.map(item => item.className)
+    for (const value of classSources) {
       const parsed = parseClass(value)
       if (!parsed) continue
       const key = `${parsed.std}-${parsed.division}`
