@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import Homework from '../models/Homework.js'
 import User from '../models/User.js'
+import Chapter from '../models/Chapter.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
@@ -35,6 +36,8 @@ router.post('/', async (req, res, next) => {
     const subject = String(req.body.subject || '').trim()
     const title = String(req.body.title || '').trim()
     if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
+    const taught = (req.user.teachingClasses || []).includes(className) || await Chapter.exists({ teacher: req.user._id, className })
+    if (!taught) return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
     const item = await Homework.create({ teacher: req.user._id, className, subject, title, instructions: String(req.body.instructions || '').trim(), dueDate: req.body.dueDate || null, status: req.body.status === 'draft' ? 'draft' : 'published' })
     res.status(201).json({ success: true, data: item })
   } catch (error) { next(error) }
