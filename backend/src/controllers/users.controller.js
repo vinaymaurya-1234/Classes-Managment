@@ -11,7 +11,7 @@ const publicUser = user => ({
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
   className: user.className || '',
-  children: (user.children || []).map(child => String(child._id || child)),
+  std: user.std ?? null,
   createdAt: user.createdAt,
 })
 
@@ -52,7 +52,7 @@ export const createUser = async (req, res, next) => {
     const role = String(req.body.role || '').trim().toLowerCase()
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
-    const childIds = Array.isArray(req.body.children) ? [...new Set(req.body.children.map(String))] : []
+    const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -66,6 +66,10 @@ export const createUser = async (req, res, next) => {
         success: false,
         message: 'Only teacher, student or parent accounts can be created here',
       })
+    }
+
+    if (role === 'student' && ![10, 11, 12].includes(std)) {
+      return res.status(400).json({ success: false, message: 'STD must be 10, 11 or 12' })
     }
 
     if (password.length < 8) {
@@ -96,7 +100,7 @@ export const createUser = async (req, res, next) => {
       role,
       phone,
       avatarUrl,
-      children: role === 'parent' ? childIds : [],
+      ...(role === 'student' ? { std } : {}),
     })
 
     return res.status(201).json({
