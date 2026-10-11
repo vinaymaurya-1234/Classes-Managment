@@ -27,6 +27,7 @@ export default function AppLayout({ children }) {
   const [mobileNav,setMobileNav] = useState(false)
   const [search,setSearch] = useState('')
   const [profileOpen,setProfileOpen] = useState(false)
+  const [sidebarProfileOpen,setSidebarProfileOpen] = useState(false)
   const profileMenuRef = useRef(null)
   const sidebarProfileRef = useRef(null)
   const info = roles[role]
@@ -34,7 +35,7 @@ export default function AppLayout({ children }) {
   const pageLabel = nav[role].find(x => x[1] === currentKey)?.[0] || 'Overview'
   const filtered = useMemo(() => search, [search])
   const go = key => { navigate(`/${role}/${key}`); setMobileNav(false) }
-  const signOut = () => { setProfileOpen(false); setNotificationOpen(false); logout(); navigate('/login', { replace:true }) }
+  const signOut = () => { setProfileOpen(false); setSidebarProfileOpen(false); setNotificationOpen(false); logout(); navigate('/login', { replace:true }) }
   useEffect(() => {
     let active = true
     if (!user) return undefined
@@ -47,15 +48,16 @@ export default function AppLayout({ children }) {
     return () => { active = false }
   }, [user, location.pathname])
   useEffect(() => {
-    if (!profileOpen) return undefined
+    if (!profileOpen && !sidebarProfileOpen) return undefined
 
     const handleOutsidePointer = event => {
       if (!(profileMenuRef.current && profileMenuRef.current.contains(event.target)) && !(sidebarProfileRef.current && sidebarProfileRef.current.contains(event.target))) {
         setProfileOpen(false)
+        setSidebarProfileOpen(false)
       }
     }
     const handleEscape = event => {
-      if (event.key === 'Escape') setProfileOpen(false)
+      if (event.key === 'Escape') { setProfileOpen(false); setSidebarProfileOpen(false) }
     }
 
     document.addEventListener('pointerdown', handleOutsidePointer)
@@ -64,7 +66,7 @@ export default function AppLayout({ children }) {
       document.removeEventListener('pointerdown', handleOutsidePointer)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [profileOpen])
+  }, [profileOpen, sidebarProfileOpen])
   const openNotice = () => { setNotificationOpen(false); navigate(`/${role}/notices`) }
   const notificationDate = value => new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value))
 
@@ -73,7 +75,7 @@ export default function AppLayout({ children }) {
       <div className="brand"><div className="brand-mark"><GraduationCap size={21}/></div><div><strong>ClassLeaf</strong><span>Tuition management</span></div><button className="mobile-close" onClick={()=>setMobileNav(false)}><X size={18}/></button></div>
       <div className="role-switcher"><span>YOUR ROLE</span><div className="role-fixed"><strong>{info.label}</strong><small>{info.color}</small></div></div>
       <nav><div className="nav-caption">WORKSPACE</div>{nav[role].map(([label,key])=>{const Icon=icons[key]||LayoutDashboard;return <NavLink key={key} to={`/${role}/${key}`} onClick={()=>setMobileNav(false)} className={({isActive})=>'nav-item '+(isActive?'active':'')}><Icon size={17}/><span>{label}</span><ChevronRight size={14}/></NavLink>})}</nav>
-      <div className="sidebar-bottom"><div className="profile-menu sidebar-profile-menu" ref={sidebarProfileRef}><button className="sidebar-profile" onClick={()=>setProfileOpen(v=>!v)} aria-expanded={profileOpen}><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{info.label}</span></div><ChevronRight size={15}/></button>{profileOpen && <div className="profile-dropdown sidebar-profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div>
+      <div className="sidebar-bottom"><div className="profile-menu sidebar-profile-menu" ref={sidebarProfileRef}><button className="sidebar-profile" onClick={()=>setSidebarProfileOpen(v=>!v)} aria-expanded={sidebarProfileOpen}><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{info.label}</span></div><ChevronRight size={15}/></button>{sidebarProfileOpen && <div className="profile-dropdown sidebar-profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setSidebarProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div>
     </aside>
     {mobileNav && <button className="sidebar-backdrop" onClick={()=>setMobileNav(false)} aria-label="Close navigation"/>}
     <main className="main">
