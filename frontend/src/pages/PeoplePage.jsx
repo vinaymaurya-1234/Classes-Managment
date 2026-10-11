@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, LoaderCircle, UserPlus, X, BookOpen } from 'lucide-react'
+import { ChevronRight, LoaderCircle, UserPlus, X } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
