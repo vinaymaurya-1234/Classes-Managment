@@ -10,6 +10,21 @@ router.use(requireAuth)
 router.get('/', listUsers)
 router.post('/', createUser)
 
+router.put('/:id/teaching-classes', async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'principal') return res.status(403).json({ success: false, message: 'Only the principal can update teacher assignments.' })
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid teacher ID.' })
+    const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(value => String(value).trim()))] : []
+    const valid = teachingClasses.every(value => /^Class (10|11|12) - [ABC]$/.test(value))
+    if (!teachingClasses.length || !valid) return res.status(400).json({ success: false, message: 'Select at least one valid class and division.' })
+    const teacher = await User.findOne({ _id: req.params.id, role: 'teacher' })
+    if (!teacher) return res.status(404).json({ success: false, message: 'Teacher not found.' })
+    teacher.teachingClasses = teachingClasses
+    await teacher.save()
+    res.json({ success: true, user: { id: teacher._id.toString(), name: teacher.name, teachingClasses: teacher.teachingClasses } })
+  } catch (error) { next(error) }
+})
+
 router.put('/:id/class-placement', async (req, res, next) => {
   try {
     if (req.user?.role !== 'principal') return res.status(403).json({ success: false, message: 'Only the principal can update class placement.' })
