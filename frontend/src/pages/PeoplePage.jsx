@@ -53,6 +53,17 @@ export default function PeoplePage({ type, title }) {
     finally { setSaving(false) }
   }
 
+  const updateTeacherClasses = async person => {
+    const current = (person.teachingClasses || []).join(', ')
+    const input = window.prompt('Enter assigned classes separated by commas. Example: Class 10 - A, Class 11 - B', current)
+    if (input === null) return
+    const teachingClasses = [...new Set(input.split(',').map(value => value.trim()).filter(Boolean))]
+    try {
+      await api.put('/api/users/' + person.id + '/teaching-classes', { teachingClasses }, token)
+      await loadUsers()
+    } catch (err) { setError(err.message) }
+  }
+
   const updatePlacement = async person => {
     const stdInput = window.prompt('Student standard (10, 11 or 12)', String(person.std || 10))
     if (stdInput === null) return
@@ -78,7 +89,7 @@ export default function PeoplePage({ type, title }) {
                 {person.avatarUrl ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" /> : <span className="avatar green">{person.name[0]}</span>}
                 <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `Class ${person.std} - ${person.division || 'A'}` : '') || (type === 'teacher' && person.teachingClasses?.length ? person.teachingClasses.join(', ') : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
               </span>
-              <div className="people-row-actions"><strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>{canManage && type === 'student' && <button type="button" className="secondary people-placement-edit" onClick={event => { event.stopPropagation(); updatePlacement(person) }}>Edit class</button>}</div>
+              <div className="people-row-actions"><strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>{canManage && type === 'student' && <button type="button" className="secondary people-placement-edit" onClick={event => { event.stopPropagation(); updatePlacement(person) }}>Edit class</button>}{canManage && type === 'teacher' && <button type="button" className="secondary people-placement-edit" onClick={event => { event.stopPropagation(); updateTeacherClasses(person) }}>Edit assignments</button>}</div>
               <span className="pill success">Active</span><ChevronRight size={15} />
             </div>)}
           </div>
