@@ -65,7 +65,7 @@ export default function PeoplePage({ type, title }) {
             {visibleData.map(person => <div className="table-row" key={person.id || person.email || person.name}>
               <span className="person">
                 {person.avatarUrl ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" /> : <span className="avatar green">{person.name[0]}</span>}
-                <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `STD ${person.std}` : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
+                <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `STD ${person.std}` : '') || (type === 'teacher' && person.teachingClasses?.length ? person.teachingClasses.map(item => `Class ${item}`).join(', ') : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
               </span>
               <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
               <span className="pill success">Active</span><ChevronRight size={15} />
