@@ -13,7 +13,6 @@ const emptyQuestion = { std: '10', division: 'A', subject: '', chapter: '', type
 const emptyPaper = { title: '', std: '10', division: 'A', subject: '', instructions: '', questionCount: '10', durationMinutes: '60', difficulty: '' }
 const emptyExam = { paperId: '', title: '', type: 'unit', startsAt: '', durationMinutes: '60', instructions: '', answerReviewEnabled: false }
 const formatDate = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled'
-const className = (std, division) => `Class ${std} - ${division}`
 const getRows = workbook => {
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
   return sheet ? XLSX.utils.sheet_to_json(sheet, { defval: '' }) : []
@@ -34,7 +33,6 @@ export default function ExamManagementPage() {
   const [exams, setExams] = useState([])
   const [results, setResults] = useState([])
   const [attempts, setAttempts] = useState([])
-  const [classes, setClasses] = useState([])
   const [filters, setFilters] = useState({ std: '10', division: 'A', subject: '', chapter: '', difficulty: '', search: '' })
   const [questionForm, setQuestionForm] = useState(emptyQuestion)
   const [paperForm, setPaperForm] = useState(emptyPaper)
@@ -55,7 +53,6 @@ export default function ExamManagementPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [searchText, setSearchText] = useState('')
 
   const loadQuestions = useCallback(async () => {
     if (!isTeacher && !isPrincipal) return
@@ -91,10 +88,6 @@ export default function ExamManagementPage() {
     setLoading(true); setError('')
     try {
       await Promise.all([loadQuestions(), loadPapers(), loadExams(), loadResults(), loadAttempts()])
-      if (isTeacher) {
-        const response = await api.get('/api/teacher/classes', token)
-        setClasses(response.classes || [])
-      }
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }
   }, [loadQuestions, loadPapers, loadExams, loadResults, loadAttempts, isTeacher, token])
@@ -367,7 +360,7 @@ export default function ExamManagementPage() {
     {isTeacher && tab === 'evaluation' && <Card title="Descriptive answer evaluation"><div className="exam-results-list">{attempts.filter(a => a.exam?.teacher && a.pendingManualCount > 0).map(attempt => <article className="exam-result-row" key={attempt._id}><div><strong>{attempt.student?.name || 'Student'} · {attempt.exam?.title}</strong><p>{attempt.exam?.subject} · {attempt.pendingManualCount} answers awaiting grading</p></div><span>{attempt.score} / {attempt.exam?.totalMarks}</span><button className="primary" onClick={() => gradeAttempt(attempt)}>Grade answers</button></article>)}</div>{!attempts.some(a => a.pendingManualCount > 0) && <div className="exam-state">No descriptive answers are waiting for evaluation.</div>}</Card>}
 
     {(tab === 'results') && answerReview && <Card title={`Answer review · ${answerReview.exam?.title || ''}`}><button className="secondary" onClick={() => setAnswerReview(null)}>Close review</button><div className="exam-answer-review">{(answerReview.answers || []).map((item, index) => <article key={item._id}><strong>{index + 1}. {item.text}</strong><p>Your answer: {item.answer || 'Not answered'} · Marks: {item.marksAwarded}/{item.marks}</p><p>Correct answer: {item.correctAnswer || 'Manual evaluation'}</p>{item.explanation && <small>{item.explanation}</small>}</article>)}</div></Card>}
-    {(tab === 'results') && <Card title={isPrincipal ? 'Results and performance reports' : isStudent ? 'Published results' : isParent ? 'Child exam reports' : 'Exam results'}><div className="exam-results-toolbar"><p>Results are visible to students and parents only after the principal publishes them.</p>{results.length > 0 && <button className="secondary" onClick={exportResults}><Download size={15}/>Export CSV</button>}</div><div className="exam-results-list">{results.filter(result => !isPrincipal || !searchText || result.student?.name?.toLowerCase().includes(searchText.toLowerCase())).map(result => <article className="exam-result-row" key={result._id}><div><strong>{result.exam?.title || 'Exam'}</strong><p>{result.student?.name || 'Student'} · {result.className} - {result.division} · {result.exam?.subject}</p><small>{result.pendingManualCount ? `${result.pendingManualCount} written answers pending` : `${result.correctCount} correct · ${result.incorrectCount} incorrect · ${result.unansweredCount} unanswered`}</small></div><div className="exam-result-score"><strong>{result.score} / {result.totalMarks}</strong><span>{result.totalMarks ? Math.round(result.score / result.totalMarks * 100) : 0}%</span>{isStudent && result.exam?.answerReviewEnabled && <button className="secondary" onClick={() => loadAnswerReview(result)}>Review answers</button>}</div></article>)}</div>{!results.length && <div className="exam-state">No published results yet.</div>}</Card>}
+    {(tab === 'results') && <Card title={isPrincipal ? 'Results and performance reports' : isStudent ? 'Published results' : isParent ? 'Child exam reports' : 'Exam results'}><div className="exam-results-toolbar"><p>Results are visible to students and parents only after the principal publishes them.</p>{results.length > 0 && <button className="secondary" onClick={exportResults}><Download size={15}/>Export CSV</button>}</div><div className="exam-results-list">{results.map(result => <article className="exam-result-row" key={result._id}><div><strong>{result.exam?.title || 'Exam'}</strong><p>{result.student?.name || 'Student'} · {result.className} - {result.division} · {result.exam?.subject}</p><small>{result.pendingManualCount ? `${result.pendingManualCount} written answers pending` : `${result.correctCount} correct · ${result.incorrectCount} incorrect · ${result.unansweredCount} unanswered`}</small></div><div className="exam-result-score"><strong>{result.score} / {result.totalMarks}</strong><span>{result.totalMarks ? Math.round(result.score / result.totalMarks * 100) : 0}%</span>{isStudent && result.exam?.answerReviewEnabled && <button className="secondary" onClick={() => loadAnswerReview(result)}>Review answers</button>}</div></article>)}</div>{!results.length && <div className="exam-state">No published results yet.</div>}</Card>}
   </>
 }
 
@@ -376,7 +369,7 @@ function ExamList({ exams, isPrincipal = false, isStudent = false, isTeacher = f
   return <div className="exam-schedule-list">{exams.map(exam => {
     const starts = new Date(exam.startsAt).getTime()
     const ended = now > starts + Number(exam.durationMinutes) * 60000
-    const canStart = isStudent && starts <= now && !ended && exam.status !== 'cancelled'
+    const canStart = isStudent && starts <= now && !ended && !['cancelled', 'completed'].includes(exam.status)
     return <article className="exam-schedule-card" key={exam._id}><div className="exam-schedule-icon"><CalendarDays size={20}/></div><div className="exam-schedule-info"><div className="exam-badges"><span>{exam.type || 'Exam'}</span><span>{exam.className} - {exam.division}</span><span>{exam.subject}</span></div><h3>{exam.title}</h3><p>{formatDate(exam.startsAt)} · {exam.durationMinutes} minutes · {exam.totalMarks} marks</p>{exam.instructions && <small>{exam.instructions}</small>}{exam.teacher?.name && <small>Teacher: {exam.teacher.name}</small>}</div><div className="exam-schedule-actions"><span className={'exam-status ' + exam.status}>{exam.status}</span>{canStart && <button className="primary" disabled={saving} onClick={() => onStart(exam)}>Start exam</button>}{isStudent && starts > now && <small>Starts in future</small>}{isStudent && ended && <small>Exam window ended</small>}{isPrincipal && !exam.resultsPublished && exam.status !== 'cancelled' && <button className="primary" disabled={saving} onClick={() => onPublish(exam)}>Publish results</button>}{isPrincipal && exam.status === 'scheduled' && <><button className="secondary" disabled={saving} onClick={() => onEdit(exam)}>Edit</button><button className="secondary" disabled={saving} onClick={() => onCancel(exam)}>Cancel exam</button></>}{isTeacher && <small>Paper: {exam.paper?.title || 'Assigned'}</small>}</div></article>
   })}{!exams.length && <div className="exam-state">No exams to show yet.</div>}</div>
 }
