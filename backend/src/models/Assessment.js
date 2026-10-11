@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const markSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   marks: { type: Number, min: 0, required: true },
+  entered: { type: Boolean, default: false },
 }, { _id: false })
 const assessmentSchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
