@@ -83,19 +83,26 @@ export default function PeoplePage({ type, title }) {
             <label>Phone<input value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="Optional" /></label>
             {type === 'student' && <label>STD (10, 11, or 12)<input type="number" min="10" max="12" step="1" value={form.std} onChange={event => setForm({ ...form, std: event.target.value })} placeholder="Enter 10, 11, or 12" required onInvalid={event => event.currentTarget.setCustomValidity('Enter 10, 11, or 12')} onInput={event => event.currentTarget.setCustomValidity('')} /></label>}
             {type === 'teacher' && <fieldset className="teacher-class-fieldset">
-              <legend>Assign classes and sections <span>*</span></legend>
-              <p>Select every class/section this teacher will teach. No class is selected by default.</p>
-              <div className="teacher-class-options">
-                {[11, 12].map(std => ['A', 'B', 'C'].map(section => {
-                  const value = `${std}-${section}`
-                  const checked = form.teachingClasses.includes(value)
-                  return <label className={`teacher-class-option ${checked ? 'selected' : ''}`} key={value}>
-                    <input type="checkbox" checked={checked} onChange={() => setForm(current => ({ ...current, teachingClasses: checked ? current.teachingClasses.filter(item => item !== value) : [...current.teachingClasses, value] }))} />
-                    <span><strong>Class {std}</strong><small>Section {section}</small></span>
+              <legend>Teaching classes and sections <span>*</span></legend>
+              <p>Enter the class (11 or 12) and section for this teacher. Add more rows if needed.</p>
+              {form.teachingClasses.map((assignment, index) => {
+                const [classValue = '', sectionValue = ''] = assignment.split('-')
+                return <div className="teacher-assignment-row" key={index}>
+                  <label>Class
+                    <select value={classValue} onChange={event => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.map((item, itemIndex) => itemIndex === index ? `${event.target.value}-${item.split('-')[1] || ''}` : item) }))} required>
+                      <option value="">Select class</option>
+                      <option value="11">11</option>
+                      <option value="12">12</option>
+                    </select>
                   </label>
-                }))}
-              </div>
-              {!form.teachingClasses.length && <small className="teacher-class-hint">Choose at least one class and section.</small>}
+                  <label>Section
+                    <input value={sectionValue} onChange={event => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.map((item, itemIndex) => itemIndex === index ? `${item.split('-')[0] || ''}-${event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)}` : item) }))} placeholder="e.g. A" maxLength={4} required />
+                  </label>
+                  <button type="button" className="teacher-assignment-remove" onClick={() => setForm(current => ({ ...current, teachingClasses: current.teachingClasses.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={`Remove assignment ${index + 1}`} title="Remove row">×</button>
+                </div>
+              })}
+              <button type="button" className="secondary teacher-assignment-add" onClick={() => setForm(current => ({ ...current, teachingClasses: [...current.teachingClasses, '-'] }))}>+ Add class and section</button>
+              {!form.teachingClasses.length && <small className="teacher-class-hint">Add at least one class and section.</small>}
             </fieldset>}
             {error && <div className="login-error user-modal-error">{error}</div>}
             <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving || (type === 'teacher' && !form.teachingClasses.length)}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
