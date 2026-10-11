@@ -7,6 +7,14 @@ const router = Router()
 
 router.use(requireAuth)
 
+// Class labels may come from older chapter records (for example "11-A" or
+// "Class 11"). Student membership itself is determined only by User.std.
+const getStd = value => {
+  const match = String(value ?? '').match(/\d+/)
+  const std = match ? Number(match[0]) : NaN
+  return [10, 11, 12].includes(std) ? std : null
+}
+
 router.get('/classes', async (req, res, next) => {
   try {
     if (req.user?.role !== 'teacher') {
@@ -15,23 +23,33 @@ router.get('/classes', async (req, res, next) => {
 
     const chapters = await Chapter.find({ teacher: req.user._id }).select('className subject').lean()
     const configuredClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
-    const classNames = [...new Set([...configuredClasses, ...chapters.map(item => item.className)].filter(Boolean))].sort()
+    const assignedStds = [...new Set(
+      [...configuredClasses, ...chapters.map(item => item.className)]
+        .map(getStd)
+        .filter(Boolean)
+    )].sort((a, b) => a - b)
 
-    const requestedClass = String(req.query.className || '').trim()
-    const selectedClasses = requestedClass ? classNames.filter(name => name === requestedClass) : classNames
+    const requestedStd = req.query.std ? getStd(req.query.std) : null
+    const selectedStds = requestedStd
+      ? assignedStds.filter(std => std === requestedStd)
+      : assignedStds
 
-    const classes = await Promise.all(selectedClasses.map(async className => {
-      const students = await User.find({ role: 'student', className })
-        .select('name email phone avatarUrl className')
+    const classes = await Promise.all(selectedStds.map(async std => {
+      const students = await User.find({ role: 'student', std })
+        .select('name email phone avatarUrl std')
         .sort({ name: 1 })
         .lean()
 
       const subjects = [...new Set(
-        chapters.filter(item => item.className === className).map(item => item.subject).filter(Boolean)
+        chapters
+          .filter(item => getStd(item.className) === std)
+          .map(item => item.subject)
+          .filter(Boolean)
       )].sort()
 
       return {
-        className,
+        std,
+        className: `Class ${std}`,
         subjects,
         studentCount: students.length,
         students: students.map(student => ({
@@ -40,7 +58,7 @@ router.get('/classes', async (req, res, next) => {
           email: student.email,
           phone: student.phone || '',
           avatarUrl: student.avatarUrl || '',
-          className: student.className,
+          std: student.std,
         })),
       }
     }))
