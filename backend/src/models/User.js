@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   avatarUrl: { type: String, trim: true, default: '' },
   className: { type: String, trim: true, default: '' },
   teachingClasses: { type: [String], default: [] },
+  children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }, { timestamps: true })
 
 userSchema.set('toJSON', {

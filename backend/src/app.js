@@ -10,6 +10,8 @@ import attendanceRoutes from './routes/attendance.routes.js'
 import timetableRoutes from './routes/timetable.routes.js'
 import noticesRoutes from './routes/notices.routes.js'
 import feesRoutes from './routes/fees.routes.js'
+import homeworkRoutes from './routes/homework.routes.js'
+import assessmentRoutes from './routes/assessment.routes.js'
 
 const app = express()
 
@@ -49,6 +51,8 @@ app.use('/api/attendance', attendanceRoutes)
 app.use('/api/timetable', timetableRoutes)
 app.use('/api/notices', noticesRoutes)
 app.use('/api/fees', feesRoutes)
+app.use('/api/homework', homeworkRoutes)
+app.use('/api/assessments', assessmentRoutes)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' })

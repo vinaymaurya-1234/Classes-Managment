@@ -11,6 +11,7 @@ const publicUser = user => ({
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
   className: user.className || '',
+  children: (user.children || []).map(child => String(child._id || child)),
   createdAt: user.createdAt,
 })
 
@@ -51,6 +52,7 @@ export const createUser = async (req, res, next) => {
     const role = String(req.body.role || '').trim().toLowerCase()
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
+    const childIds = Array.isArray(req.body.children) ? [...new Set(req.body.children.map(String))] : []
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -81,6 +83,12 @@ export const createUser = async (req, res, next) => {
       })
     }
 
+    if (role !== 'parent' && childIds.length) return res.status(400).json({ success: false, message: 'Only parent accounts can be linked to children.' })
+    if (role === 'parent' && childIds.length) {
+      const linkedStudents = await User.find({ _id: { $in: childIds }, role: 'student' }).select('_id').lean()
+      if (linkedStudents.length !== childIds.length) return res.status(400).json({ success: false, message: 'Choose valid student accounts only.' })
+    }
+
     const user = await User.create({
       name,
       email,
@@ -88,6 +96,7 @@ export const createUser = async (req, res, next) => {
       role,
       phone,
       avatarUrl,
+      children: role === 'parent' ? childIds : [],
     })
 
     return res.status(201).json({

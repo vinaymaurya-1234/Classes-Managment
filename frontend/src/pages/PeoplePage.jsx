@@ -21,7 +21,8 @@ export default function PeoplePage({ type, title }) {
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', children: [] })
+  const [studentOptions, setStudentOptions] = useState([])
 
   const loadUsers = async () => {
     if (!canManage) return
@@ -40,14 +41,14 @@ export default function PeoplePage({ type, title }) {
     return source.filter(item => item.name.toLowerCase().includes(query))
   }, [canManage, data, search, type])
 
-  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '' }); setError(''); setModalOpen(true) }
+  const openModal = async () => { setForm({ name: '', email: '', password: '', phone: '', children: [] }); setError(''); setModalOpen(true); if (type === 'parent') { try { const result = await listUsersApi(token, 'student'); setStudentOptions(result.users || []) } catch (err) { setError(err.message) } } }
   const closeModal = () => { if (!saving) setModalOpen(false) }
 
   const submit = async event => {
     event.preventDefault(); setSaving(true); setError('')
     try {
       await createUserApi(token, { ...form, role: type })
-      setModalOpen(false); setForm({ name: '', email: '', password: '', phone: '' }); await loadUsers()
+      setModalOpen(false); setForm({ name: '', email: '', password: '', phone: '', children: [] }); await loadUsers()
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
@@ -80,6 +81,7 @@ export default function PeoplePage({ type, title }) {
             <label>Email address<input type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="name@example.com" required /></label>
             <label>Temporary password<input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required /></label>
             <label>Phone<input value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="Optional" /></label>
+            {type === 'parent' && <label>Link child / student<select multiple value={form.children} onChange={event => setForm({ ...form, children: Array.from(event.target.selectedOptions, option => option.value) })} style={{ minHeight: 110 }}>{studentOptions.map(student => <option key={student.id} value={student.id}>{student.name}{student.className ? ' · ' + student.className : ''}</option>)}</select><small>Use Ctrl (Windows) or Command (Mac) to select more than one child.</small></label>}
             {error && <div className="login-error user-modal-error">{error}</div>}
             <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
           </form>
