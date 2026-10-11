@@ -6,9 +6,9 @@ import { useAuth } from '../../context/AuthContext'
 import { listNoticesApi } from '../../api/notices.api'
 
 const nav = {
-  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exam Management','exams'],['Results & Reports','results'],['Notices','notices']],
+  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exam Management','exams'],['Notices','notices']],
   teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Exams & Question Bank','exams'],['Results & Reports','results'],['Notices','notices']],
-  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Exams','exams'],['Results','results'],['Notices','notices']],
+  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Exams','exams'],['Notices','notices']],
   parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Exams & Reports','exams'],['Results','results'],['Notices','notices'],['Timetable','timetable']],
 }
 const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, exams:ClipboardList, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users }
