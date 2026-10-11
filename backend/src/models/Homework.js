@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const homeworkSchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   className: { type: String, required: true, trim: true, index: true },
+  division: { type: String, trim: true, uppercase: true, default: '', index: true },
   subject: { type: String, required: true, trim: true },
   title: { type: String, required: true, trim: true },
   instructions: { type: String, default: '', trim: true },
@@ -11,5 +12,5 @@ const homeworkSchema = new mongoose.Schema({
   submissions: [{ student: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, text: { type: String, trim: true }, submittedAt: { type: Date, default: Date.now } }],
 }, { timestamps: true })
 
-homeworkSchema.index({ className: 1, status: 1, createdAt: -1 })
+homeworkSchema.index({ className: 1, division: 1, status: 1, createdAt: -1 })
 export default mongoose.model('Homework', homeworkSchema)
