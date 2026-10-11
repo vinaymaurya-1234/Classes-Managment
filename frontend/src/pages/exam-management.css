@@ -2,3 +2,47 @@
 
 .exam-checkbox-field{display:flex!important;flex-direction:row!important;align-items:center;gap:9px!important;font-size:12px!important;line-height:1.5}.exam-checkbox-field input{width:16px;height:16px;accent-color:var(--green)}.exam-answer-review{display:grid;gap:12px;margin-top:15px}.exam-answer-review article{padding:13px;border:1px solid var(--line);border-radius:10px}.exam-answer-review strong{font-size:13px}.exam-answer-review p{font-size:12px;line-height:1.5;color:var(--muted)}.exam-answer-review small{font-size:11px;color:var(--green)}
 @media print{body *{visibility:hidden!important}.exam-paper-card:not(.print-selected){display:none!important}.exam-paper-card.print-selected{display:block!important;position:absolute!important;inset:0 auto auto 0!important;width:100%!important;border:0!important;padding:0!important}.exam-paper-card.print-selected .exam-paper-top,.exam-paper-card.print-selected>h3,.exam-paper-card.print-selected>p,.exam-paper-card.print-selected>.exam-paper-stats,.exam-paper-card.print-selected>.exam-paper-actions,.exam-paper-card.print-selected>.exam-status,.exam-paper-card.print-selected>details>summary{display:none!important}.exam-paper-card.print-selected .exam-paper-preview{display:block!important}.exam-paper-card.print-selected .exam-print-area,.exam-paper-card.print-selected .exam-print-area *{visibility:visible!important}.exam-paper-card.print-selected .exam-print-area{display:block!important;position:static!important;width:100%!important;padding:24px!important;color:#000!important}.exam-paper-card.print-selected .exam-answer-key{display:none!important;visibility:hidden!important}.exam-paper-card.print-answer-key .exam-answer-key{display:block!important;visibility:visible!important}.exam-paper-card.print-selected .exam-print-area small{color:#000!important}}
+
+
+/* Exam centre form layout polish */
+.exam-tabs{gap:8px;padding:6px;margin-bottom:22px}
+.exam-tabs button{min-height:40px;padding:10px 16px}
+.exam-form{gap:18px 16px;align-items:start;padding:4px 0 2px}
+.exam-form>label{gap:8px;line-height:1.35;font-size:13px;color:#284d3a}
+.exam-form input:not([type="checkbox"]),.exam-form select,.exam-form textarea{
+  display:block;box-sizing:border-box;width:100%;min-height:44px;padding:11px 13px;
+  border:1px solid #d5e5da;border-radius:11px;background:#fff;color:var(--ink);
+  font-family:inherit;font-size:13px;font-weight:450;line-height:1.45;outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease
+}
+.exam-form textarea{min-height:86px;padding:12px 13px;resize:vertical}
+.exam-form input:not([type="checkbox"]):focus,.exam-form select:focus,.exam-form textarea:focus{
+  border-color:#72ad86;box-shadow:0 0 0 3px rgba(63,143,99,.12);background:#fff
+}
+.exam-form input::placeholder,.exam-form textarea::placeholder{color:#87978d;opacity:1}
+.exam-form .exam-option-fields{gap:16px}
+.exam-form-actions{align-items:center;gap:10px;padding-top:4px}
+.exam-form-actions button{min-height:42px;padding:0 17px;border-radius:10px}
+.exam-form .exam-checkbox-field{display:flex;flex-direction:row;align-items:flex-start;gap:10px;line-height:1.5}
+.exam-form .exam-checkbox-field input{margin-top:3px;accent-color:var(--green)}
+.exam-form .exam-generator-summary{padding:16px;border-radius:13px;gap:14px}
+.exam-form .exam-generator-summary button{min-height:38px;padding:0 12px}
+.exam-filter-grid{gap:16px;margin:0 0 20px}
+.exam-filter-grid label{gap:8px;font-size:12px}
+.exam-filter-grid input,.exam-filter-grid select{box-sizing:border-box;min-height:42px;padding:10px 12px;font-size:13px}
+.exam-list-head{margin:18px 0 10px}
+.exam-bank-item{gap:16px;padding:18px 2px}
+.exam-bank-body p{margin:10px 0;font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+.exam-bank-actions button{min-height:34px;padding:0 11px;border-radius:8px}
+.exam-alert,.exam-notice{margin:14px 0;padding:13px 16px;line-height:1.5}
+@media(max-width:700px){
+  .exam-form{grid-template-columns:minmax(0,1fr);gap:15px}
+  .exam-full{grid-column:1}
+  .exam-form>label{font-size:12px}
+  .exam-form input:not([type="checkbox"]),.exam-form select,.exam-form textarea{font-size:14px}
+  .exam-form .exam-option-fields{grid-template-columns:minmax(0,1fr);gap:14px}
+  .exam-filter-grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  .exam-tabs{margin-bottom:16px}
+  .exam-bank-item{gap:10px;padding:14px 0}
+  .exam-bank-actions{flex-direction:row;flex-wrap:wrap}
+}
