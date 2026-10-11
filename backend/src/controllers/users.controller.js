@@ -53,6 +53,9 @@ export const createUser = async (req, res, next) => {
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
+    const childIds = Array.isArray(req.body.childIds)
+      ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
+      : []
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -87,10 +90,15 @@ export const createUser = async (req, res, next) => {
       })
     }
 
-    if (role !== 'parent' && childIds.length) return res.status(400).json({ success: false, message: 'Only parent accounts can be linked to children.' })
+    if (role !== 'parent' && childIds.length) {
+      return res.status(400).json({ success: false, message: 'Only parent accounts can be linked to children.' })
+    }
+
     if (role === 'parent' && childIds.length) {
       const linkedStudents = await User.find({ _id: { $in: childIds }, role: 'student' }).select('_id').lean()
-      if (linkedStudents.length !== childIds.length) return res.status(400).json({ success: false, message: 'Choose valid student accounts only.' })
+      if (linkedStudents.length !== childIds.length) {
+        return res.status(400).json({ success: false, message: 'Choose valid student accounts only.' })
+      }
     }
 
     const user = await User.create({
@@ -101,6 +109,7 @@ export const createUser = async (req, res, next) => {
       phone,
       avatarUrl,
       ...(role === 'student' ? { std } : {}),
+      ...(role === 'parent' ? { children: childIds } : {}),
     })
 
     return res.status(201).json({
