@@ -120,6 +120,11 @@ router.put('/questions/:id', async (req, res, next) => {
     if (!isTeacher(req.user) || !validId(req.params.id)) return forbidden(res)
     const question = await Question.findOne({ _id: req.params.id, teacher: req.user._id })
     if (!question) return fail(res, 404, 'Question not found.')
+    const std = req.body.std === undefined ? Number(String(question.className).match(/\\d+/)?.[0]) : Number(req.body.std)
+    const division = req.body.division === undefined ? question.division : String(req.body.division).toUpperCase()
+    if (!stds.includes(std) || !divisions.includes(division)) return fail(res, 400, 'Choose a valid class and division.')
+    if (!await canTeach(req.user, std, division)) return forbidden(res)
+    question.className = `Class ${std}`; question.division = division
     const allowed = ['subject','chapter','topic','type','text','options','correctAnswer','explanation','marks','difficulty','tags']
     for (const key of allowed) if (req.body[key] !== undefined) question[key] = req.body[key]
     await question.save()
