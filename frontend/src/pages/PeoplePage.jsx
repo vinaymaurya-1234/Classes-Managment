@@ -21,7 +21,7 @@ export default function PeoplePage({ type, title }) {
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', std: '' })
 
   const loadUsers = async () => {
     if (!canManage) return
@@ -40,14 +40,14 @@ export default function PeoplePage({ type, title }) {
     return source.filter(item => item.name.toLowerCase().includes(query))
   }, [canManage, data, search, type])
 
-  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '' }); setError(''); setModalOpen(true) }
+  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '', std: '' }); setError(''); setModalOpen(true) }
   const closeModal = () => { if (!saving) setModalOpen(false) }
 
   const submit = async event => {
     event.preventDefault(); setSaving(true); setError('')
     try {
-      await createUserApi(token, { ...form, role: type })
-      setModalOpen(false); setForm({ name: '', email: '', password: '', phone: '' }); await loadUsers()
+      await createUserApi(token, { ...form, ...(type === 'student' ? { std: Number(form.std) } : {}), role: type })
+      setModalOpen(false); setForm({ name: '', email: '', password: '', phone: '', std: '' }); await loadUsers()
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
@@ -64,7 +64,7 @@ export default function PeoplePage({ type, title }) {
             {visibleData.map(person => <div className="table-row" key={person.id || person.email || person.name}>
               <span className="person">
                 {person.avatarUrl ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" /> : <span className="avatar green">{person.name[0]}</span>}
-                <div><b>{person.name}</b><small>{person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
+                <div><b>{person.name}</b><small>{(type === 'student' && person.std ? `STD ${person.std}` : '') || person.className || person.email || (type === 'teacher' ? 'Faculty' : 'Parent account')}</small></div>
               </span>
               <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
               <span className="pill success">Active</span><ChevronRight size={15} />
@@ -80,6 +80,7 @@ export default function PeoplePage({ type, title }) {
             <label>Email address<input type="email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="name@example.com" required /></label>
             <label>Temporary password<input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required /></label>
             <label>Phone<input value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="Optional" /></label>
+            {type === 'student' && <label>STD (10, 11, or 12)<input type="number" min="10" max="12" step="1" value={form.std} onChange={event => setForm({ ...form, std: event.target.value })} placeholder="Enter 10, 11, or 12" required onInvalid={event => event.currentTarget.setCustomValidity('Enter 10, 11, or 12')} onInput={event => event.currentTarget.setCustomValidity('')} /></label>}
             {error && <div className="login-error user-modal-error">{error}</div>}
             <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
           </form>
