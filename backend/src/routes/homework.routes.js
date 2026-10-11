@@ -51,12 +51,8 @@ router.post('/', async (req, res, next) => {
 
     const assignedClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
     const teachesClass = assignedClasses.some(assigned => getStd(assigned) === requestedStd)
-    const hasChapterForClass = teachesClass
-      ? false
-      : Boolean(await Chapter.exists({
-          teacher: req.user._id,
-          className: { $in: [className, `Class ${requestedStd}`, String(requestedStd), `11-${requestedStd}`] },
-        }))
+    const chapters = teachesClass ? [] : await Chapter.find({ teacher: req.user._id }).select('className').lean()
+    const hasChapterForClass = chapters.some(chapter => getStd(chapter.className) === requestedStd)
 
     if (!teachesClass && !hasChapterForClass) {
       return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
