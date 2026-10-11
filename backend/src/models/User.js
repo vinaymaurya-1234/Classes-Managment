@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, trim: true, default: '' },
   avatarUrl: { type: String, trim: true, default: '' },
   className: { type: String, trim: true, default: '' },
+  std: { type: Number, enum: [10, 11, 12] },
   teachingClasses: { type: [String], default: [] },
 }, { timestamps: true })
 
