@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import './workflow.css'
 import { Trophy, Plus, Save, LoaderCircle, CheckCircle2, RotateCcw } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
