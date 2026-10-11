@@ -6,12 +6,12 @@ import { useAuth } from '../../context/AuthContext'
 import { listNoticesApi } from '../../api/notices.api'
 
 const nav = {
-  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exams & Results','results'],['Notices','notices']],
-  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Tests & Marks','results'],['Notices','notices']],
-  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Tests & Results','results'],['Notices','notices']],
-  parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Tests & Reports','results'],['Notices','notices'],['Timetable','timetable']],
+  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exam Management','exams'],['Results & Reports','results'],['Notices','notices']],
+  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Exams & Question Bank','exams'],['Results & Reports','results'],['Notices','notices']],
+  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Exams','exams'],['Results','results'],['Notices','notices']],
+  parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Exams & Reports','exams'],['Results','results'],['Notices','notices'],['Timetable','timetable']],
 }
-const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users }
+const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, exams:ClipboardList, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users }
 
 const Avatar = ({ user, className = 'avatar' }) => user?.avatarUrl ? <img className={className + ' avatar-image'} src={user.avatarUrl} alt={user.name || 'Profile'} /> : <span className={className}>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
 
