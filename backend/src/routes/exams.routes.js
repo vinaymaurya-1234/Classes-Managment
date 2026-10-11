@@ -367,7 +367,7 @@ router.get('/results', async (req, res, next) => {
       filter = { student: { $in: ids }, published: true }
     } else if (isTeacher(user)) filter = { exam: { $in: (await Exam.find({ teacher: user._id }).select('_id')).map(e => e._id) } }
     else if (!isPrincipal(user)) return forbidden(res)
-    const results = await ExamResult.find(filter).sort({ createdAt: -1 }).populate('student', 'name email std division').populate('exam', 'title subject startsAt totalMarks className division resultsPublished').limit(1000).lean()
+    const results = await ExamResult.find(filter).sort({ createdAt: -1 }).populate('student', 'name email std division').populate('exam', 'title subject startsAt totalMarks className division resultsPublished answerReviewEnabled').limit(1000).lean()
     res.json({ success: true, data: results })
   } catch (error) { next(error) }
 })
