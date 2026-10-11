@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, Menu, MessageSquare, Search, Settings, Trophy, Users, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { roles } from '../../data/mockData'
@@ -27,6 +27,7 @@ export default function AppLayout({ children }) {
   const [mobileNav,setMobileNav] = useState(false)
   const [search,setSearch] = useState('')
   const [profileOpen,setProfileOpen] = useState(false)
+  const profileMenuRef = useRef(null)
   const info = roles[role]
   const currentKey = location.pathname.split('/')[2] || 'overview'
   const pageLabel = nav[role].find(x => x[1] === currentKey)?.[0] || 'Overview'
@@ -44,6 +45,25 @@ export default function AppLayout({ children }) {
     }).finally(() => { if (active) setNotificationLoading(false) })
     return () => { active = false }
   }, [user, location.pathname])
+  useEffect(() => {
+    if (!profileOpen) return undefined
+
+    const handleOutsidePointer = event => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setProfileOpen(false)
+      }
+    }
+    const handleEscape = event => {
+      if (event.key === 'Escape') setProfileOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handleOutsidePointer)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [profileOpen])
   const openNotice = () => { setNotificationOpen(false); navigate(`/${role}/notices`) }
   const notificationDate = value => new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value))
 
@@ -75,7 +95,7 @@ export default function AppLayout({ children }) {
        <div className="notification-dropdown-state"><Bell size={20}/><span>No notifications yet.</span></div>}
     </div>
   </div>}
-</div><div className="profile-menu"><button className="top-avatar-button" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu"><Avatar user={user} className="top-avatar"/></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
+</div><div className="profile-menu" ref={profileMenuRef}><button className="top-avatar-button" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu"><Avatar user={user} className="top-avatar"/></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
       <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{({principal:'Good morning, Principal.',teacher:'Ready for today’s lessons?',student:'Good morning, Aarav.',parent:'Welcome back.'})[role]}</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>Friday, 2 October 2026</span></div></div>{children || <Outlet context={{role,search,setSearch,go}}/>}</div>
     </main>
   </div>
