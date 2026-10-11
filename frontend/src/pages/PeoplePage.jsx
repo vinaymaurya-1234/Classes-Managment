@@ -21,7 +21,8 @@ export default function PeoplePage({ type, title }) {
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', std: '' })
+  const emptyForm = { name: '', email: '', password: '', phone: '', std: '', teachingClasses: [] }
+  const [form, setForm] = useState(emptyForm)
 
   const loadUsers = async () => {
     if (!canManage) return
@@ -40,14 +41,14 @@ export default function PeoplePage({ type, title }) {
     return source.filter(item => item.name.toLowerCase().includes(query))
   }, [canManage, data, search, type])
 
-  const openModal = () => { setForm({ name: '', email: '', password: '', phone: '', std: '' }); setError(''); setModalOpen(true) }
+  const openModal = () => { setForm({ ...emptyForm, teachingClasses: [] }); setError(''); setModalOpen(true) }
   const closeModal = () => { if (!saving) setModalOpen(false) }
 
   const submit = async event => {
     event.preventDefault(); setSaving(true); setError('')
     try {
-      await createUserApi(token, { ...form, ...(type === 'student' ? { std: Number(form.std) } : {}), role: type })
-      setModalOpen(false); setForm({ name: '', email: '', password: '', phone: '', std: '' }); await loadUsers()
+      await createUserApi(token, { ...form, ...(type === 'student' ? { std: Number(form.std) } : {}), ...(type === 'teacher' ? { teachingClasses: form.teachingClasses } : {}), role: type })
+      setModalOpen(false); setForm({ ...emptyForm, teachingClasses: [] }); await loadUsers()
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
@@ -81,8 +82,23 @@ export default function PeoplePage({ type, title }) {
             <label>Temporary password<input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required /></label>
             <label>Phone<input value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} placeholder="Optional" /></label>
             {type === 'student' && <label>STD (10, 11, or 12)<input type="number" min="10" max="12" step="1" value={form.std} onChange={event => setForm({ ...form, std: event.target.value })} placeholder="Enter 10, 11, or 12" required onInvalid={event => event.currentTarget.setCustomValidity('Enter 10, 11, or 12')} onInput={event => event.currentTarget.setCustomValidity('')} /></label>}
+            {type === 'teacher' && <fieldset className="teacher-class-fieldset">
+              <legend>Assign classes and sections <span>*</span></legend>
+              <p>Select every class/section this teacher will teach. No class is selected by default.</p>
+              <div className="teacher-class-options">
+                {[11, 12].map(std => ['A', 'B', 'C'].map(section => {
+                  const value = `${std}-${section}`
+                  const checked = form.teachingClasses.includes(value)
+                  return <label className={`teacher-class-option ${checked ? 'selected' : ''}`} key={value}>
+                    <input type="checkbox" checked={checked} onChange={() => setForm(current => ({ ...current, teachingClasses: checked ? current.teachingClasses.filter(item => item !== value) : [...current.teachingClasses, value] }))} />
+                    <span><strong>Class {std}</strong><small>Section {section}</small></span>
+                  </label>
+                }))}
+              </div>
+              {!form.teachingClasses.length && <small className="teacher-class-hint">Choose at least one class and section.</small>}
+            </fieldset>}
             {error && <div className="login-error user-modal-error">{error}</div>}
-            <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
+            <div className="user-modal-actions"><button type="button" className="secondary" onClick={closeModal} disabled={saving}>Cancel</button><button className="primary" disabled={saving || (type === 'teacher' && !form.teachingClasses.length)}>{saving && <LoaderCircle size={15} className="spin" />}{saving ? 'Creating...' : 'Create ' + type}</button></div>
           </form>
         </div>
       </div>}
