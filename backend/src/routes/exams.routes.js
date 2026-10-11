@@ -20,12 +20,27 @@ const fail = (res, status, message) => res.status(status).json({ success: false,
 const isPrincipal = user => user?.role === 'principal'
 const isTeacher = user => user?.role === 'teacher'
 const isStudent = user => user?.role === 'student'
+const normalizeClassAssignment = value => {
+  const raw = String(value || '').trim()
+  const match = raw.match(/(?:class\\s*)?(10|11|12)(?:\\s*[-–/]\\s*([ABC]))?/i)
+  return match ? { std: Number(match[1]), division: match[2]?.toUpperCase() || '' } : null
+}
 const canTeach = async (user, std, division) => {
-  const label = classLabel(std, division)
   const labels = Array.isArray(user.teachingClasses) ? user.teachingClasses : []
-  if (labels.includes(label) || labels.includes(`Class ${std}`) || labels.includes(String(std))) return true
-  const chapterNames = [label, `Class ${std}`, String(std), `${std}-${division}`]
-  return Boolean(await Chapter.exists({ teacher: user._id, className: { $in: chapterNames } }))
+  const assigned = labels.some(value => {
+    const parsed = normalizeClassAssignment(value)
+    return parsed && parsed.std === Number(std) && (!parsed.division || parsed.division === String(division).toUpperCase())
+  })
+  if (assigned) return true
+
+  // Older chapter records and accounts may use "10-A", "Class 10", or
+  // "Class 10 - A". Match those legacy formats without granting access to
+  // another class or division.
+  const chapters = await Chapter.find({ teacher: user._id }).select('className').lean()
+  return chapters.some(chapter => {
+    const parsed = normalizeClassAssignment(chapter.className)
+    return parsed && parsed.std === Number(std) && (!parsed.division || parsed.division === String(division).toUpperCase())
+  })
 }
 const getStudentClass = user => ({ std: Number(user.std), division: user.division, className: `Class ${Number(user.std)}` })
 const safeQuestion = question => ({
