@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import Assessment from '../models/Assessment.js'
 import User from '../models/User.js'
+import Chapter from '../models/Chapter.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
@@ -41,6 +42,8 @@ router.post('/', async (req, res, next) => {
     const className = String(req.body.className || '').trim(), subject = String(req.body.subject || '').trim(), title = String(req.body.title || '').trim()
     const maxMarks = Number(req.body.maxMarks)
     if (!className || !subject || !title || !Number.isFinite(maxMarks) || maxMarks < 1) return res.status(400).json({ success: false, message: 'Class, subject, test title and valid maximum marks are required.' })
+    const taught = (req.user.teachingClasses || []).includes(className) || await Chapter.exists({ teacher: req.user._id, className })
+    if (!taught) return res.status(403).json({ success: false, message: 'You can only create tests for a class assigned to you.' })
     const students = await User.find({ role: 'student', className }).select('_id').lean()
     const item = await Assessment.create({ teacher: req.user._id, className, subject, title, examDate: req.body.examDate || null, maxMarks, marks: students.map(student => ({ student: student._id, marks: 0, entered: false })), status: 'draft' })
     const data = await Assessment.findById(item._id).populate('marks.student', 'name className')
