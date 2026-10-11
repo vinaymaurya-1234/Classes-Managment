@@ -18,7 +18,7 @@ router.get('/', async (req, res, next) => {
     if (user.role === 'student') {
       const className = user.className || (user.std ? `Class ${user.std}` : '')
       const filter = { className, status: 'published' }
-      if (user.division) filter.division = user.division
+      filter.division = user.division || ''
       const data = className ? await Homework.find(filter).sort({ dueDate: 1, createdAt: -1 }).lean() : []
       return res.json({ success: true, data })
     }
