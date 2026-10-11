@@ -22,7 +22,15 @@ router.get('/', async (req, res, next) => {
       const data = user.className ? await Assessment.find({ className: user.className, status: 'published' }).sort({ publishedAt: -1 }).populate('marks.student', 'name').lean() : []
       return res.json({ success: true, data: data.map(test => ({ ...test, marks: test.marks.filter(mark => String(mark.student?._id || mark.student) === String(user._id)) })) })
     }
-    if (user.role === 'parent') return res.json({ success: true, data: [], message: 'Parent-child linking is not configured yet, so results are hidden to protect student privacy.' })
+    if (user.role === 'parent') {
+      const parent = await User.findById(user._id).populate('children', 'className').lean()
+      const children = parent?.children || []
+      const childIds = new Set(children.map(child => String(child._id)))
+      const classes = [...new Set(children.map(child => child.className).filter(Boolean))]
+      const tests = classes.length ? await Assessment.find({ className: { $in: classes }, status: 'published' }).sort({ publishedAt: -1 }).populate('marks.student', 'name className').lean() : []
+      const data = tests.map(test => ({ ...test, marks: test.marks.filter(mark => childIds.has(String(mark.student?._id || mark.student))) }))
+      return res.json({ success: true, data, message: classes.length ? '' : 'No students are linked to this parent account yet. Ask the principal to link the child account.' })
+    }
     return res.json({ success: true, data: [] })
   } catch (error) { next(error) }
 })
