@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronRight, LoaderCircle, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LoaderCircle, UserPlus, X, BookOpen, Trophy, Wallet, Users } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
@@ -40,6 +40,11 @@ export default function PeoplePage({ type, title }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [selectedPerson, setSelectedPerson] = useState(null)
+  const [attempts, setAttempts] = useState([])
+  const [selectedAttempt, setSelectedAttempt] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [feeRecords, setFeeRecords] = useState([])
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return
@@ -70,6 +75,26 @@ export default function PeoplePage({ type, title }) {
         .includes(query),
     )
   }, [canManage, data, search, type])
+
+  const openPerson = async person => {
+    setSelectedPerson(person); setSelectedAttempt(null); setAttempts([]); setFeeRecords([]); setError('');
+    if (!canManage || !token) return;
+    setDetailLoading(true);
+    try {
+      if (type === 'student') {
+        const [result, fees] = await Promise.all([
+          api.get(`/api/exams/students/${encodeURIComponent(person.id)}/attempts`, token),
+          api.get('/api/fees/students', token).catch(() => ({ fees: [] })),
+        ]);
+        setAttempts(result.data || []);
+        setFeeRecords((fees.fees || []).filter(item => item.student?.id === person.id));
+      } else if (type === 'parent') {
+        const fees = await api.get('/api/fees/students', token).catch(() => ({ fees: [] }));
+        setFeeRecords(fees.fees || []);
+      }
+    } catch (err) { setError(err.message || 'Unable to load account details.') }
+    finally { setDetailLoading(false) }
+  }
 
   const openModal = () => {
     setForm(emptyForm())
@@ -157,13 +182,13 @@ export default function PeoplePage({ type, title }) {
 
       {error && !modalOpen && <div className="profile-message error people-error">{error}</div>}
 
-      <Card title={`${heading} directory`}>
+      {selectedPerson ? <Card title={`${selectedPerson.name} · ${type} details`}><div className="person-detail-page"><button type="button" className="secondary" onClick={()=>{setSelectedPerson(null);setSelectedAttempt(null);setError('')}}><ArrowLeft size={15}/> Back to {heading.toLowerCase()}</button><div className="person-detail-hero">{selectedPerson.avatarUrl?<img className="avatar avatar-image" src={selectedPerson.avatarUrl} alt=""/>:<span className="avatar green">{(selectedPerson.name||'?')[0].toUpperCase()}</span>}<div><h2>{selectedPerson.name}</h2><p>{selectedPerson.email}</p><span>{selectedPerson.phone||'No phone provided'}</span></div></div>{detailLoading?<div className="people-state"><LoaderCircle size={18} className="spin"/>Loading details...</div>:<><div className="person-detail-grid"><div><span>Email</span><strong>{selectedPerson.email||'—'}</strong></div><div><span>Phone</span><strong>{selectedPerson.phone||'—'}</strong></div>{type==='student'&&<><div><span>Class</span><strong>Class {selectedPerson.std||'—'}{selectedPerson.division?` · Division ${selectedPerson.division}`:''}</strong></div><div><span>Account created</span><strong>{selectedPerson.createdAt?new Date(selectedPerson.createdAt).toLocaleDateString('en-IN'):'—'}</strong></div></>}{type==='teacher'&&<div className="person-detail-wide"><span>Assigned classes</span><strong>{(selectedPerson.teachingClasses||[]).join(', ')||'No classes assigned'}</strong></div>}</div>{canManage&&type==='student'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Trophy size={16}/> Recent attempted tests</h3><span>{attempts.length} attempts</span></div>{attempts.length?attempts.map(attempt=><article className="person-test-card" key={attempt.id}><button type="button" className="person-test-summary" onClick={()=>setSelectedAttempt(selectedAttempt?.id===attempt.id?null:attempt)}><span><strong>{attempt.exam?.title||'Exam'}</strong><small>{attempt.exam?.subject||'Subject'} · {attempt.submittedAt?new Date(attempt.submittedAt).toLocaleDateString('en-IN'):'Submitted'}</small></span><span className="person-test-score">{attempt.score??0} / {attempt.totalMarks}</span><ChevronRight size={16}/></button>{selectedAttempt?.id===attempt.id&&<div className="person-question-review">{(attempt.questions||[]).map((question,index)=><div className="person-question" key={question.id}><div className="person-question-title"><strong>Q{index+1}. {question.text}</strong><span className={'pill '+(question.status==='correct'?'success':question.status==='incorrect'?'danger':'neutral')}>{question.status}</span></div><p>Your answer: <b>{question.selectedAnswer||'Skipped'}</b></p>{question.correctAnswer&&<p>Correct answer: <b>{question.correctAnswer}</b></p>}{question.explanation&&<small>{question.explanation}</small>}</div>)}</div>}</article>):<p className="person-detail-empty">No submitted test attempts found for this student.</p>}</div>}{type==='student'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Wallet size={16}/> Fee details</h3></div>{feeRecords.length?feeRecords.map(fee=><div className="person-fee-row" key={fee.id||fee.academicYear}><span>{fee.academicYear}</span><strong>₹{Number(fee.pendingAmount||0).toLocaleString('en-IN')} pending</strong><small>₹{Number(fee.paidAmount||0).toLocaleString('en-IN')} paid of ₹{Number(fee.totalFee||0).toLocaleString('en-IN')}</small></div>):<p className="person-detail-empty">No fee record is available yet.</p>}</div>}{type==='parent'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Users size={16}/> Fee overview</h3></div>{feeRecords.length?feeRecords.map(fee=><div className="person-fee-row" key={fee.id||fee.student?.id}><span>{fee.student?.name} · {fee.student?.className||'Class not assigned'}</span><strong>₹{Number(fee.pendingAmount||0).toLocaleString('en-IN')} pending</strong><small>{fee.installmentCount||0} recorded installments</small></div>):<p className="person-detail-empty">No student fee records found.</p>}</div>}{type==='teacher'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><BookOpen size={16}/> Teaching overview</h3></div><p className="person-detail-empty">The assigned classes are listed above. Class-level chapter progress and rosters are available in the teacher's My Classes area.</p></div>}</>}</div></Card> : <Card title={`${heading} directory`}>
         {loading ? (
           <div className="people-state"><LoaderCircle size={18} className="spin" />Loading {heading.toLowerCase()}...</div>
         ) : visibleData.length ? (
           <div className="attendance-table">
             {visibleData.map(person => (
-              <div className="table-row" key={person.id || person.email || person.name}>
+              <div className="table-row people-clickable-row" key={person.id || person.email || person.name} onClick={()=>openPerson(person)} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPerson(person)}}}>
                 <span className="person">
                   {person.avatarUrl
                     ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" />
@@ -185,10 +210,10 @@ export default function PeoplePage({ type, title }) {
                 <div className="people-row-actions">
                   <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
                   {canManage && type === 'student' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={() => updatePlacement(person)}>Edit class</button>
+                    <button type="button" className="secondary people-placement-edit" onClick={event => {event.stopPropagation();openPerson(person)}}>Edit class</button>
                   )}
                   {canManage && type === 'teacher' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={() => updateTeacherClasses(person)}>Edit assignments</button>
+                    <button type="button" className="secondary people-placement-edit" onClick={event => {event.stopPropagation();openPerson(person)}}>Edit assignments</button>
                   )}
                 </div>
                 <span className="pill success">Active</span>
@@ -199,7 +224,7 @@ export default function PeoplePage({ type, title }) {
         ) : (
           <div className="people-state">No {heading.toLowerCase()} found.</div>
         )}
-      </Card>
+      </Card>}
 
       {modalOpen && (
         <div className="user-modal-backdrop" onMouseDown={closeModal}>
