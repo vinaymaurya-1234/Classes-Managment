@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
-const ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `${classNumber}-${section}`)))
+const normalizeTeachingClass = value => { const match = String(value ?? '').trim().match(/^(?:Class\\s*)?(11|12)\\s*-\\s*([ABC])$/i); return match ? `Class ${match[1]} - ${match[2].toUpperCase()}` : '' }\nconst ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `Class ${classNumber} - ${section}`)))
 const publicUser = user => ({
   id: user._id.toString(),
   name: user.name,
@@ -40,7 +40,7 @@ export const createUser = async (req, res, next) => {
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
     const division = String(req.body.division || '').trim().toUpperCase()
-    const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(value => String(value).trim()).filter(Boolean))] : []
+    const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(normalizeTeachingClass))] : []
     const childIds = Array.isArray(req.body.childIds)
       ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
       : []
@@ -120,7 +120,7 @@ export const updateTeacherAssignments = async (req, res, next) => {
     }
 
     const teachingClasses = Array.isArray(req.body.teachingClasses)
-      ? [...new Set(req.body.teachingClasses.map(value => String(value).trim().toUpperCase()).filter(Boolean))]
+      ? [...new Set(req.body.teachingClasses.map(normalizeTeachingClass))]
       : []
     if (!teachingClasses.length || teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value))) {
       return res.status(400).json({ success: false, message: 'Provide at least one valid Class 11 or 12 division (A, B or C).' })
