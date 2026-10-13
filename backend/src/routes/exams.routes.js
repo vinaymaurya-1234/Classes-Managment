@@ -381,6 +381,38 @@ router.get('/exams/:id/review', async (req, res, next) => {
   } catch (error) { next(error) }
 })
 
+router.get('/students/:studentId/attempts', async (req, res, next) => {
+  try {
+    if (!isPrincipal(req.user)) return forbidden(res)
+    if (!validId(req.params.studentId)) return fail(res, 400, 'Invalid student ID.')
+    const student = await User.findOne({ _id: req.params.studentId, role: 'student' }).select('_id')
+    if (!student) return fail(res, 404, 'Student not found.')
+    const attempts = await ExamAttempt.find({ student: student._id, status: { $in: ['submitted', 'graded'] } })
+      .sort({ submittedAt: -1, updatedAt: -1 }).populate('exam', 'title subject startsAt totalMarks paper')
+      .limit(100).lean()
+    const data = await Promise.all(attempts.map(async attempt => {
+      const paper = attempt.exam?.paper ? await QuestionPaper.findById(attempt.exam.paper).lean() : null
+      const questions = (paper?.questions || []).map(question => {
+        const answer = (attempt.answers || []).find(item => String(item.questionId) === String(question._id))
+        const response = String(answer?.answer || '').trim()
+        const correct = ['mcq', 'true_false'].includes(question.type) && response !== '' &&
+          (response === String(question.correctAnswer) || response === String(question.options?.find(option => option.key === question.correctAnswer)?.text || ''))
+        return {
+          id: String(question._id), text: question.text, type: question.type,
+          options: question.options || [], selectedAnswer: response,
+          correctAnswer: question.correctAnswer || '', explanation: question.explanation || '',
+          marks: Number(question.marks || 0), marksAwarded: Number(answer?.marksAwarded || 0),
+          status: !response ? 'skipped' : ['mcq', 'true_false'].includes(question.type) ? (correct ? 'correct' : 'incorrect') : (answer?.reviewed ? 'graded' : 'awaiting-review'),
+        }
+      })
+      return { id: String(attempt._id), exam: attempt.exam, score: attempt.score, totalMarks: attempt.exam?.totalMarks || 0,
+        submittedAt: attempt.submittedAt, status: attempt.status, correctCount: attempt.correctCount,
+        incorrectCount: attempt.incorrectCount, unansweredCount: attempt.unansweredCount, questions }
+    }))
+    return res.json({ success: true, data })
+  } catch (error) { next(error) }
+})
+
 router.get('/results', async (req, res, next) => {
   try {
     const user = req.user
