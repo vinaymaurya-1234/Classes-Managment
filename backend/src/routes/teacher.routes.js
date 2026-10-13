@@ -14,9 +14,11 @@ const parseClass = value => {
 
 router.get('/classes', async (req, res, next) => {
   try {
-    if (req.user?.role !== 'teacher') return res.status(403).json({ success: false, message: 'Only teachers can access teaching classes.' })
-    const chapters = await Chapter.find({ teacher: req.user._id }).select('className subject').lean()
-    const configuredClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
+    if (!['teacher', 'principal'].includes(req.user?.role)) return res.status(403).json({ success: false, message: 'You do not have permission to view teaching classes.' })
+    const targetTeacher = req.user.role === 'teacher' ? req.user : await User.findOne({ _id: req.query.teacherId, role: 'teacher' })
+    if (!targetTeacher) return res.status(404).json({ success: false, message: 'Teacher not found.' })
+    const chapters = await Chapter.find({ teacher: targetTeacher._id }).select('className subject title chapterName status progress updatedAt').lean()
+    const configuredClasses = Array.isArray(targetTeacher.teachingClasses) ? targetTeacher.teachingClasses : []
     const classMap = new Map()
     const classSources = configuredClasses.length ? configuredClasses : chapters.map(item => item.className)
     for (const value of classSources) {
@@ -33,8 +35,9 @@ router.get('/classes', async (req, res, next) => {
         const parsed = parseClass(ch.className)
         return parsed && parsed.std === item.std && (!parsed.division || parsed.division === item.division)
       }).map(ch => ch.subject).filter(Boolean))].sort()
+      const classChapters = chapters.filter(ch => { const parsed = parseClass(ch.className); return parsed && parsed.std === item.std && (!item.division || !parsed.division || parsed.division === item.division) }).map(ch => ({ id: String(ch._id), title: ch.title || ch.chapterName || ch.subject || 'Chapter', subject: ch.subject || '', status: ch.status || 'in-progress', progress: Number(ch.progress || 0), updatedAt: ch.updatedAt || null }))
       return {
-        std: item.std, className: item.className, division: item.division,
+        std: item.std, className: item.className, division: item.division, chapters: classChapters,
         label: item.division ? `Class ${item.std} - ${item.division}` : item.className,
         subjects, studentCount: students.length,
         students: students.map(student => ({
