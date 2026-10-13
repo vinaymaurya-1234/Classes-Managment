@@ -2,7 +2,8 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
-const normalizeTeachingClass = value => { const match = String(value ?? '').trim().match(/^(?:Class\\s*)?(11|12)\\s*-\\s*([ABC])$/i); return match ? `Class ${match[1]} - ${match[2].toUpperCase()}` : '' }\nconst ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `Class ${classNumber} - ${section}`)))
+const normalizeTeachingClass = value => { const match = String(value ?? '').trim().match(/^(?:Class\s*)?(11|12)\s*-\s*([ABC])$/i); return match ? `Class ${match[1]} - ${match[2].toUpperCase()}` : '' }
+const ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `Class ${classNumber} - ${section}`)))
 const publicUser = user => ({
   id: user._id.toString(),
   name: user.name,
