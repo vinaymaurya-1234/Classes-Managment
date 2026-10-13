@@ -466,3 +466,19 @@
 @media(max-width:520px){.fee-summary-grid{grid-template-columns:1fr 1fr;gap:7px}.fee-form-grid{grid-template-columns:1fr}.fee-installment{align-items:flex-start}.fee-installment-fields{grid-template-columns:1fr}.fee-wide-field{grid-column:auto}.fee-installment-head{align-items:flex-start;flex-direction:column}.fee-installment-head .secondary{width:100%;justify-content:center}.fee-modal-actions{flex-direction:column-reverse}.fee-modal-actions button{width:100%;justify-content:center}}
 
 .people-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.people-placement-edit{padding:7px 9px;font-size:10px;white-space:nowrap}
+
+
+/* Sidebar profile control: reset browser button defaults and anchor its menu. */
+.sidebar-profile-menu{position:relative;width:100%;}
+.sidebar-profile{width:calc(100% - 8px);min-height:54px;margin:14px 4px 0;padding:9px 10px;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--ink);display:flex;align-items:center;gap:9px;text-align:left;}
+.sidebar-profile:hover,.sidebar-profile[aria-expanded="true"]{border-color:var(--line);background:#f0f7f2;}
+.sidebar-profile>.avatar,.sidebar-profile>.avatar-image{width:34px;height:34px;flex:0 0 34px;}
+.sidebar-profile>div{min-width:0;flex:1;}
+.sidebar-profile strong,.sidebar-profile span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-profile strong{font-size:10px;}
+.sidebar-profile span{font-size:8px;color:var(--muted);margin-top:2px;}
+.sidebar-profile>svg{flex:0 0 auto;margin-left:auto;}
+.sidebar-profile-dropdown{top:auto;bottom:calc(100% + 8px);left:0;right:auto;width:min(230px,calc(100vw - 30px));}
+.notice-recipient-tools{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:8px;padding:10px 12px;border-bottom:1px solid #e8f0eb;background:#fff;}
+.notice-recipient-tools input,.notice-recipient-tools select{min-width:0;width:100%;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#f9fcfa;color:var(--ink);font:inherit;font-size:9px;}
+@media(max-width:560px){.notice-recipient-tools{grid-template-columns:1fr}.sidebar-profile-dropdown{width:min(230px,calc(100vw - 60px));}}
