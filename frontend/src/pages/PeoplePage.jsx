@@ -19,15 +19,13 @@ const emptyForm = () => ({
   password: '',
   phone: '',
   std: '',
-  division: 'A',
+  division: '',
   teachingClasses: [],
 })
-const teacherClassOptions = [11, 12].flatMap(std =>
-  ['A', 'B', 'C'].map(division => ({
-    value: `Class ${std} - ${division}`,
-    label: `Class ${std} · Division ${division}`,
-  })),
-)
+const teacherClassOptions = [11, 12].flatMap(std => [
+  { value: `Class ${std}`, label: `Class ${std} · Any division` },
+  ...['A', 'B', 'C'].map(division => ({ value: `Class ${std} - ${division}`, label: `Class ${std} · Division ${division}` })),
+])
 
 export default function PeoplePage({ type, title }) {
   const { search = '', role } = useOutletContext()
@@ -238,7 +236,7 @@ export default function PeoplePage({ type, title }) {
                   </label>
                   <label>Division
                     <select value={form.division} onChange={event => setForm({ ...form, division: event.target.value })} required>
-                      {['A', 'B', 'C'].map(division => <option key={division} value={division}>Division {division}</option>)}
+                      <option value="">No division selected</option>{['A', 'B', 'C'].map(division => <option key={division} value={division}>Division {division}</option>)}
                     </select>
                   </label>
                 </div>
@@ -256,7 +254,7 @@ export default function PeoplePage({ type, title }) {
                       </label>
                     ))}
                   </div>
-                  {!form.teachingClasses.length && <small>Choose at least one class.</small>}
+                  {!form.teachingClasses.length && <small>Choose a class, with or without a division.</small>}
                 </fieldset>
               )}
 
