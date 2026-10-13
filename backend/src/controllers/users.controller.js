@@ -15,6 +15,7 @@ const publicUser = user => ({
   std: user.std ?? null,
   division: user.division || '',
   teachingClasses: user.teachingClasses || [],
+  children: (user.children || []).map(child => child?._id ? ({ id: child._id.toString(), name: child.name, email: child.email, std: child.std ?? null, division: child.division || '', className: child.className || '' }) : ({ id: child.toString() })),
   createdAt: user.createdAt,
 })
 const requirePrincipal = req => req.user?.role === 'principal'
@@ -25,7 +26,7 @@ export const listUsers = async (req, res, next) => {
     const role = String(req.query.role || '').trim().toLowerCase()
     const filter = role ? { role } : { role: { $in: MANAGED_ROLES } }
     if (role && !MANAGED_ROLES.includes(role)) return res.status(400).json({ success: false, message: 'Invalid user role' })
-    const users = await User.find(filter).sort({ createdAt: -1 })
+    const users = await User.find(filter).populate('children', 'name email std division className').sort({ createdAt: -1 })
     return res.json({ success: true, users: users.map(publicUser) })
   } catch (error) { next(error) }
 }
