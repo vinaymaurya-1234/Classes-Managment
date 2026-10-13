@@ -504,3 +504,6 @@
 .person-fee-row{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#fff;}.person-fee-row span{font-size:10px;font-weight:750;}.person-fee-row strong{font-size:10px;color:#a45d46;}.person-fee-row small{grid-column:1/-1;color:var(--muted);font-size:9px;}
 .pill.danger{background:#fbe9e6;color:#a7473b;}
 @media(max-width:560px){.person-detail-grid{grid-template-columns:1fr;}.person-detail-wide{grid-column:auto;}.person-fee-row{grid-template-columns:1fr;}.person-fee-row small{grid-column:auto;}}
+
+.timetable-repeat-option{display:flex!important;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#f9fcfa;font-size:9px!important;}
+.timetable-repeat-option input{width:15px;height:15px;margin:0;accent-color:var(--dark);}
