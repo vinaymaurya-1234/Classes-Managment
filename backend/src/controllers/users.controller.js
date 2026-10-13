@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
-const normalizeTeachingClass = value => { const match = String(value ?? '').trim().match(/^(?:Class\s*)?(11|12)\s*-\s*([ABC])$/i); return match ? `Class ${match[1]} - ${match[2].toUpperCase()}` : '' }
-const ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `Class ${classNumber} - ${section}`)))
+const normalizeTeachingClass = value => { const match = String(value ?? '').trim().match(/^(?:Class\s*)?(11|12)(?:\s*-\s*([ABC]))?$/i); return match ? (match[2] ? `Class ${match[1]} - ${match[2].toUpperCase()}` : `Class ${match[1]}`) : '' }
+const ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => [`Class ${classNumber}`, ...['A', 'B', 'C'].map(section => `Class ${classNumber} - ${section}`)]))
 const publicUser = user => ({
   id: user._id.toString(),
   name: user.name,
@@ -68,7 +68,7 @@ export const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Assign the teacher to at least one class and division.' })
     }
 
-    if (role === 'teacher' && teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value.toUpperCase()))) {
+    if (role === 'teacher' && teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value))) {
       return res.status(400).json({ success: false, message: 'Select at least one valid Class 11 or 12 section (A, B or C) for the teacher.' })
     }
 
