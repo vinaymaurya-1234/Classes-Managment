@@ -6,7 +6,13 @@ import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
 router.use(requireAuth)
-const role = (req, res, allowed) => allowed.includes(req.user?.role) || res.status(403).json({ success: false, message: 'You do not have permission to perform this action.' })
+const role = (req, res, allowed) => {
+  if (!allowed.includes(req.user?.role)) {
+    res.status(403).json({ success: false, message: 'You do not have permission to perform this action.' })
+    return false
+  }
+  return true
+}
 
 router.get('/', async (req, res, next) => {
   try {
