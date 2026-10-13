@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
+const ALLOWED_TEACHING_CLASSES = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `${classNumber}-${section}`)))
 const publicUser = user => ({
   id: user._id.toString(),
   name: user.name,
@@ -43,7 +44,6 @@ export const createUser = async (req, res, next) => {
     const childIds = Array.isArray(req.body.childIds)
       ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
       : []
-    const childIds = Array.isArray(req.body.childIds) ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))] : []
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -67,7 +67,7 @@ export const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Assign the teacher to at least one class and division.' })
     }
 
-    if (role === 'teacher' && (!teachingClasses.length || teachingClasses.some(value => !allowedTeachingClasses.has(value)))) {
+    if (role === 'teacher' && teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value.toUpperCase()))) {
       return res.status(400).json({ success: false, message: 'Select at least one valid Class 11 or 12 section (A, B or C) for the teacher.' })
     }
 
@@ -122,9 +122,7 @@ export const updateTeacherAssignments = async (req, res, next) => {
     const teachingClasses = Array.isArray(req.body.teachingClasses)
       ? [...new Set(req.body.teachingClasses.map(value => String(value).trim().toUpperCase()).filter(Boolean))]
       : []
-    const allowedTeachingClasses = new Set([11, 12].flatMap(classNumber => ['A', 'B', 'C'].map(section => `${classNumber}-${section}`)))
-
-    if (!teachingClasses.length || teachingClasses.some(value => !allowedTeachingClasses.has(value))) {
+    if (!teachingClasses.length || teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value))) {
       return res.status(400).json({ success: false, message: 'Provide at least one valid Class 11 or 12 division (A, B or C).' })
     }
 
