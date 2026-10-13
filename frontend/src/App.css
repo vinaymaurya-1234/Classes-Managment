@@ -466,23 +466,50 @@
 @media(max-width:520px){.fee-summary-grid{grid-template-columns:1fr 1fr;gap:7px}.fee-form-grid{grid-template-columns:1fr}.fee-installment{align-items:flex-start}.fee-installment-fields{grid-template-columns:1fr}.fee-wide-field{grid-column:auto}.fee-installment-head{align-items:flex-start;flex-direction:column}.fee-installment-head .secondary{width:100%;justify-content:center}.fee-modal-actions{flex-direction:column-reverse}.fee-modal-actions button{width:100%;justify-content:center}}
 
 
-/* Student division and teacher class assignment forms */
-.people-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.people-form-grid select{width:100%;height:42px;margin-top:6px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:#f9fcfa;color:var(--ink);font:inherit;font-size:12px}
-.teacher-assignment-field{min-width:0;margin:4px 0 0;padding:13px;border:1px solid var(--line);border-radius:12px}
-.teacher-assignment-field legend{padding:0 5px;color:var(--dark);font-size:12px;font-weight:800}
-.teacher-assignment-field>p{margin:0 0 10px;color:var(--muted);font-size:11px}
-.teacher-assignment-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.teacher-assignment-options label{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid #e2ece5;border-radius:9px;background:#fbfdfc;color:var(--ink);font-size:11px;cursor:pointer}
-.teacher-assignment-options input{width:15px;height:15px;flex:0 0 15px;accent-color:#286b47}
-.teacher-assignment-field>small{display:block;margin-top:9px;color:var(--muted);font-size:10px}
-.sidebar-profile-menu{position:relative;width:100%}
-.sidebar-profile{width:100%;display:flex;align-items:center;gap:10px;padding:10px 9px;border:1px solid transparent;border-radius:12px;background:transparent;color:inherit;text-align:left;cursor:pointer}
-.sidebar-profile:hover,.sidebar-profile[aria-expanded="true"]{border-color:#dcebe1;background:#f3f9f5}
-.sidebar-profile>div{min-width:0;flex:1}
-.sidebar-profile>div strong,.sidebar-profile>div span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sidebar-profile>div strong{font-size:12px}
-.sidebar-profile>div span{margin-top:3px;color:var(--muted);font-size:10px}
-.sidebar-profile>svg{flex:0 0 auto;color:#789084}
-.sidebar-profile-dropdown{top:auto;bottom:calc(100% + 8px);left:0;right:auto;width:min(270px,calc(100vw - 40px));z-index:100}
-@media(max-width:560px){.people-form-grid{grid-template-columns:1fr}.teacher-assignment-options{grid-template-columns:1fr}.sidebar-profile-dropdown{width:min(270px,calc(100vw - 60px))}}
+/* Principal teacher assignment form: keep long forms scrollable on every screen. */
+.user-modal-backdrop{overflow-y:auto;align-items:start;overscroll-behavior:contain}
+.user-modal{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.user-modal form{display:grid;gap:13px}
+.user-modal form>label{display:block;min-width:0;color:#526b5e;font-size:9px;font-weight:750}
+.user-modal form>label input,.user-modal form>label select{display:block;width:100%;min-height:40px;margin-top:6px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:#f9fcfa;color:var(--ink);font-size:10px}
+.teacher-class-fieldset{min-width:0;margin:2px 0 0;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}
+.teacher-class-fieldset legend{padding:0 5px;color:#526b5e;font-size:10px;font-weight:800}
+.teacher-class-fieldset legend span{color:var(--red)}
+.teacher-class-fieldset>p{margin:0 0 10px;color:#819087;font-size:9px;line-height:1.45}
+.teacher-class-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.teacher-class-option{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:white;cursor:pointer}
+.teacher-class-option.selected{border-color:#8fbea1;background:#f0f8f3;box-shadow:0 0 0 1px rgba(63,143,99,.08)}
+.teacher-class-option input{width:15px;height:15px;flex:0 0 auto;margin:0;accent-color:var(--dark)}
+.teacher-class-option span,.teacher-class-option strong,.teacher-class-option small{display:block;min-width:0}
+.teacher-class-option strong{font-size:9px}
+.teacher-class-option small{margin-top:3px;color:#819087;font-size:8px}
+.teacher-class-hint{display:block;margin-top:8px;color:var(--amber);font-size:8px}
+.user-modal-actions{position:sticky;bottom:-1px;display:flex;justify-content:flex-end;gap:8px;padding:12px 0 2px;background:white}
+@media(max-width:560px){.user-modal-backdrop{padding:10px;place-items:start center}.user-modal{max-height:calc(100dvh - 20px);padding:17px}.teacher-class-options{grid-template-columns:repeat(2,minmax(0,1fr))}.user-modal-actions{flex-direction:column-reverse}.user-modal-actions button{width:100%;justify-content:center}}
+
+
+/* Editable teacher class/section assignment rows */
+.teacher-assignment-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;align-items:end;gap:9px;margin-top:10px}
+.teacher-assignment-row label{display:block;min-width:0;color:#526b5e;font-size:9px;font-weight:750}
+.teacher-assignment-row input,.teacher-assignment-row select{display:block;width:100%;height:40px;margin-top:6px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#f9fcfa;color:var(--ink);font:inherit;font-size:10px}
+.teacher-assignment-row input:focus,.teacher-assignment-row select:focus{outline:3px solid rgba(63,143,99,.12);border-color:#8fbea1}
+.teacher-assignment-remove{width:30px;height:30px;margin-bottom:5px;border:1px solid #ead8d2;border-radius:8px;background:white;color:#a45d46;font-size:20px;line-height:1;cursor:pointer}
+.teacher-assignment-add{margin-top:10px}
+@media(max-width:560px){.teacher-assignment-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:6px}.teacher-assignment-row input,.teacher-assignment-row select{padding:0 7px}}
+
+
+/* Principal: teacher class and division inputs */
+.teacher-class-div-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;min-width:0}
+.teacher-class-div-row label{display:block;min-width:0;color:#526b5e;font-size:9px;font-weight:750}
+.teacher-class-div-row label span{color:var(--red)}
+.teacher-class-div-row input{display:block;width:100%;min-width:0;min-height:40px;margin-top:6px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:#f9fcfa;color:var(--ink);font-size:10px}
+@media(max-width:420px){.teacher-class-div-row{gap:8px}}
+
+
+/* Teacher assignment edit action and current assignments */
+.people-edit-button{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto;border:1px solid var(--line);border-radius:9px;background:#f7fbf8;color:var(--dark);cursor:pointer}
+.people-edit-button:hover{background:var(--soft)}
+.teacher-current-assignments{display:grid;gap:9px;color:var(--ink);font-size:12px}
+.teacher-current-assignments>div{display:flex;flex-wrap:wrap;gap:7px}
+.teacher-assignment-chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--pale);padding:6px 10px;color:var(--dark);font-size:11px;font-weight:700}
+.teacher-edit-note{margin:0;color:var(--muted);font-size:12px;line-height:1.5}

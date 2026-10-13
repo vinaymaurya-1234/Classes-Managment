@@ -30,3 +30,11 @@ export const createUserApi = (token, payload) =>
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   })
+
+
+export const updateUserApi = (token, userId, payload) =>
+  request(`/${encodeURIComponent(userId)}/teaching-classes`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
