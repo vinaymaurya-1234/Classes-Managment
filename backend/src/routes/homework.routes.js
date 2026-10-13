@@ -43,10 +43,9 @@ router.post('/', async (req, res, next) => {
     const division = String(req.body.division || '').trim().toUpperCase()
     const subject = String(req.body.subject || '').trim()
     const title = String(req.body.title || '').trim()
-    if (!className || !division || !subject || !title) return res.status(400).json({ success: false, message: 'Class, division, subject and title are required.' })
-    const label = division ? `${className} - ${division}` : className
-    const taught = (req.user.teachingClasses || []).some(value => value === label || value === className) ||
-      await Chapter.exists({ teacher: req.user._id, className: { $in: [label, className] } })
+    if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
+    const teacherClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
+    const taught = teacherClasses.some(value => value === className || value.startsWith(className + ' - ')) || await Chapter.exists({ teacher: req.user._id, className: { $in: [className, ...teacherClasses] } })
     if (!taught) return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
     const item = await Homework.create({ teacher: req.user._id, className, division, subject, title, instructions: String(req.body.instructions || '').trim(), dueDate: req.body.dueDate || null, status: req.body.status === 'draft' ? 'draft' : 'published' })
     res.status(201).json({ success: true, data: item })

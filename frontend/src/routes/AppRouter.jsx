@@ -11,7 +11,7 @@ import HomeworkPage from '../pages/HomeworkPage'
 import ChaptersPage from '../pages/ChaptersPage'
 import TeacherClassesPage from '../pages/TeacherClassesPage'
 import FeesPage from '../pages/FeesPage'
-import ResultsPage from '../pages/ResultsPage'
+import ExamManagementPage from '../pages/ExamManagementPage'
 import PeoplePage from '../pages/PeoplePage'
 import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
@@ -34,7 +34,8 @@ export default function AppRouter() {
         <Route path="/:role/homework" element={<HomeworkPage />} />
         <Route path="/:role/chapters" element={<ChaptersPage />} />
         <Route path="/:role/fees" element={<FeesPage />} />
-        <Route path="/:role/results" element={<ResultsPage />} />
+        <Route path="/:role/exams" element={<ExamManagementPage />} />
+        <Route path="/:role/results" element={<Navigate to={user ? '/' + user.role + '/exams' : '/login'} replace />} />
         <Route path="/:role/students" element={<PeoplePage type="student" />} />
         <Route path="/:role/teachers" element={<PeoplePage type="teacher" />} />
         <Route path="/:role/parents" element={<PeoplePage type="parent" />} />
