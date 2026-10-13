@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronRight, LoaderCircle, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LoaderCircle, UserPlus, X, BookOpen, Trophy, Wallet, Users } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
@@ -19,15 +19,14 @@ const emptyForm = () => ({
   password: '',
   phone: '',
   std: '',
-  division: 'A',
+  division: '',
   teachingClasses: [],
+  childIds: [],
 })
-const teacherClassOptions = [11, 12].flatMap(std =>
-  ['A', 'B', 'C'].map(division => ({
-    value: `Class ${std} - ${division}`,
-    label: `Class ${std} · Division ${division}`,
-  })),
-)
+const teacherClassOptions = [11, 12].flatMap(std => [
+  { value: `Class ${std}`, label: `Class ${std} · Any division` },
+  ...['A', 'B', 'C'].map(division => ({ value: `Class ${std} - ${division}`, label: `Class ${std} · Division ${division}` })),
+])
 
 export default function PeoplePage({ type, title }) {
   const { search = '', role } = useOutletContext()
@@ -42,6 +41,14 @@ export default function PeoplePage({ type, title }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [selectedPerson, setSelectedPerson] = useState(null)
+  const [attempts, setAttempts] = useState([])
+  const [selectedAttempt, setSelectedAttempt] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [feeRecords, setFeeRecords] = useState([])
+  const [availableStudents, setAvailableStudents] = useState([])
+  const [teacherClasses, setTeacherClasses] = useState([])
+  const [selectedTeachingClass, setSelectedTeachingClass] = useState('')
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return
@@ -73,10 +80,38 @@ export default function PeoplePage({ type, title }) {
     )
   }, [canManage, data, search, type])
 
-  const openModal = () => {
+  const openPerson = async person => {
+    setSelectedPerson(person); setSelectedAttempt(null); setAttempts([]); setFeeRecords([]); setTeacherClasses([]); setSelectedTeachingClass(''); setError('');
+    if (!canManage || !token) return;
+    setDetailLoading(true);
+    try {
+      if (type === 'student') {
+        const [result, fees] = await Promise.all([
+          api.get(`/api/exams/students/${encodeURIComponent(person.id)}/attempts`, token),
+          api.get('/api/fees/students', token).catch(() => ({ fees: [] })),
+        ]);
+        setAttempts(result.data || []);
+        setFeeRecords((fees.fees || []).filter(item => item.student?.id === person.id));
+      } else if (type === 'teacher') {
+        const result = await api.get(`/api/teacher/classes?teacherId=${encodeURIComponent(person.id)}`, token);
+        setTeacherClasses(result.classes || []);
+      } else if (type === 'parent') {
+        const fees = await api.get('/api/fees/students', token).catch(() => ({ fees: [] }));
+        const linkedIds = (person.children || []).map(child => child.id);
+        setFeeRecords((fees.fees || []).filter(fee => linkedIds.includes(fee.student?.id)));
+      }
+    } catch (err) { setError(err.message || 'Unable to load account details.') }
+    finally { setDetailLoading(false) }
+  }
+
+  const openModal = async () => {
     setForm(emptyForm())
     setError('')
     setModalOpen(true)
+    if (type === 'parent' && token && !availableStudents.length) {
+      try { const result = await listUsersApi(token, 'student'); setAvailableStudents(result.users || []) }
+      catch (err) { setError(err.message || 'Unable to load students for parent linking.') }
+    }
   }
 
   const closeModal = () => {
@@ -106,6 +141,7 @@ export default function PeoplePage({ type, title }) {
         role: type,
         ...(type === 'student' ? { std: Number(form.std), division: form.division } : {}),
         ...(type === 'teacher' ? { teachingClasses: form.teachingClasses } : {}),
+        ...(type === 'parent' ? { childIds: form.childIds } : {}),
       }
       await createUserApi(token, payload)
       setModalOpen(false)
@@ -159,13 +195,13 @@ export default function PeoplePage({ type, title }) {
 
       {error && !modalOpen && <div className="profile-message error people-error">{error}</div>}
 
-      <Card title={`${heading} directory`}>
+      {selectedPerson ? <Card title={`${selectedPerson.name} · ${type} details`}><div className="person-detail-page"><button type="button" className="secondary" onClick={()=>{setSelectedPerson(null);setSelectedAttempt(null);setError('')}}><ArrowLeft size={15}/> Back to {heading.toLowerCase()}</button><div className="person-detail-hero">{selectedPerson.avatarUrl?<img className="avatar avatar-image" src={selectedPerson.avatarUrl} alt=""/>:<span className="avatar green">{(selectedPerson.name||'?')[0].toUpperCase()}</span>}<div><h2>{selectedPerson.name}</h2><p>{selectedPerson.email}</p><span>{selectedPerson.phone||'No phone provided'}</span></div></div>{detailLoading?<div className="people-state"><LoaderCircle size={18} className="spin"/>Loading details...</div>:<><div className="person-detail-actions">{type==='student'&&<button type="button" className="secondary" onClick={()=>updatePlacement(selectedPerson)}>Edit class and division</button>}{type==='teacher'&&<button type="button" className="secondary" onClick={()=>updateTeacherClasses(selectedPerson)}>Edit teaching assignments</button>}</div><div className="person-detail-grid"><div><span>Email</span><strong>{selectedPerson.email||'—'}</strong></div><div><span>Phone</span><strong>{selectedPerson.phone||'—'}</strong></div>{type==='student'&&<><div><span>Class</span><strong>Class {selectedPerson.std||'—'}{selectedPerson.division?` · Division ${selectedPerson.division}`:''}</strong></div><div><span>Account created</span><strong>{selectedPerson.createdAt?new Date(selectedPerson.createdAt).toLocaleDateString('en-IN'):'—'}</strong></div></>}{type==='teacher'&&<div className="person-detail-wide"><span>Assigned classes</span><strong>{(selectedPerson.teachingClasses||[]).join(', ')||'No classes assigned'}</strong></div>}</div>{canManage&&type==='student'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Trophy size={16}/> Recent attempted tests</h3><span>{attempts.length} attempts</span></div>{attempts.length?attempts.map(attempt=><article className="person-test-card" key={attempt.id}><button type="button" className="person-test-summary" onClick={()=>setSelectedAttempt(selectedAttempt?.id===attempt.id?null:attempt)}><span><strong>{attempt.exam?.title||'Exam'}</strong><small>{attempt.exam?.subject||'Subject'} · {attempt.submittedAt?new Date(attempt.submittedAt).toLocaleDateString('en-IN'):'Submitted'}</small></span><span className="person-test-score">{attempt.score??0} / {attempt.totalMarks}</span><ChevronRight size={16}/></button>{selectedAttempt?.id===attempt.id&&<div className="person-question-review">{(attempt.questions||[]).map((question,index)=><div className="person-question" key={question.id}><div className="person-question-title"><strong>Q{index+1}. {question.text}</strong><span className={'pill '+(question.status==='correct'?'success':question.status==='incorrect'?'danger':'neutral')}>{question.status}</span></div><p>Your answer: <b>{question.selectedAnswer||'Skipped'}</b></p>{question.correctAnswer&&<p>Correct answer: <b>{question.correctAnswer}</b></p>}{question.explanation&&<small>{question.explanation}</small>}</div>)}</div>}</article>):<p className="person-detail-empty">No submitted test attempts found for this student.</p>}</div>}{type==='student'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Wallet size={16}/> Fee details</h3></div>{feeRecords.length?feeRecords.map(fee=><div className="person-fee-row" key={fee.id||fee.academicYear}><span>{fee.academicYear}</span><strong>₹{Number(fee.pendingAmount||0).toLocaleString('en-IN')} pending</strong><small>₹{Number(fee.paidAmount||0).toLocaleString('en-IN')} paid of ₹{Number(fee.totalFee||0).toLocaleString('en-IN')}</small></div>):<p className="person-detail-empty">No fee record is available yet.</p>}</div>}{type==='parent'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><Users size={16}/> Linked children and fee overview</h3><span>{(selectedPerson.children||[]).length} children</span></div>{(selectedPerson.children||[]).map(child=><div className="person-fee-row" key={child.id}><span>{child.name} · Class {child.std||'—'}{child.division?' · Division '+child.division:''}</span><small>{child.email}</small></div>)}{feeRecords.length?feeRecords.map(fee=><div className="person-fee-row" key={fee.id||fee.student?.id}><span>{fee.student?.name} · {fee.student?.className||'Class not assigned'}</span><strong>₹{Number(fee.pendingAmount||0).toLocaleString('en-IN')} pending</strong><small>{fee.installmentCount||0} recorded installments</small>{(fee.installments||[]).map((installment,index)=><small key={installment.id||index}>Installment {index+1}: ₹{Number(installment.amount||0).toLocaleString('en-IN')} · {installment.paidOn?new Date(installment.paidOn).toLocaleDateString('en-IN'):'Date not recorded'}</small>)}</div>):<p className="person-detail-empty">No fee records are available for this parent’s linked children.</p>}</div>}{type==='teacher'&&<div className="person-detail-section"><div className="person-detail-section-head"><h3><BookOpen size={16}/> Teaching overview</h3></div>{teacherClasses.length?teacherClasses.map(item=><article className="person-teaching-class" key={item.label}><button type="button" className="person-teaching-class-head" onClick={()=>setSelectedTeachingClass(selectedTeachingClass===item.label?'':item.label)}><div><strong>{item.label}</strong><small>{item.subjects?.join(' · ')||'Subjects not configured'}</small></div><span>{item.studentCount||0} students · {selectedTeachingClass===item.label?'Hide details':'View details'}</span></button>{selectedTeachingClass===item.label&&<div className="person-teaching-class-columns"><div><b>Chapters in progress</b>{item.chapters?.length?item.chapters.map(ch=><div className="person-chapter-row" key={ch.id}><span>{ch.title}</span><small>{ch.subject||'Subject'} · {ch.status}{ch.progress?` · ${ch.progress}%`:''}</small></div>):<small>No chapters recorded for this class yet.</small>}</div><div><b>Students in this class</b>{item.students?.length?item.students.map(student=><div className="person-chapter-row" key={student.id}><span>{student.name}</span><small>{student.email||'No email'}{student.division?' · '+student.division:''}</small></div>):<small>No students assigned to this class.</small>}</div>}</article>):<p className="person-detail-empty">No teaching classes are assigned to this teacher yet.</p>}</div>}</>}</div></Card> : <Card title={`${heading} directory`}>
         {loading ? (
           <div className="people-state"><LoaderCircle size={18} className="spin" />Loading {heading.toLowerCase()}...</div>
         ) : visibleData.length ? (
           <div className="attendance-table">
             {visibleData.map(person => (
-              <div className="table-row" key={person.id || person.email || person.name}>
+              <div className="table-row people-clickable-row" key={person.id || person.email || person.name} onClick={()=>openPerson(person)} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPerson(person)}}}>
                 <span className="person">
                   {person.avatarUrl
                     ? <img className="avatar avatar-image" src={person.avatarUrl} alt="" />
@@ -186,12 +222,6 @@ export default function PeoplePage({ type, title }) {
                 </span>
                 <div className="people-row-actions">
                   <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
-                  {canManage && type === 'student' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={() => updatePlacement(person)}>Edit class</button>
-                  )}
-                  {canManage && type === 'teacher' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={() => updateTeacherClasses(person)}>Edit assignments</button>
-                  )}
                 </div>
                 <span className="pill success">Active</span>
                 <ChevronRight size={15} />
@@ -201,7 +231,7 @@ export default function PeoplePage({ type, title }) {
         ) : (
           <div className="people-state">No {heading.toLowerCase()} found.</div>
         )}
-      </Card>
+      </Card>}
 
       {modalOpen && (
         <div className="user-modal-backdrop" onMouseDown={closeModal}>
@@ -238,10 +268,24 @@ export default function PeoplePage({ type, title }) {
                   </label>
                   <label>Division
                     <select value={form.division} onChange={event => setForm({ ...form, division: event.target.value })} required>
-                      {['A', 'B', 'C'].map(division => <option key={division} value={division}>Division {division}</option>)}
+                      <option value="">No division selected</option>{['A', 'B', 'C'].map(division => <option key={division} value={division}>Division {division}</option>)}
                     </select>
                   </label>
                 </div>
+              )}
+
+              {type === 'parent' && (
+                <fieldset className="teacher-assignment-field">
+                  <legend>Link children (optional)</legend>
+                  <p>Select the students linked to this parent account.</p>
+                  <div className="teacher-assignment-options">
+                    {availableStudents.map(student => <label key={student.id}>
+                      <input type="checkbox" checked={form.childIds.includes(student.id)} onChange={() => setForm(current => ({...current, childIds: current.childIds.includes(student.id) ? current.childIds.filter(id => id !== student.id) : [...current.childIds, student.id]}))} />
+                      {student.name} · Class {student.std || '—'}{student.division ? ' - ' + student.division : ''}
+                    </label>)}
+                    {!availableStudents.length && <small>No student accounts loaded yet.</small>}
+                  </div>
+                </fieldset>
               )}
 
               {type === 'teacher' && (
@@ -256,7 +300,7 @@ export default function PeoplePage({ type, title }) {
                       </label>
                     ))}
                   </div>
-                  {!form.teachingClasses.length && <small>Choose at least one class.</small>}
+                  {!form.teachingClasses.length && <small>Choose a class, with or without a division.</small>}
                 </fieldset>
               )}
 
