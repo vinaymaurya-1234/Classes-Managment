@@ -221,12 +221,6 @@ export default function PeoplePage({ type, title }) {
                 </span>
                 <div className="people-row-actions">
                   <strong>{person.phone || (person.attendance != null ? `${person.attendance}% attendance` : '')}</strong>
-                  {canManage && type === 'student' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={event => {event.stopPropagation();openPerson(person)}}>Edit class</button>
-                  )}
-                  {canManage && type === 'teacher' && (
-                    <button type="button" className="secondary people-placement-edit" onClick={event => {event.stopPropagation();openPerson(person)}}>Edit assignments</button>
-                  )}
                 </div>
                 <span className="pill success">Active</span>
                 <ChevronRight size={15} />
