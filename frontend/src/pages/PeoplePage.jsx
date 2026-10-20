@@ -19,7 +19,7 @@ import { students, teachers } from "../data/mockData";
 
 const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
 const descriptions = {
-  student: "Manage student records, class and division.",
+  student: "Manage student records, class and optional division.",
   teacher: "Manage faculty and assign their teaching classes.",
   parent: "Manage parent accounts and family contacts.",
 };
