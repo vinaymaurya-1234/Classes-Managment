@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Edit3, LoaderCircle, Plus, Trash2, UserRound } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Edit3, LoaderCircle, Plus, Trash2, UserRound, X } from 'lucide-react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { createTimetableEntryApi, deleteTimetableEntryApi, getTimetableRangeApi, updateTimetableEntryApi } from '../api/timetable.api'
