@@ -833,3 +833,16 @@
 @media(max-width:1250px){.weekly-board-days{grid-template-columns:repeat(4,minmax(0,1fr));}.weekly-board-config-row{grid-template-columns:1fr 1fr;}}
 @media(max-width:850px){.weekly-board-config-row{grid-template-columns:1fr;}.weekly-config-content{grid-template-columns:1fr 1fr;}.weekly-board-days{grid-template-columns:repeat(2,minmax(0,1fr));}.weekly-board-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.weekly-board-fields .weekly-board-notes{grid-column:1/-1;}.weekly-board-title-icon{width:52px;height:52px;flex-basis:52px;}}
 @media(max-width:560px){.weekly-board-page{gap:12px;}.weekly-board-breadcrumb{font-size:10px;gap:5px;}.weekly-board-user{display:none;}.weekly-board-title{align-items:flex-start;gap:11px;}.weekly-board-title h1{font-size:25px;}.weekly-board-title p{font-size:11px;}.weekly-config-content{grid-template-columns:1fr;}.weekly-board-days{grid-template-columns:1fr;}.weekly-board-day-head{min-height:44px;}.weekly-board-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.weekly-board-footer{flex-wrap:wrap;gap:8px;}.weekly-board-summary-text{flex-basis:calc(100% - 52px);}.weekly-board-footer>.secondary{margin-left:0;}.weekly-board-apply{flex:1;}.weekly-board-empty{min-height:120px;}}
+
+
+/* Collapsible lecture cards in the weekly timetable planner */
+.weekly-board-lecture-head{min-height:30px;}
+.weekly-board-lecture-toggle{display:flex;align-items:center;gap:5px;flex:1;min-width:0;padding:4px 0;border:0;background:transparent;color:#15203e;text-align:left;cursor:pointer;}
+.weekly-board-lecture-toggle>span{display:flex;flex-direction:column;gap:3px;min-width:0;overflow:hidden;}
+.weekly-board-lecture-toggle strong{font-size:10px;white-space:nowrap;}
+.weekly-board-lecture-toggle small{overflow:hidden;color:#64728b;font-size:8px;font-weight:500;white-space:nowrap;text-overflow:ellipsis;}
+.weekly-board-lecture-delete{display:grid;place-items:center;width:24px;height:25px;flex:0 0 24px;padding:0;border:0;border-radius:4px;background:transparent;color:#e42d37;cursor:pointer;}
+.weekly-board-lecture-delete:hover{background:#ffe9e9;}
+.weekly-board-lecture.is-collapsed{background:#fbfcfe;}
+.weekly-board-lecture.is-collapsed .weekly-board-lecture-head{margin-bottom:0;background:transparent;}
+.weekly-board-lecture-toggle:focus-visible,.weekly-board-lecture-delete:focus-visible{outline:2px solid #76a8e8;outline-offset:1px;}
