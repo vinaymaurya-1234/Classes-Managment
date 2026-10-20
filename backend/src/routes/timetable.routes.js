@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   createTimetableEntry,
+  createWeeklyTimetableTemplate,
   deleteTimetableEntry,
   listTimetable,
   listTimetableRange,
@@ -15,6 +16,7 @@ router.use(requireAuth)
 router.get('/', listTimetable)
 router.get('/range', listTimetableRange)
 router.get('/teachers', listTimetableTeachers)
+router.post('/weekly-template', createWeeklyTimetableTemplate)
 router.post('/', createTimetableEntry)
 router.patch('/:id', updateTimetableEntry)
 router.delete('/:id', deleteTimetableEntry)
