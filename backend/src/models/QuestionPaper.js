@@ -17,7 +17,7 @@ const questionPaperSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   className: { type: String, required: true, trim: true, index: true },
   std: { type: Number, enum: [10, 11, 12], required: true },
-  division: { type: String, enum: ['A', 'B', 'C'], required: true },
+  division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
   subject: { type: String, required: true, trim: true },
   instructions: { type: String, default: '' },
   questions: { type: [paperQuestionSchema], default: [] },

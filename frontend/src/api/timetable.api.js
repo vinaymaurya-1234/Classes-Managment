@@ -24,3 +24,5 @@ export const getTimetableTeachersApi = token => request('/teachers', token)
 export const createTimetableEntryApi = (token, payload) => request('', token, { method: 'POST', body: JSON.stringify(payload) })
 export const updateTimetableEntryApi = (token, id, payload) => request(`/${encodeURIComponent(id)}`, token, { method: 'PATCH', body: JSON.stringify(payload) })
 export const deleteTimetableEntryApi = (token, id) => request(`/${encodeURIComponent(id)}`, token, { method: 'DELETE' })
+
+export const createWeeklyTimetableTemplateApi = (token, payload) => request('/weekly-template', token, { method: 'POST', body: JSON.stringify(payload) })

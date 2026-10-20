@@ -5,7 +5,7 @@ const examResultSchema = new mongoose.Schema({
   attempt: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt', required: true, unique: true },
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   className: { type: String, required: true, trim: true },
-  division: { type: String, enum: ['A', 'B', 'C'], required: true },
+  division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
   totalMarks: { type: Number, required: true },
   score: { type: Number, default: 0 },
   autoScore: { type: Number, default: 0 },

@@ -19,7 +19,7 @@ import { students, teachers } from "../data/mockData";
 
 const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
 const descriptions = {
-  student: "Manage student records, class and division.",
+  student: "Manage student records, class and optional division.",
   teacher: "Manage faculty and assign their teaching classes.",
   parent: "Manage parent accounts and family contacts.",
 };
@@ -236,8 +236,8 @@ export default function PeoplePage({ type, title }) {
     );
     if (stdInput === null) return;
     const divisionInput = window.prompt(
-      "Student division (A, B or C)",
-      person.division || "A",
+      "Student division (A, B or C, or leave blank)",
+      person.division || "",
     );
     if (divisionInput === null) return;
     try {
@@ -846,9 +846,8 @@ export default function PeoplePage({ type, title }) {
                       onChange={(event) =>
                         setForm({ ...form, division: event.target.value })
                       }
-                      required
                     >
-                      <option value="">No division selected</option>
+                      <option value="">No division (optional)</option>
                       {["A", "B", "C"].map((division) => (
                         <option key={division} value={division}>
                           Division {division}

@@ -8,7 +8,7 @@ const optionSchema = new mongoose.Schema({
 const questionSchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   className: { type: String, required: true, trim: true, index: true },
-  division: { type: String, enum: ['A', 'B', 'C'], required: true, index: true },
+  division: { type: String, enum: ['', 'A', 'B', 'C'], default: '', index: true },
   subject: { type: String, required: true, trim: true, index: true },
   chapter: { type: String, trim: true, default: '' },
   topic: { type: String, trim: true, default: '' },

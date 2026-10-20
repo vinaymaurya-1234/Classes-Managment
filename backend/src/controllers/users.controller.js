@@ -61,16 +61,17 @@ export const createUser = async (req, res, next) => {
       })
     }
 
-    if (role === 'student' && (![10, 11, 12].includes(std) || !['A', 'B', 'C'].includes(division))) {
-      return res.status(400).json({ success: false, message: 'Choose a valid standard (10, 11 or 12) and division (A, B or C).' })
+    if (role === 'student' && ![10, 11, 12].includes(std)) {
+      return res.status(400).json({ success: false, message: 'Choose a valid standard (10, 11 or 12).' })
     }
+    if (role === 'student' && division && !['A', 'B', 'C'].includes(division)) return res.status(400).json({ success: false, message: 'Choose division A, B, C or leave it blank.' })
 
     if (role === 'teacher' && !teachingClasses.length) {
-      return res.status(400).json({ success: false, message: 'Assign the teacher to at least one class and division.' })
+      return res.status(400).json({ success: false, message: 'Assign the teacher to at least one class; division is optional.' })
     }
 
     if (role === 'teacher' && teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value))) {
-      return res.status(400).json({ success: false, message: 'Select at least one valid Class 11 or 12 section (A, B or C) for the teacher.' })
+      return res.status(400).json({ success: false, message: 'Select a valid Class 11 or 12, optionally with division A, B or C.' })
     }
 
     if (password.length < 8) {
@@ -125,7 +126,7 @@ export const updateTeacherAssignments = async (req, res, next) => {
       ? [...new Set(req.body.teachingClasses.map(normalizeTeachingClass))]
       : []
     if (!teachingClasses.length || teachingClasses.some(value => !ALLOWED_TEACHING_CLASSES.has(value))) {
-      return res.status(400).json({ success: false, message: 'Provide at least one valid Class 11 or 12 division (A, B or C).' })
+      return res.status(400).json({ success: false, message: 'Provide at least one valid Class 11 or 12 assignment, with or without a division.' })
     }
 
     const teacher = await User.findOne({ _id: req.params.id, role: 'teacher' })
