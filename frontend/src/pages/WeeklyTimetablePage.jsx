@@ -6,7 +6,7 @@ import { createWeeklyTimetableTemplateApi, getTimetableTeachersApi } from '../ap
 
 const todayIndia=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=Object.fromEntries(parts.map(p=>[p.type,p.value]));return value.year+'-'+value.month+'-'+value.day}
 const days=[{value:1,label:'Monday',tone:'green'},{value:2,label:'Tuesday',tone:'blue'},{value:3,label:'Wednesday',tone:'yellow'},{value:4,label:'Thursday',tone:'rose'},{value:5,label:'Friday',tone:'purple'},{value:6,label:'Saturday',tone:'cyan'},{value:0,label:'Sunday',tone:'slate'}]
-const blankSlot=dayOfWeek=>({id:dayOfWeek+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),dayOfWeek,startTime:'09:00',endTime:'10:00',subject:'',classNumber:'',division:'A',room:'',teacherId:'',notes:''})
+const blankSlot=dayOfWeek=>({id:dayOfWeek+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),dayOfWeek,startTime:'09:00',endTime:'10:00',subject:'',classNumber:'',division:'',room:'',teacherId:'',notes:''})
 const subjects=['Mathematics','English','Science','Hindi','Computer','Social Science','Art','Physical Education','Other']
 const divisions=['A','B','C','D','E','F']
 
