@@ -117,7 +117,7 @@ router.post('/questions/import', async (req, res, next) => {
       const marks = Number(row.marks || 1)
       const options = Array.isArray(row.options) ? row.options.map((o, j) => ({ key: String(o.key || String.fromCharCode(65 + j)), text: String(o.text || '').trim() })).filter(o => o.text) : ['A','B','C','D'].map(k => ({ key: k, text: String(row['option' + k] || row[k] || '').trim() })).filter(o => o.text)
       const correctAnswer = String(row.correctAnswer || row.answer || '').trim()
-      if (!stds.includes(std) || !divisions.includes(division) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, subject, question text or valid marks. Division is optional.' }); continue }
+      if (!stds.includes(std) || (division && !divisions.includes(division)) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, subject, question text or valid marks. Division is optional.' }); continue }
       if (!await canTeach(req.user, std, division)) { errors.push({ row: i + 2, message: `Class ${std}-${division} is not assigned to you.` }); continue }
       if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) { errors.push({ row: i + 2, message: 'Objective question has missing options or an invalid answer.' }); continue }
       const duplicate = await Question.exists({ teacher: req.user._id, className: `Class ${std}`, division, subject, text })
@@ -137,7 +137,7 @@ router.put('/questions/:id', async (req, res, next) => {
     if (!question) return fail(res, 404, 'Question not found.')
     const std = req.body.std === undefined ? Number(String(question.className).match(/\\d+/)?.[0]) : Number(req.body.std)
     const division = req.body.division === undefined ? question.division : String(req.body.division).toUpperCase()
-    if (!stds.includes(std) || !divisions.includes(division)) return fail(res, 400, 'Choose a valid class and optionally division A, B or C.')
+    if (!stds.includes(std) || (division && !divisions.includes(division))) return fail(res, 400, 'Choose a valid class and optionally division A, B or C.')
     if (!await canTeach(req.user, std, division)) return forbidden(res)
     question.className = `Class ${std}`; question.division = division
     const allowed = ['subject','chapter','topic','type','text','options','correctAnswer','explanation','marks','difficulty','tags']
@@ -171,7 +171,7 @@ router.post('/papers', async (req, res, next) => {
     if (!isTeacher(req.user)) return forbidden(res)
     const body = req.body || {}, std = Number(body.std), division = String(body.division || '').toUpperCase()
     const subject = String(body.subject || '').trim(), title = String(body.title || '').trim()
-    if (!stds.includes(std) || !divisions.includes(division) || !subject || !title) return fail(res, 400, 'Paper title, class and subject are required. Division is optional.')
+    if (!stds.includes(std) || (division && !divisions.includes(division)) || !subject || !title) return fail(res, 400, 'Paper title, class and subject are required. Division is optional.')
     if (!await canTeach(req.user, std, division)) return forbidden(res)
     let questions = []
     if (Array.isArray(body.questionIds) && body.questionIds.length) {
