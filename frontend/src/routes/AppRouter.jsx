@@ -6,6 +6,7 @@ import ProfilePage from '../pages/ProfilePage'
 import OverviewPage from '../pages/OverviewPage'
 import TeacherOverviewPage from '../pages/TeacherOverviewPage'
 import TimetablePage from '../pages/TimetablePage'
+import WeeklyTimetablePage from '../pages/WeeklyTimetablePage'
 import AttendancePage from '../pages/AttendancePage'
 import HomeworkPage from '../pages/HomeworkPage'
 import ChaptersPage from '../pages/ChaptersPage'
@@ -29,6 +30,7 @@ export default function AppRouter() {
         <Route path="/teacher/overview" element={<TeacherOverviewPage />} />
         <Route path="/teacher/classes" element={<TeacherClassesPage />} />
         <Route path="/:role/overview" element={<OverviewPage />} />
+        <Route path="/principal/timetable/weekly-template" element={<WeeklyTimetablePage />} />
         <Route path="/:role/timetable" element={<TimetablePage />} />
         <Route path="/:role/attendance" element={<AttendancePage />} />
         <Route path="/:role/homework" element={<HomeworkPage />} />
