@@ -19,7 +19,7 @@ const publicEntry = entry => ({
     name: entry.teacher.name,
     email: entry.teacher.email,
     avatarUrl: entry.teacher.avatarUrl || '',
-  } : null,
+  } : (entry.teacherName ? { id: '', name: entry.teacherName, email: '', avatarUrl: '' } : null),
 })
 
 export const listTimetable = async (req, res, next) => {
@@ -63,6 +63,7 @@ export const createTimetableEntry = async (req, res, next) => {
     const room = String(req.body.room || '').trim()
     const notes = String(req.body.notes || '').trim()
     const teacherId = String(req.body.teacherId || '').trim()
+    const teacherName = String(req.body.teacherName || '').trim()
 
     if (!isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !subject || !className) {
       return res.status(400).json({ success: false, message: 'Date, time, subject and class are required.' })
@@ -75,7 +76,7 @@ export const createTimetableEntry = async (req, res, next) => {
       if (!teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
     }
 
-    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null, createdBy: req.user._id })
+    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
     await entry.populate('teacher', 'name email avatarUrl')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
@@ -89,7 +90,7 @@ export const updateTimetableEntry = async (req, res, next) => {
     const entry = await TimetableEntry.findById(req.params.id)
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
-    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes']
+    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
     for (const field of fields) if (req.body[field] !== undefined) entry[field] = String(req.body[field]).trim()
 
     if (!isValidDate(entry.date) || !isValidTime(entry.startTime) || !isValidTime(entry.endTime) || !entry.subject || !entry.className) {
@@ -101,6 +102,10 @@ export const updateTimetableEntry = async (req, res, next) => {
       const teacherId = String(req.body.teacherId || '').trim()
       entry.teacher = teacherId ? (await User.findOne({ _id: teacherId, role: 'teacher' }))?._id || null : null
       if (teacherId && !entry.teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
+      if (teacherId) entry.teacherName = ''
+    } else if (req.body.teacherName !== undefined) {
+      entry.teacher = null
+    }
     }
 
     await entry.save()
@@ -147,6 +152,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const room = String(slot.room || '').trim()
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
+      const teacherName = String(slot.teacherName || '').trim()
       if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !className) {
         return res.status(400).json({ success: false, message: `Check the day, time, subject and class for weekly lecture ${index + 1}.` })
       }
@@ -155,7 +161,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         teacher = await User.findOne({ _id: teacherId, role: 'teacher' }).select('_id').lean()
         if (!teacher) return res.status(400).json({ success: false, message: `Teacher for weekly lecture ${index + 1} was not found.` })
       }
-      prepared.push({ dayOfWeek, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null })
+      prepared.push({ dayOfWeek, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
     }
 
     const start = new Date(startDate + 'T00:00:00.000Z')
@@ -174,7 +180,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         occurrences.push({
           date: dateString, startTime: slot.startTime, endTime: slot.endTime,
           subject: slot.subject, className: slot.className, room: slot.room,
-          notes: slot.notes, teacher: slot.teacher, createdBy: req.user._id,
+          notes: slot.notes, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
         })
       }
     }
