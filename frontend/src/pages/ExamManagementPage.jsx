@@ -223,7 +223,7 @@ export default function ExamManagementPage() {
     event.preventDefault(); setSaving(true); setError(''); setNotice('')
     try {
       await api.post('/api/exams/exams', { ...examForm, startsAt: new Date(examForm.startsAt).toISOString(), durationMinutes: Number(examForm.durationMinutes) }, token)
-      setExamForm(emptyExam); setNotice('Exam scheduled for the selected class and division.'); await loadExams(); setTab('schedule')
+      setExamForm(emptyExam); setNotice('Exam scheduled for the selected class.'); await loadExams(); setTab('schedule')
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
