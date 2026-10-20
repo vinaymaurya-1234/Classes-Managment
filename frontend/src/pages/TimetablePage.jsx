@@ -25,7 +25,7 @@ export default function TimetablePage(){
   const load=useCallback(async()=>{setLoading(true);setError('');try{const r=await getTimetableRangeApi(token,from,to);setEntries(r.entries||[])}catch(e){setError(e.message||'Unable to load timetable.')}finally{setLoading(false)}},[token,from,to])
   useEffect(()=>{load()},[load])
   const classOptions=useMemo(()=>[...new Set(entries.map(x=>x.className).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[entries])
-  const filteredEntries=useMemo(()=>entries.filter(x=>classFilter==='all'||x.className===classFilter),[entries,classFilter])
+  const filteredEntries=useMemo(()=>entries.filter(x=>days.includes(x.date)&&(classFilter==='all'||x.className===classFilter)),[entries,classFilter,days])
   const grouped=useMemo(()=>{const m=Object.fromEntries(days.map(x=>[x,[]]));filteredEntries.forEach(x=>m[x.date]?.push(x));Object.values(m).forEach(x=>x.sort((a,b)=>a.startTime.localeCompare(b.startTime)));return m},[days,filteredEntries])
   const timeRows=useMemo(()=>{const seen=new Map();filteredEntries.forEach(entry=>{const key=entry.startTime+'-'+entry.endTime;if(!seen.has(key))seen.set(key,{key,startTime:entry.startTime,endTime:entry.endTime})});return [...seen.values()].sort((a,b)=>a.startTime.localeCompare(b.startTime))},[filteredEntries])
   const teacherCount=useMemo(()=>new Set(filteredEntries.map(x=>x.teacher?.name).filter(Boolean)).size,[filteredEntries])
