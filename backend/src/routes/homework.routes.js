@@ -24,17 +24,16 @@ router.get('/', async (req, res, next) => {
     if (user.role === 'student') {
       const className = user.className || (user.std ? `Class ${user.std}` : '')
       const filter = { className, status: 'published' }
-      filter.division = user.division || ''
+      filter.$or = [{ division: user.division || '' }, { division: '' }]
       const data = className ? await Homework.find(filter).sort({ dueDate: 1, createdAt: -1 }).lean() : []
       return res.json({ success: true, data })
     }
     if (user.role === 'parent') {
       const parent = await User.findById(user._id).populate('children', 'className std division').lean()
-      const filters = (parent?.children || []).map(child => ({
-        className: child.className || (child.std ? `Class ${child.std}` : ''),
-        division: child.division || '',
-        status: 'published',
-      })).filter(item => item.className)
+      const filters = (parent?.children || []).filter(child => child.className || child.std).flatMap(child => {
+        const className = child.className || `Class ${child.std}`
+        return [{ className, division: child.division || '', status: 'published' }, { className, division: '', status: 'published' }]
+      })
       const data = filters.length ? await Homework.find({ $or: filters }).sort({ dueDate: 1, createdAt: -1 }).lean() : []
       return res.json({ success: true, data, message: filters.length ? '' : 'No students are linked to this parent account yet. Ask the principal to link the child account.' })
     }
@@ -62,8 +61,8 @@ router.post('/:id/submit', async (req, res, next) => {
   try {
     if (!role(req, res, ['student'])) return
     const className = req.user.className || (req.user.std ? `Class ${req.user.std}` : '')
-    const item = await Homework.findOne({ _id: req.params.id, className, division: req.user.division || '', status: 'published' })
-    if (!item) return res.status(404).json({ success: false, message: 'Homework not found for your class and division.' })
+    const item = await Homework.findOne({ _id: req.params.id, className, $or: [{ division: req.user.division || '' }, { division: '' }], status: 'published' })
+    if (!item) return res.status(404).json({ success: false, message: 'Homework not found for your class.' })
     const text = String(req.body.text || '').trim()
     if (!text) return res.status(400).json({ success: false, message: 'Write a submission before sending.' })
     const existing = item.submissions.find(entry => String(entry.student) === String(req.user._id))
