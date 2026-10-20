@@ -509,3 +509,23 @@
 .timetable-repeat-option input{width:15px;height:15px;margin:0;accent-color:var(--dark);}
 
 .person-teaching-class{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}.person-teaching-class-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px;background:#f9fcfa;border-bottom:1px solid var(--line);}.person-teaching-class-head strong,.person-teaching-class-head small{display:block;}.person-teaching-class-head strong{font-size:11px;}.person-teaching-class-head small,.person-teaching-class-head>span{font-size:8px;color:var(--muted);margin-top:4px;}.person-teaching-class-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:13px;}.person-teaching-class-columns b{display:block;margin-bottom:8px;font-size:9px;}.person-teaching-class-columns>div>small{font-size:9px;color:var(--muted);}.person-chapter-row{display:grid;gap:3px;padding:8px 0;border-top:1px solid #edf2ef;}.person-chapter-row span{font-size:9px;font-weight:700;}.person-chapter-row small{font-size:8px;color:var(--muted);overflow-wrap:anywhere;}@media(max-width:560px){.person-teaching-class-columns{grid-template-columns:1fr;}}
+
+
+/* Year-round weekly timetable editor */
+.timetable-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.timetable-head-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.timetable-weekly-modal{width:min(760px,calc(100vw - 28px));max-height:calc(100vh - 34px);overflow:hidden;display:flex;flex-direction:column;}
+.timetable-weekly-modal .user-modal-head{flex:0 0 auto;}
+.timetable-weekly-modal .timetable-form{min-height:0;overflow-y:auto;padding-right:5px;}
+.weekly-template-notice{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f1f8f3;color:#315c46;font-size:10px;line-height:1.6;}
+.weekly-template-notice svg{flex:0 0 auto;margin-top:1px;}
+.weekly-template-day{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff;}
+.weekly-template-day-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f8fbf9;border-bottom:1px solid var(--line);}
+.weekly-template-day-head strong{font-size:11px;}
+.weekly-template-day-head button{display:inline-flex;align-items:center;gap:5px;padding:7px 9px;font-size:9px;}
+.weekly-template-slot{padding:12px;border-bottom:1px solid #edf2ef;display:grid;gap:10px;}
+.weekly-template-slot:last-child{border-bottom:0;}
+.weekly-template-slot .timetable-form-row{margin:0;}
+.weekly-slot-remove{justify-self:end;display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#a7473b;font-size:9px;padding:4px;cursor:pointer;}
+.weekly-template-empty{margin:0;padding:12px;color:var(--muted);font-size:9px;}
+@media(max-width:600px){.timetable-head-actions{width:100%;}.timetable-head-actions button{flex:1;font-size:9px;padding:9px 7px;}.timetable-weekly-modal{width:calc(100vw - 16px);max-height:calc(100vh - 16px);}.weekly-template-slot .timetable-form-row{grid-template-columns:1fr;}}
