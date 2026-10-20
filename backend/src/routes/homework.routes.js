@@ -50,9 +50,9 @@ router.post('/', async (req, res, next) => {
     const title = String(req.body.title || '').trim()
     if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
     const teacherClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
-    const requested = className.match(/^(?:Class\\s*)?(\\d+)(?:\\s*[-–/]\\s*([A-F]))?$/i)
+    const requested = className.match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
     const sameAssignment = value => {
-      const assigned = String(value || '').match(/^(?:Class\\s*)?(\\d+)(?:\\s*[-–/]\\s*([A-F]))?$/i)
+      const assigned = String(value || '').match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
       if (!requested || !assigned || Number(requested[1]) !== Number(assigned[1])) return false
       const assignedDivision = String(assigned[2] || '').toUpperCase()
       return !assignedDivision || (Boolean(division) && assignedDivision === division)
