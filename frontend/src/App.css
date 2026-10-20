@@ -529,3 +529,6 @@
 .weekly-slot-remove{justify-self:end;display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#a7473b;font-size:9px;padding:4px;cursor:pointer;}
 .weekly-template-empty{margin:0;padding:12px;color:var(--muted);font-size:9px;}
 @media(max-width:600px){.timetable-head-actions{width:100%;}.timetable-head-actions button{flex:1;font-size:9px;padding:9px 7px;}.timetable-weekly-modal{width:calc(100vw - 16px);max-height:calc(100vh - 16px);}.weekly-template-slot .timetable-form-row{grid-template-columns:1fr;}}
+
+.weekly-template-day-head{position:relative;z-index:1;}
+.weekly-template-day-head .weekly-add-lecture{position:relative;z-index:2;pointer-events:auto;cursor:pointer;}
