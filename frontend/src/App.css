@@ -532,3 +532,167 @@
 
 .weekly-template-day-head{position:relative;z-index:1;}
 .weekly-template-day-head .weekly-add-lecture{position:relative;z-index:2;pointer-events:auto;cursor:pointer;}
+
+
+/* Fix: keep the weekly timetable editor content visible and scrollable */
+.timetable-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  overflow:hidden;
+  background:rgba(18,36,27,.52);
+  backdrop-filter:blur(4px);
+}
+.timetable-weekly-modal{
+  box-sizing:border-box;
+  width:min(820px, calc(100vw - 32px));
+  height:min(900px, calc(100dvh - 32px));
+  max-height:calc(100dvh - 32px);
+  min-height:0;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid #dce9e0;
+  border-radius:18px;
+  box-shadow:0 24px 70px rgba(17,45,29,.28);
+}
+.timetable-weekly-modal .user-modal-head{
+  flex:0 0 auto;
+  margin:0 0 16px;
+  padding-bottom:14px;
+  border-bottom:1px solid #e8f0eb;
+}
+.timetable-weekly-modal .user-modal-head h3{font-size:22px;line-height:1.25;color:#173d2b;}
+.timetable-weekly-modal .user-modal-head p{max-width:560px;font-size:12px;line-height:1.55;}
+.timetable-weekly-modal .timetable-form{
+  box-sizing:border-box;
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  align-items:stretch;
+  gap:14px;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  padding:2px 8px 8px 2px;
+  overscroll-behavior:contain;
+}
+.timetable-weekly-modal .timetable-form>label{flex:0 0 auto;font-size:12px;color:#385a48;}
+.timetable-weekly-modal .timetable-form>label input{box-sizing:border-box;height:44px;margin-top:6px;font-size:13px;}
+.timetable-weekly-modal .weekly-template-notice{flex:0 0 auto;font-size:12px;padding:13px 14px;}
+.timetable-weekly-modal .weekly-template-day{
+  display:block;
+  flex:0 0 auto;
+  width:100%;
+  min-width:0;
+  overflow:visible;
+  border:1px solid #dce9e0;
+  border-radius:12px;
+  background:#fff;
+}
+.timetable-weekly-modal .weekly-template-day-head{
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:54px;
+  padding:10px 14px;
+  background:#f2f8f4;
+  border-bottom:1px solid #dce9e0;
+  border-radius:12px 12px 0 0;
+}
+.timetable-weekly-modal .weekly-template-day-head strong{font-size:13px;color:#1c4933;}
+.timetable-weekly-modal .weekly-template-day-head .weekly-add-lecture{
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:36px;
+  padding:8px 12px;
+  border:1px solid #c8dfd0;
+  border-radius:9px;
+  background:#fff;
+  color:#206541;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  pointer-events:auto;
+}
+.timetable-weekly-modal .weekly-template-day-head .weekly-add-lecture:hover{background:#e8f5ec;border-color:#86b99a;}
+.timetable-weekly-modal .weekly-template-slot{
+  display:grid;
+  gap:14px;
+  padding:16px;
+  border-bottom:1px solid #e9f0eb;
+}
+.timetable-weekly-modal .weekly-template-slot .timetable-form-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:14px;
+  margin:0;
+}
+.timetable-weekly-modal .weekly-template-slot label{
+  display:block;
+  min-width:0;
+  color:#385a48;
+  font-size:11px;
+  font-weight:700;
+}
+.timetable-weekly-modal .weekly-template-slot input,
+.timetable-weekly-modal .weekly-template-slot select{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  min-width:0;
+  height:44px;
+  margin-top:7px;
+  padding:0 11px;
+  border:1px solid #cfded4;
+  border-radius:9px;
+  background:#fbfdfb;
+  color:#193c2b;
+  font-size:13px;
+  opacity:1;
+  visibility:visible;
+}
+.timetable-weekly-modal .weekly-template-slot input:focus,
+.timetable-weekly-modal .weekly-template-slot select:focus{outline:2px solid #b9ddc5;outline-offset:1px;border-color:#6fa782;}
+.timetable-weekly-modal .weekly-template-empty{padding:12px 14px;font-size:11px;color:#6b8174;}
+.timetable-weekly-modal .weekly-slot-remove{font-size:11px;padding:6px;}
+.timetable-weekly-modal .user-modal-actions{
+  position:sticky;
+  bottom:0;
+  z-index:3;
+  flex:0 0 auto;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin:0;
+  padding:14px 0 0;
+  background:#fff;
+  border-top:1px solid #e8f0eb;
+}
+.timetable-weekly-modal .user-modal-actions button{min-height:42px;font-size:12px;}
+@media(max-width:640px){
+  .timetable-modal-backdrop{padding:8px;align-items:center;}
+  .timetable-weekly-modal{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);padding:14px;border-radius:14px;}
+  .timetable-weekly-modal .user-modal-head h3{font-size:19px;}
+  .timetable-weekly-modal .user-modal-head p{font-size:11px;}
+  .timetable-weekly-modal .weekly-template-slot{padding:12px;}
+  .timetable-weekly-modal .weekly-template-slot .timetable-form-row{grid-template-columns:minmax(0,1fr);gap:12px;}
+  .timetable-weekly-modal .weekly-template-day-head{padding:9px 10px;}
+  .timetable-weekly-modal .weekly-template-day-head .weekly-add-lecture{min-height:34px;padding:7px 9px;font-size:11px;}
+  .timetable-weekly-modal .user-modal-actions button{flex:1;}
+}
