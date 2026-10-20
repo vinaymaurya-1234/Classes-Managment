@@ -106,7 +106,6 @@ export const updateTimetableEntry = async (req, res, next) => {
     } else if (req.body.teacherName !== undefined) {
       entry.teacher = null
     }
-    }
 
     await entry.save()
     await entry.populate('teacher', 'name email avatarUrl')
