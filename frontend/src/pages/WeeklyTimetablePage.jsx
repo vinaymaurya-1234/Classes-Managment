@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { ArrowLeft, CalendarRange, CheckCircle2, Clock3, Copy, LoaderCircle, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bell, CalendarDays, CheckCircle2, ChevronRight, Clock3, Info, LoaderCircle, Plus, Trash2, ListChecks } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { createWeeklyTimetableTemplateApi, getTimetableTeachersApi } from '../api/timetable.api'
 
 const todayIndia=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=Object.fromEntries(parts.map(p=>[p.type,p.value]));return value.year+'-'+value.month+'-'+value.day}
-const days=[{value:1,label:'Monday'},{value:2,label:'Tuesday'},{value:3,label:'Wednesday'},{value:4,label:'Thursday'},{value:5,label:'Friday'},{value:6,label:'Saturday'},{value:0,label:'Sunday'}]
-const blankSlot=dayOfWeek=>({dayOfWeek,startTime:'08:00',endTime:'09:00',subject:'',className:'',room:'',teacherId:'',notes:''})
+const days=[{value:1,label:'Monday',tone:'green'},{value:2,label:'Tuesday',tone:'blue'},{value:3,label:'Wednesday',tone:'yellow'},{value:4,label:'Thursday',tone:'rose'},{value:5,label:'Friday',tone:'purple'},{value:6,label:'Saturday',tone:'cyan'},{value:0,label:'Sunday',tone:'slate'}]
+const blankSlot=dayOfWeek=>({dayOfWeek,startTime:'09:00',endTime:'10:00',subject:'',classNumber:'',division:'A',room:'',teacherId:'',notes:''})
+const subjects=['Mathematics','English','Science','Hindi','Computer','Social Science','Art','Physical Education','Other']
+const divisions=['A','B','C','D','E','F']
 
 export default function WeeklyTimetablePage(){
   const {role}=useOutletContext()
@@ -20,38 +22,42 @@ export default function WeeklyTimetablePage(){
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [success,setSuccess]=useState('')
+  const endDate=useMemo(()=>{if(!startDate)return '';const date=new Date(startDate+'T12:00:00');date.setDate(date.getDate()+52*7-1);return date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})},[startDate])
   useEffect(()=>{if(!principal){navigate('/'+(user?.role||'')+'/timetable',{replace:true});return}let active=true;getTimetableTeachersApi(token).then(r=>{if(active)setTeachers(r.teachers||[])}).catch(e=>{if(active)setError(e.message||'Unable to load teachers.')}).finally(()=>{if(active)setLoadingTeachers(false)});return()=>{active=false}},[principal,token,navigate,user?.role])
   const addSlot=dayOfWeek=>{setSlots(current=>[...current,blankSlot(dayOfWeek)]);setError('');setSuccess('')}
   const updateSlot=(index,field,value)=>setSlots(current=>current.map((slot,i)=>i===index?{...slot,[field]:value}:slot))
   const removeSlot=index=>setSlots(current=>current.filter((_,i)=>i!==index))
-  const save=async event=>{event.preventDefault();setError('');setSuccess('');if(!slots.length){setError('Add at least one lecture before applying the timetable.');return}const invalid=slots.findIndex(slot=>!slot.subject.trim()||!slot.className.trim()||!slot.startTime||!slot.endTime||slot.startTime>=slot.endTime);if(invalid!==-1){setError('Complete the subject, class and valid start/end times for every lecture.');return}setSaving(true);try{const result=await createWeeklyTimetableTemplateApi(token,{startDate,weeks:52,entries:slots});setSuccess(result.message||'Weekly timetable applied for 52 weeks.');window.scrollTo({top:0,behavior:'smooth'})}catch(e){setError(e.message||'Unable to apply the weekly timetable.')}finally{setSaving(false)}}
+  const save=async event=>{event.preventDefault();setError('');setSuccess('');if(!slots.length){setError('Add at least one lecture before applying the timetable.');return}const invalid=slots.findIndex(slot=>!slot.subject.trim()||!slot.classNumber.trim()||!slot.startTime||!slot.endTime||slot.startTime>=slot.endTime);if(invalid!==-1){setError('Complete the subject, class and valid start/end times for every lecture.');return}setSaving(true);try{const entries=slots.map(({classNumber,division,...slot})=>({...slot,className:'Class '+classNumber+(division?' - Division '+division:'')}));const result=await createWeeklyTimetableTemplateApi(token,{startDate,weeks:52,entries});setSuccess(result.message||'Weekly timetable applied for 52 weeks.');window.scrollTo({top:0,behavior:'smooth'})}catch(e){setError(e.message||'Unable to apply the weekly timetable.')}finally{setSaving(false)}}
   if(!principal)return null
-  return <main className="weekly-builder-page">
-    <div className="weekly-builder-topbar"><button type="button" className="secondary weekly-back-button" onClick={()=>navigate('/principal/timetable')}><ArrowLeft size={16}/> Back to timetable</button><span className="weekly-builder-kicker"><CalendarRange size={15}/> PRINCIPAL · TIMETABLE PLANNER</span></div>
-    <header className="weekly-builder-hero"><div><span className="eyebrow">REPEATING WEEKLY SCHEDULE</span><h1>Build your weekly timetable</h1><p>Add as many lectures as needed to each day. This weekly pattern will be applied for 52 weeks, and individual dates can still be edited from the main timetable.</p></div><div className="weekly-builder-stat"><CalendarRange size={20}/><strong>52 weeks</strong><span>Year-round schedule</span></div></header>
-    {error&&<div className="weekly-builder-alert error">{error}</div>}
-    {success&&<div className="weekly-builder-alert success"><CheckCircle2 size={17}/><span>{success}</span><button type="button" onClick={()=>navigate('/principal/timetable')}>View timetable</button></div>}
-    <form onSubmit={save} className="weekly-builder-form">
-      <section className="weekly-builder-settings"><div><span className="weekly-field-label">SCHEDULE START DATE</span><p>Choose the first date this weekly pattern should follow.</p></div><label className="weekly-start-date"><CalendarRange size={17}/><input type="date" name="weeklyStartDate" value={startDate} onChange={e=>setStartDate(e.target.value)} required/></label></section>
-      <div className="weekly-builder-section-title"><div><span className="eyebrow">YOUR STANDARD WEEK</span><h2>Lectures by day</h2><p>Each day can contain multiple lectures with different classes, teachers and timings.</p></div><span className="weekly-total-count">{slots.length} lecture{slots.length===1?'':'s'} added</span></div>
-      {days.map(day=>{const daySlots=slots.map((slot,index)=>({...slot,index})).filter(slot=>slot.dayOfWeek===day.value);return <section className="weekly-builder-day" key={day.value}>
-        <div className="weekly-builder-day-header"><div className="weekly-day-name"><span className="weekly-day-number">{daySlots.length}</span><div><h3>{day.label}</h3><p>{daySlots.length?daySlots.length+' lecture'+(daySlots.length===1?'':'s')+' planned':'No lectures added yet'}</p></div></div><button type="button" className="secondary weekly-add-button" onClick={()=>addSlot(day.value)}><Plus size={15}/> Add lecture</button></div>
-        {daySlots.length>0&&<div className="weekly-builder-lectures">{daySlots.map(slot=><article className="weekly-builder-lecture" key={slot.index}>
-          <div className="weekly-lecture-heading"><span><Clock3 size={14}/><b>Lecture {daySlots.findIndex(item=>item.index===slot.index)+1}</b></span><button type="button" className="weekly-remove-button" onClick={()=>removeSlot(slot.index)} aria-label={'Remove lecture '+(slot.index+1)}><Trash2 size={15}/> Remove</button></div>
-          <div className="weekly-builder-fields">
-            <label>Subject <input name={'subject-'+slot.index} value={slot.subject} onChange={e=>updateSlot(slot.index,'subject',e.target.value)} placeholder="e.g. Mathematics" required/></label>
-            <label>Class / Division <input name={'class-'+slot.index} value={slot.className} onChange={e=>updateSlot(slot.index,'className',e.target.value)} placeholder="e.g. Class 10 - A" required/></label>
-            <label>Start time <input name={'start-'+slot.index} type="time" value={slot.startTime} onChange={e=>updateSlot(slot.index,'startTime',e.target.value)} required/></label>
-            <label>End time <input name={'end-'+slot.index} type="time" value={slot.endTime} onChange={e=>updateSlot(slot.index,'endTime',e.target.value)} required/></label>
-            <label>Teacher <select name={'teacher-'+slot.index} value={slot.teacherId} onChange={e=>updateSlot(slot.index,'teacherId',e.target.value)}><option value="">No teacher assigned</option>{teachers.map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
-            <label>Room <input name={'room-'+slot.index} value={slot.room} onChange={e=>updateSlot(slot.index,'room',e.target.value)} placeholder="e.g. Room 04"/></label>
-            <label className="weekly-notes-field">Notes (optional) <input name={'notes-'+slot.index} value={slot.notes} onChange={e=>updateSlot(slot.index,'notes',e.target.value)} placeholder="Extra information for this lecture"/></label>
+  return <main className="weekly-board-page">
+    <div className="weekly-board-breadcrumb"><button type="button" onClick={()=>navigate('/principal/overview')}>Home</button><ChevronRight size={13}/><button type="button" onClick={()=>navigate('/principal/timetable')}>Timetable</button><ChevronRight size={13}/><strong>Weekly Timetable</strong><span className="weekly-board-user"><Bell size={17}/><span className="weekly-user-avatar">P</span> Principal</span></div>
+    <header className="weekly-board-title"><span className="weekly-board-title-icon"><CalendarDays size={30}/></span><div><h1>Weekly Timetable</h1><p>Create a weekly timetable and apply it for 52 weeks from the selected start date.</p></div></header>
+    {error&&<div className="weekly-board-alert error">{error}</div>}
+    {success&&<div className="weekly-board-alert success"><CheckCircle2 size={17}/><span>{success}</span><button type="button" onClick={()=>navigate('/principal/timetable')}>View timetable</button></div>}
+    <form onSubmit={save} className="weekly-board-form">
+      <div className="weekly-board-config-row">
+        <section className="weekly-config-card"><h2>Schedule Configuration</h2><div className="weekly-config-content"><label>Start Date <i>*</i><input type="date" name="weeklyStartDate" value={startDate} onChange={e=>setStartDate(e.target.value)} required/></label><div className="weekly-date-summary"><CalendarDays size={28}/><div><span>This timetable will be applied for</span><strong>52 weeks (1 Year)</strong><small>{startDate?new Date(startDate+'T12:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'Select start date'} – {endDate}</small></div></div></div></section>
+        <aside className="weekly-info-card"><div className="weekly-info-icon"><Info size={17}/></div><div><h3>Important Notes</h3><ul><li>This will create a repeating weekly timetable for 52 weeks.</li><li>Existing timetable entries will not be deleted.</li><li>You can edit or remove individual lectures later from the main timetable.</li><li>Make sure start time is earlier than end time.</li></ul></div></aside>
+      </div>
+      <div className="weekly-board-days">{days.map(day=>{const daySlots=slots.map((slot,index)=>({...slot,index})).filter(slot=>slot.dayOfWeek===day.value);return <section className={'weekly-board-day tone-'+day.tone} key={day.value}>
+        <header className="weekly-board-day-head"><strong>{day.label}</strong><span>(Weekly)</span></header>
+        <div className="weekly-board-day-body">{daySlots.length?daySlots.map((slot,position)=><article className="weekly-board-lecture" key={slot.index}>
+          <div className="weekly-board-lecture-head"><strong>Lecture {position+1}</strong><button type="button" onClick={()=>removeSlot(slot.index)} aria-label={'Remove '+day.label+' lecture '+(position+1)}><Trash2 size={14}/></button></div>
+          <div className="weekly-board-fields">
+            <label>Subject <i>*</i><select name={'subject-'+slot.index} value={slot.subject} onChange={e=>updateSlot(slot.index,'subject',e.target.value)} required><option value="">Select subject</option>{subjects.map(subject=><option key={subject}>{subject}</option>)}</select></label>
+            <label>Class <i>*</i><select name={'class-'+slot.index} value={slot.classNumber} onChange={e=>updateSlot(slot.index,'classNumber',e.target.value)} required><option value="">Select class</option>{Array.from({length:12},(_,i)=>String(i+1)).map(n=><option key={n} value={n}>Class {n}</option>)}</select></label>
+            <label>Division <i>*</i><select name={'division-'+slot.index} value={slot.division} onChange={e=>updateSlot(slot.index,'division',e.target.value)} required>{divisions.map(d=><option key={d} value={d}>{d}</option>)}</select></label>
+            <label>Start Time <i>*</i><span className="weekly-time-input"><input name={'start-'+slot.index} type="time" value={slot.startTime} onChange={e=>updateSlot(slot.index,'startTime',e.target.value)} required/><Clock3 size={12}/></span></label>
+            <label>End Time <i>*</i><span className="weekly-time-input"><input name={'end-'+slot.index} type="time" value={slot.endTime} onChange={e=>updateSlot(slot.index,'endTime',e.target.value)} required/><Clock3 size={12}/></span></label>
+            <label>Teacher <i>*</i><select name={'teacher-'+slot.index} value={slot.teacherId} onChange={e=>updateSlot(slot.index,'teacherId',e.target.value)}><option value="">Select teacher</option>{teachers.map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
+            <label>Room No.<input name={'room-'+slot.index} value={slot.room} onChange={e=>updateSlot(slot.index,'room',e.target.value)} placeholder="e.g. Room 101"/></label>
+            <label className="weekly-board-notes">Notes<input name={'notes-'+slot.index} value={slot.notes} onChange={e=>updateSlot(slot.index,'notes',e.target.value)} placeholder="Optional lecture notes"/></label>
           </div>
-        </article>)}</div>}
-        {daySlots.length===0&&<button type="button" className="weekly-empty-add" onClick={()=>addSlot(day.value)}><Plus size={15}/> Add the first lecture for {day.label}</button>}
-      </section>})}
-      <footer className="weekly-builder-footer"><div><Copy size={17}/><span><strong>Apply this pattern for 52 weeks</strong><small>Existing timetable entries will not be deleted.</small></span></div><button type="submit" className="primary weekly-apply-button" disabled={saving||loadingTeachers||slots.length===0}>{saving?<LoaderCircle size={16} className="spin"/>:<CalendarRange size={16}/>} {saving?'Applying schedule...':'Apply weekly timetable'}</button></footer>
+        </article>):<div className="weekly-board-empty"><CalendarDays size={28}/><strong>No lectures added</strong><span>Click the button below to add lectures for {day.label}.</span></div>}</div>
+        <button type="button" className="weekly-board-add" onClick={()=>addSlot(day.value)}><Plus size={15}/> Add Lecture</button>
+      </section>})}</div>
+      <footer className="weekly-board-footer"><div className="weekly-board-summary-icon"><ListChecks size={22}/></div><div className="weekly-board-summary-text"><strong>Summary</strong><span>Review your weekly schedule before applying.</span><small>{slots.length} lectures · 52 weeks</small></div><button type="button" className="secondary" onClick={()=>navigate('/principal/timetable')}>Cancel</button><button type="submit" className="primary weekly-board-apply" disabled={saving||loadingTeachers||slots.length===0}>{saving?<LoaderCircle size={16} className="spin"/>:<CalendarDays size={16}/>} {saving?'Applying...':'Apply Weekly Timetable'}</button></footer>
     </form>
-    {loadingTeachers&&<p className="weekly-teacher-loading"><LoaderCircle size={14} className="spin"/> Loading teacher list...</p>}
+    {loadingTeachers&&<p className="weekly-board-loading"><LoaderCircle size={14} className="spin"/> Loading teacher list...</p>}
   </main>
 }
