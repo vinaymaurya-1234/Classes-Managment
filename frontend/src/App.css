@@ -696,3 +696,61 @@
   .timetable-weekly-modal .weekly-template-day-head .weekly-add-lecture{min-height:34px;padding:7px 9px;font-size:11px;}
   .timetable-weekly-modal .user-modal-actions button{flex:1;}
 }
+
+
+/* Dedicated year-round weekly timetable builder page */
+.weekly-builder-page{width:100%;max-width:1180px;margin:0 auto;padding:clamp(16px,2.4vw,30px);display:grid;gap:20px;color:var(--ink);}
+.weekly-builder-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.weekly-back-button{display:inline-flex;align-items:center;gap:8px;min-height:38px;}
+.weekly-builder-kicker{display:inline-flex;align-items:center;gap:7px;color:#39724f;font-size:10px;font-weight:800;letter-spacing:1.1px;}
+.weekly-builder-hero{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:clamp(20px,3vw,32px);border:1px solid #dce9e0;border-radius:18px;background:linear-gradient(120deg,#f2f8f4 0%,#fff 78%);}
+.weekly-builder-hero h1{margin:8px 0;font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.8px;color:#163d2b;}
+.weekly-builder-hero p{max-width:690px;margin:0;color:#63796c;font-size:13px;line-height:1.7;}
+.weekly-builder-stat{display:flex;flex:0 0 150px;flex-direction:column;align-items:flex-start;gap:8px;padding:18px;border:1px solid #d8e8dd;border-radius:14px;background:#fff;color:#267147;}
+.weekly-builder-stat strong{font-size:18px;color:#19482f;}
+.weekly-builder-stat span{font-size:10px;color:#6b8174;}
+.weekly-builder-alert{display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:11px;font-size:12px;line-height:1.5;}
+.weekly-builder-alert.error{border:1px solid #f0c8c2;background:#fff4f2;color:#9d3e32;}
+.weekly-builder-alert.success{border:1px solid #cce5d3;background:#eff9f1;color:#23633d;}
+.weekly-builder-alert.success span{flex:1;}
+.weekly-builder-alert.success button{border:0;background:transparent;color:#23633d;font-weight:800;cursor:pointer;}
+.weekly-builder-form{display:grid;gap:16px;min-width:0;}
+.weekly-builder-settings{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border:1px solid #dce9e0;border-radius:14px;background:#fff;}
+.weekly-field-label{font-size:10px;font-weight:850;letter-spacing:.9px;color:#345e47;}
+.weekly-builder-settings p{margin:6px 0 0;color:#718478;font-size:11px;line-height:1.5;}
+.weekly-start-date{display:flex;align-items:center;gap:10px;min-width:230px;padding:0 12px;border:1px solid #d5e4da;border-radius:10px;background:#f9fcfa;color:#34704d;}
+.weekly-start-date input{width:100%;min-width:0;height:42px;border:0;outline:0;background:transparent;color:#1b3d2b;font-size:12px;}
+.weekly-builder-section-title{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding:8px 2px 2px;}
+.weekly-builder-section-title h2{margin:6px 0;font-size:22px;letter-spacing:-.4px;color:#173d2b;}
+.weekly-builder-section-title p{margin:0;color:#6b8074;font-size:11px;line-height:1.6;}
+.weekly-total-count{flex:0 0 auto;padding:8px 11px;border:1px solid #d7e8dc;border-radius:999px;background:#f1f8f3;color:#286443;font-size:10px;font-weight:800;}
+.weekly-builder-day{min-width:0;overflow:hidden;border:1px solid #dce9e0;border-radius:15px;background:#fff;box-shadow:0 4px 14px rgba(26,70,43,.025);}
+.weekly-builder-day-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;background:#f4f9f5;border-bottom:1px solid #e1ece4;}
+.weekly-day-name{display:flex;align-items:center;gap:12px;min-width:0;}
+.weekly-day-number{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:#dff0e4;color:#246841;font-size:13px;font-weight:850;}
+.weekly-day-name h3{margin:0;color:#1d4932;font-size:14px;}
+.weekly-day-name p{margin:4px 0 0;color:#718478;font-size:10px;}
+.weekly-add-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid #cfe1d5;background:#fff;color:#286643;font-size:11px;font-weight:800;white-space:nowrap;}
+.weekly-add-button:hover,.weekly-empty-add:hover{background:#eaf6ed;border-color:#9cc9a9;}
+.weekly-builder-lectures{display:grid;gap:0;}
+.weekly-builder-lecture{min-width:0;padding:18px;border-bottom:1px solid #edf2ee;}
+.weekly-builder-lecture:last-child{border-bottom:0;}
+.weekly-lecture-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px;}
+.weekly-lecture-heading>span{display:inline-flex;align-items:center;gap:8px;color:#315b43;font-size:11px;}
+.weekly-remove-button{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border:0;border-radius:7px;background:transparent;color:#a5483d;font-size:10px;font-weight:700;cursor:pointer;}
+.weekly-remove-button:hover{background:#fff0ee;}
+.weekly-builder-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;}
+.weekly-builder-fields label{display:block;min-width:0;color:#486654;font-size:11px;font-weight:750;}
+.weekly-builder-fields input,.weekly-builder-fields select{box-sizing:border-box;display:block;width:100%;min-width:0;height:43px;margin-top:7px;padding:0 11px;border:1px solid #d3e1d7;border-radius:9px;background:#fbfdfb;color:#1c3e2c;font-size:12px;outline:0;visibility:visible;opacity:1;}
+.weekly-builder-fields input:focus,.weekly-builder-fields select:focus{border-color:#78ad8b;box-shadow:0 0 0 3px rgba(66,143,89,.1);}
+.weekly-notes-field{grid-column:1/-1;}
+.weekly-empty-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:58px;padding:12px;border:0;background:#fff;color:#36744d;font-size:11px;font-weight:750;cursor:pointer;}
+.weekly-builder-footer{position:sticky;bottom:10px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 18px;border:1px solid #d7e7dc;border-radius:14px;background:rgba(255,255,255,.97);box-shadow:0 12px 35px rgba(22,57,36,.12);backdrop-filter:blur(10px);}
+.weekly-builder-footer>div{display:flex;align-items:center;gap:10px;color:#2c7046;}
+.weekly-builder-footer>div span,.weekly-builder-footer>div strong,.weekly-builder-footer>div small{display:block;}
+.weekly-builder-footer>div strong{font-size:11px;color:#244b34;}
+.weekly-builder-footer>div small{margin-top:4px;font-size:10px;color:#728579;}
+.weekly-apply-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;white-space:nowrap;}
+.weekly-teacher-loading{display:flex;align-items:center;gap:8px;color:#718478;font-size:11px;}
+@media(max-width:850px){.weekly-builder-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.weekly-builder-hero{align-items:flex-start;}.weekly-builder-stat{flex-basis:125px;padding:14px;}}
+@media(max-width:600px){.weekly-builder-page{padding:12px;gap:14px;}.weekly-builder-topbar{align-items:flex-start;flex-direction:column;}.weekly-builder-hero{flex-direction:column;padding:18px;}.weekly-builder-stat{width:auto;flex:0 0 auto;}.weekly-builder-settings{align-items:stretch;flex-direction:column;padding:15px;}.weekly-start-date{box-sizing:border-box;min-width:0;width:100%;}.weekly-builder-section-title{align-items:flex-start;flex-direction:column;}.weekly-builder-section-title h2{font-size:20px;}.weekly-builder-day-header{padding:12px;}.weekly-add-button{padding:8px;font-size:10px;}.weekly-builder-lecture{padding:13px;}.weekly-builder-fields{grid-template-columns:minmax(0,1fr);gap:12px;}.weekly-notes-field{grid-column:auto;}.weekly-builder-footer{align-items:stretch;flex-direction:column;bottom:6px;padding:13px;}.weekly-apply-button{width:100%;}.weekly-builder-alert.success{align-items:flex-start;flex-wrap:wrap;}}
