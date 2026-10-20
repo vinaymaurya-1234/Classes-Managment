@@ -8,7 +8,7 @@ const examSchema = new mongoose.Schema({
   type: { type: String, enum: ['weekly', 'unit', 'midterm', 'final', 'practice', 'other'], default: 'unit' },
   className: { type: String, required: true, trim: true, index: true },
   std: { type: Number, enum: [10, 11, 12], required: true },
-  division: { type: String, enum: ['A', 'B', 'C'], required: true },
+  division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
   subject: { type: String, required: true, trim: true },
   startsAt: { type: Date, required: true, index: true },
   durationMinutes: { type: Number, required: true, min: 1 },
