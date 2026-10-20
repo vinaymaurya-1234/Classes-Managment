@@ -125,3 +125,69 @@ export const listTimetableTeachers = async (req, res, next) => {
     return res.json({ success: true, teachers: teachers.map(t => ({ id: t._id.toString(), name: t.name, email: t.email, avatarUrl: t.avatarUrl || '' })) })
   } catch (error) { next(error) }
 }
+
+export const createWeeklyTimetableTemplate = async (req, res, next) => {
+  try {
+    if (!requirePrincipal(req)) return res.status(403).json({ success: false, message: 'Only the principal can manage the timetable.' })
+
+    const startDate = String(req.body.startDate || '').trim()
+    const weeks = Number(req.body.weeks || 52)
+    const slots = Array.isArray(req.body.entries) ? req.body.entries : []
+    if (!isValidDate(startDate)) return res.status(400).json({ success: false, message: 'Choose a valid start date.' })
+    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 53) return res.status(400).json({ success: false, message: 'The timetable duration must be between 1 and 53 weeks.' })
+    if (!slots.length || slots.length > 100) return res.status(400).json({ success: false, message: 'Add at least one lecture to the weekly timetable.' })
+
+    const prepared = []
+    for (const [index, slot] of slots.entries()) {
+      const dayOfWeek = Number(slot.dayOfWeek)
+      const startTime = String(slot.startTime || '').trim()
+      const endTime = String(slot.endTime || '').trim()
+      const subject = String(slot.subject || '').trim()
+      const className = String(slot.className || '').trim()
+      const room = String(slot.room || '').trim()
+      const notes = String(slot.notes || '').trim()
+      const teacherId = String(slot.teacherId || '').trim()
+      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !className) {
+        return res.status(400).json({ success: false, message: `Check the day, time, subject and class for weekly lecture ${index + 1}.` })
+      }
+      let teacher = null
+      if (teacherId) {
+        teacher = await User.findOne({ _id: teacherId, role: 'teacher' }).select('_id').lean()
+        if (!teacher) return res.status(400).json({ success: false, message: `Teacher for weekly lecture ${index + 1} was not found.` })
+      }
+      prepared.push({ dayOfWeek, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null })
+    }
+
+    const start = new Date(startDate + 'T00:00:00.000Z')
+    const end = new Date(start)
+    end.setUTCDate(end.getUTCDate() + weeks * 7 - 1)
+    const endDate = end.toISOString().slice(0, 10)
+    const occurrences = []
+    for (let week = 0; week < weeks; week += 1) {
+      for (const slot of prepared) {
+        const date = new Date(start)
+        date.setUTCDate(date.getUTCDate() + week * 7)
+        const offset = (slot.dayOfWeek - date.getUTCDay() + 7) % 7
+        date.setUTCDate(date.getUTCDate() + offset)
+        const dateString = date.toISOString().slice(0, 10)
+        if (dateString < startDate || dateString > endDate) continue
+        occurrences.push({
+          date: dateString, startTime: slot.startTime, endTime: slot.endTime,
+          subject: slot.subject, className: slot.className, room: slot.room,
+          notes: slot.notes, teacher: slot.teacher, createdBy: req.user._id,
+        })
+      }
+    }
+    if (!occurrences.length) return res.status(400).json({ success: false, message: 'No timetable occurrences fall within the selected period.' })
+
+    await TimetableEntry.insertMany(occurrences, { ordered: true })
+    return res.status(201).json({
+      success: true,
+      message: `Weekly timetable applied through ${endDate}.`,
+      startDate,
+      endDate,
+      weeks,
+      createdCount: occurrences.length,
+    })
+  } catch (error) { next(error) }
+}
