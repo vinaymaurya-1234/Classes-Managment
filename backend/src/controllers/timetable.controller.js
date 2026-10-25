@@ -7,8 +7,8 @@ const isValidTime = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
 
 const parseClassPlacement = value => {
   const text = String(value || '').trim()
-  const standardMatch = text.match(/(?:class\\s*)?(\\d{1,2})/i)
-  const divisionMatch = text.match(/division\\s+([A-C])/i)
+  const standardMatch = text.match(/(?:class\s*)?(\\d{1,2})/i)
+  const divisionMatch = text.match(/division\s+([A-C])/i)
   const parsedStandard = standardMatch ? Number(standardMatch[1]) : null
   return { standard: parsedStandard >= 1 && parsedStandard <= 12 ? parsedStandard : null, division: divisionMatch ? divisionMatch[1].toUpperCase() : 'A' }
 }
