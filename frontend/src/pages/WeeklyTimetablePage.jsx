@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { ArrowLeft, Bell, CalendarDays, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Plus, Trash2, ListChecks, Pencil, X, BookOpen, Users, DoorOpen, ArrowLeftRight, CheckCircle } from 'lucide-react'
+import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Plus, Trash2, ListChecks, Pencil, X, BookOpen, Users, DoorOpen, ArrowLeftRight, CheckCircle, FileSpreadsheet, Upload } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import * as XLSX from 'xlsx'
 import { createWeeklyTimetableTemplateApi, getTimetableRangeApi, clearClassTimetableApi } from '../api/timetable.api'
 
 const todayIndia=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=Object.fromEntries(parts.map(p=>[p.type,p.value]));return value.year+'-'+value.month+'-'+value.day}
@@ -32,6 +33,8 @@ export default function WeeklyTimetablePage(){
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [success,setSuccess]=useState('')
+  const [importing,setImporting]=useState(false)
+  const [importSummary,setImportSummary]=useState('')
   const endDate=useMemo(()=>endDateFor(startDate),[startDate])
   useEffect(()=>{let active=true;const loadCurrentTimetable=async()=>{setLoadingCurrent(true);setError('');try{const from=mondayOf(todayIndia());const to=dateOffset(from,6);const result=await getTimetableRangeApi(token,from,to);if(!active)return;const grouped={};(result.entries||[]).forEach(entry=>{const date=new Date(entry.date+'T12:00:00');const dayOfWeek=date.getDay()===0?7:date.getDay();if(dayOfWeek>6)return;if(!grouped[dayOfWeek])grouped[dayOfWeek]=[];grouped[dayOfWeek].push(entry)});let maxPeriods=1;const currentSlots=[];Object.entries(grouped).forEach(([dayKey,entries])=>{entries.sort((a,b)=>a.startTime.localeCompare(b.startTime));entries.forEach((entry,index)=>{const periodNumber=index+1;maxPeriods=Math.max(maxPeriods,periodNumber);const parsed=splitClassName(entry.className);currentSlots.push({id:entry.id,dayOfWeek:Number(dayKey),periodNumber,startTime:entry.startTime,endTime:entry.endTime,subject:entry.subject||'',classNumber:parsed.classNumber,division:parsed.division || 'A',room:entry.room||'',teacherName:entry.teacher?.name||entry.teacherName||'',notes:entry.notes||'',kind:'lecture'})})});setAllLoadedSlots(currentSlots);setSlots(currentSlots);setPeriodCount(Math.max(7,maxPeriods));if(currentSlots.length)setSuccess('Loaded existing timetable entries. Select a standard and division to view that timetable.')}catch(e){if(active)setError(e.message||'Could not load the current timetable.')}finally{if(active)setLoadingCurrent(false)}};if(token)loadCurrentTimetable();else setLoadingCurrent(false);return()=>{active=false}},[token])
   useEffect(()=>{if(!allLoadedSlots.length)return;const matches=allLoadedSlots.filter(slot=>{const standardMatches=!standard||!slot.classNumber||String(slot.classNumber)===String(standard);const divisionMatches=(slot.division||'A')===division;return standardMatches&&divisionMatches});setSlots(matches);const max=Math.max(1,...matches.map(slot=>slot.periodNumber));setPeriodCount(n=>Math.max(7,max))},[standard,division,allLoadedSlots])
