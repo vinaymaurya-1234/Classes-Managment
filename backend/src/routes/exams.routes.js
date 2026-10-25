@@ -224,12 +224,29 @@ router.get('/exams', async (req, res, next) => {
     const user = req.user
     let filter = {}
     if (isTeacher(user)) filter.teacher = user._id
-    else if (isStudent(user)) filter = { std: Number(user.std), $or: [{ division: user.division || '' }, { division: '' }], status: { $ne: 'cancelled' } }
-    else if (user.role === 'parent') {
-      const parent = await User.findById(user._id).populate('children', 'std division')
+    else if (isStudent(user)) {
+      // Older student records may have className (e.g. "Class 10") but no std.
+      const classMatch = String(user.className || '').match(/\\d+/)
+      const studentStd = Number(user.std || classMatch?.[0])
+      const studentDivision = String(user.division || 'A').trim().toUpperCase()
+      if (!Number.isInteger(studentStd) || studentStd < 1) return res.json({ success: true, data: [] })
+      filter = {
+        std: studentStd,
+        $or: [{ division: studentDivision }, { division: '' }, { division: { $exists: false } }, { division: null }],
+        status: { $ne: 'cancelled' },
+      }
+    } else if (user.role === 'parent') {
+      const parent = await User.findById(user._id).populate('children', 'std division className').lean()
       const children = parent?.children || []
-      filter = { $or: children.flatMap(c => [{ std: Number(c.std), division: c.division || '' }, { std: Number(c.std), division: '' }]), status: { $ne: 'cancelled' } }
-      if (!children.length) return res.json({ success: true, data: [] })
+      const classFilters = children.flatMap(child => {
+        const classMatch = String(child.className || '').match(/\\d+/)
+        const childStd = Number(child.std || classMatch?.[0])
+        if (!Number.isInteger(childStd) || childStd < 1) return []
+        const childDivision = String(child.division || 'A').trim().toUpperCase()
+        return [{ std: childStd, $or: [{ division: childDivision }, { division: '' }, { division: { $exists: false } }, { division: null }] }]
+      })
+      if (!classFilters.length) return res.json({ success: true, data: [] })
+      filter = { $or: classFilters, status: { $ne: 'cancelled' } }
     } else if (!isPrincipal(user)) return forbidden(res)
     const exams = await Exam.find(filter).sort({ startsAt: 1 }).populate('teacher', 'name').populate('paper', 'title')
     res.json({ success: true, data: exams.map(e => ({ ...sanitizeExam(e), teacher: e.teacher, paper: e.paper })) })
