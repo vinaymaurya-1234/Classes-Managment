@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Edit3, LoaderCircle, Plus, Trash2, UserRound, X } from 'lucide-react'
-import { useOutletContext } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { createTimetableEntryApi, deleteTimetableEntryApi, getTimetableRangeApi, getTimetableTeachersApi, updateTimetableEntryApi } from '../api/timetable.api'
 
@@ -16,7 +16,7 @@ const month=v=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).fo
 const blank=date=>({date,startTime:'08:00',endTime:'09:00',subject:'',className:'',room:'',teacherId:'',notes:''})
 
 export default function TimetablePage(){
-  const {role}=useOutletContext(); const {token,user}=useAuth(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
+  const {role}=useOutletContext(); const {token,user}=useAuth(); const navigate=useNavigate(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
   const [selected,setSelected]=useState(today),[entries,setEntries]=useState([]),[teachers,setTeachers]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[open,setOpen]=useState(false),[editId,setEditId]=useState(null),[form,setForm]=useState(blank(today))
   const days=useMemo(()=>weekDays(selected),[selected]), from=days[0], to=days[6]
   const load=useCallback(async()=>{setLoading(true);setError('');try{const r=await getTimetableRangeApi(token,from,to);setEntries(r.entries||[])}catch(e){setError(e.message||'Unable to load timetable.')}finally{setLoading(false)}},[token,from,to])
@@ -28,7 +28,7 @@ export default function TimetablePage(){
   const save=async e=>{e.preventDefault();setSaving(true);setError('');try{if(editId)await updateTimetableEntryApi(token,editId,form);else await createTimetableEntryApi(token,form);setOpen(false);await load()}catch(e){setError(e.message||'Unable to save lecture.')}finally{setSaving(false)}}
   const remove=async x=>{if(!window.confirm('Remove '+x.subject+' from '+full(x.date)+'?'))return;try{await deleteTimetableEntryApi(token,x.id);await load()}catch(e){setError(e.message||'Unable to remove lecture.')}}
   return <><div className="timetable-page">
-    <div className="timetable-head"><div><span className="eyebrow">TIMETABLE</span><h2>{principal?'Plan classes and lectures':'Lecture timetable'}</h2><p>{principal?'Set today’s lectures and manage the schedule for any date.':'View the published schedule for any date.'}</p></div>{principal&&<button className="primary" onClick={()=>create(selected)}><Plus size={16}/> Add lecture</button>}</div>
+    <div className="timetable-head"><div><span className="eyebrow">TIMETABLE</span><h2>{principal?'Plan classes and lectures':'Lecture timetable'}</h2><p>{principal?'Set today’s lectures and manage the schedule for any date.':'View the published schedule for any date.'}</p></div>{principal&&<div className="timetable-head-actions"><button type="button" className="secondary" onClick={()=>navigate('/principal/timetable/weekly-template')}><CalendarDays size={16}/> Set Weekly Timetable</button><button type="button" className="primary" onClick={()=>create(selected)}><Plus size={16}/> Add lecture</button></div>}</div>
     {error&&<div className="attendance-admin-error">{error}</div>}
     <section className="timetable-toolbar"><button className="icon-button" onClick={()=>setSelected(offset(selected,-7))}><ChevronLeft size={17}/></button><button className="icon-button" onClick={()=>setSelected(offset(selected,7))}><ChevronRight size={17}/></button><div className="timetable-period"><CalendarDays size={17}/><div><span>WEEK</span><strong>{month(from)} · {label(from)} — {label(to)}</strong></div></div><button className="secondary" onClick={()=>setSelected(today)}>Today</button><label className="timetable-date-picker"><span>Jump to date</span><input type="date" value={selected} onChange={e=>setSelected(e.target.value)}/></label></section>
     <section className="timetable-selected-day"><div><span className="eyebrow">{selected===today?'TODAY':'SELECTED DAY'}</span><h3>{full(selected)}</h3></div><span>{grouped[selected]?.length||0} lectures</span></section>
