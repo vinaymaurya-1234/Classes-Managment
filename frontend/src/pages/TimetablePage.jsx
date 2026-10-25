@@ -14,8 +14,8 @@ const full=v=>new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'long',year:'
 const weekday=v=>new Intl.DateTimeFormat('en-IN',{weekday:'short'}).format(d(v))
 const month=v=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).format(d(v))
 const blank=date=>({date,startTime:'08:00',endTime:'09:00',subject:'',className:'',room:'',teacherId:'',notes:''})
-const classDetails=value=>{const text=String(value||'').trim();const standardMatch=text.match(/(?:class\s*)?(\d{1,2})/i);const divisionMatch=text.match(/division\s+([A-Z])/i);return {standard:standardMatch?Number(standardMatch[1]):null,division:divisionMatch?divisionMatch[1].toUpperCase():''}}
-const belongsToStudent=(entry,user)=>{const own=classDetails(user?.className);const standard=Number(user?.std)||own.standard;const division=String(user?.division||own.division||'').toUpperCase();const item=classDetails(entry.className);if(standard&&item.standard&&standard!==item.standard)return false;if(division&&item.division&&division!==item.division)return false;return true}
+const classDetails=value=>{const text=String(value||'').trim();const standardMatch=text.match(/(?:class\s*)?(\d{1,2})/i);const divisionMatch=text.match(/division\s+([A-Z])/i);return {standard:standardMatch?Number(standardMatch[1]):null,division:divisionMatch?divisionMatch[1].toUpperCase():'A'}}
+const belongsToStudent=(entry,user)=>{const own=classDetails(user?.className);const standard=Number(user?.std)||own.standard;const division=String(user?.division||own.division||'A').toUpperCase();const item=classDetails(entry.className);if(standard&&item.standard&&standard!==item.standard)return false;if(division&&item.division&&division!==item.division)return false;return true}
 
 export default function TimetablePage(){
   const {role}=useOutletContext(); const {token,user}=useAuth(); const navigate=useNavigate(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
