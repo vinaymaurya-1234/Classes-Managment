@@ -5,6 +5,31 @@ const requirePrincipal = req => req.user?.role === 'principal'
 const isValidDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
 const isValidTime = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
 
+const parseClassPlacement = value => {
+  const text = String(value || '').trim()
+  const standardMatch = text.match(/(?:class\\s*)?(\\d{1,2})/i)
+  const divisionMatch = text.match(/division\\s+([A-C])/i)
+  const parsedStandard = standardMatch ? Number(standardMatch[1]) : null
+  return { standard: parsedStandard >= 1 && parsedStandard <= 12 ? parsedStandard : null, division: divisionMatch ? divisionMatch[1].toUpperCase() : 'A' }
+}
+
+const studentPlacement = user => {
+  const parsed = parseClassPlacement(user?.className)
+  const standard = Number(user?.std) || parsed.standard
+  const division = String(user?.division || parsed.division || 'A').toUpperCase()
+  return { standard, division: ['A', 'B', 'C'].includes(division) ? division : 'A' }
+}
+
+const placementQuery = user => {
+  const placement = studentPlacement(user)
+  if (!placement.standard) return { _id: null }
+  const className = 'Class ' + placement.standard + ' - Division ' + placement.division
+  return { $or: [
+    { standard: placement.standard, division: placement.division },
+    { standard: { $exists: false }, className }
+  ] }
+}
+
 const publicEntry = entry => ({
   id: entry._id.toString(),
   date: entry.date,
@@ -12,6 +37,8 @@ const publicEntry = entry => ({
   endTime: entry.endTime,
   subject: entry.subject,
   className: entry.className,
+  standard: entry.standard ?? parseClassPlacement(entry.className).standard,
+  division: entry.division || parseClassPlacement(entry.className).division,
   room: entry.room || '',
   notes: entry.notes || '',
   teacher: entry.teacher ? {
@@ -27,7 +54,9 @@ export const listTimetable = async (req, res, next) => {
     const date = String(req.query.date || '')
     if (!isValidDate(date)) return res.status(400).json({ success: false, message: 'A valid date is required.' })
 
-    const entries = await TimetableEntry.find({ date })
+    const filter = { date }
+    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const entries = await TimetableEntry.find(filter)
       .populate('teacher', 'name email avatarUrl')
       .sort({ startTime: 1, endTime: 1 })
 
@@ -43,7 +72,9 @@ export const listTimetableRange = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid from and to dates are required.' })
     }
 
-    const entries = await TimetableEntry.find({ date: { $gte: from, $lte: to } })
+    const filter = { date: { $gte: from, $lte: to } }
+    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const entries = await TimetableEntry.find(filter)
       .populate('teacher', 'name email avatarUrl')
       .sort({ date: 1, startTime: 1 })
 
