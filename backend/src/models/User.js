@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
   children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }, { timestamps: true })
 
+userSchema.pre('validate', function normalizeStudentDivision(next) { if (this.role === 'student' && !String(this.division || '').trim()) this.division = 'A'; next() })
+
 userSchema.set('toJSON', {
   transform: (_doc, ret) => { delete ret.password; return ret },
 })
