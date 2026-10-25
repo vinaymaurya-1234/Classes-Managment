@@ -26,3 +26,5 @@ export const updateTimetableEntryApi = (token, id, payload) => request(`/${encod
 export const deleteTimetableEntryApi = (token, id) => request(`/${encodeURIComponent(id)}`, token, { method: 'DELETE' })
 
 export const createWeeklyTimetableTemplateApi = (token, payload) => request('/weekly-template', token, { method: 'POST', body: JSON.stringify(payload) })
+
+export const clearClassTimetableApi = (token, standard, division) => request(`/class?standard=${encodeURIComponent(standard)}&division=${encodeURIComponent(division)}`, token, { method: 'DELETE' })
