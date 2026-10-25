@@ -3,6 +3,7 @@ import {
   createTimetableEntry,
   createWeeklyTimetableTemplate,
   deleteTimetableEntry,
+  clearClassTimetable,
   listTimetable,
   listTimetableRange,
   listTimetableTeachers,
@@ -19,6 +20,7 @@ router.get('/teachers', listTimetableTeachers)
 router.post('/weekly-template', createWeeklyTimetableTemplate)
 router.post('/', createTimetableEntry)
 router.patch('/:id', updateTimetableEntry)
+router.delete('/class', clearClassTimetable)
 router.delete('/:id', deleteTimetableEntry)
 
 export default router
