@@ -14,6 +14,8 @@ const full=v=>new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'long',year:'
 const weekday=v=>new Intl.DateTimeFormat('en-IN',{weekday:'short'}).format(d(v))
 const month=v=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).format(d(v))
 const blank=date=>({date,startTime:'08:00',endTime:'09:00',subject:'',className:'',room:'',teacherId:'',notes:''})
+const classDetails=value=>{const text=String(value||'').trim();const standardMatch=text.match(/(?:class\\s*)?(\\d{1,2})/i);const divisionMatch=text.match(/division\\s+([A-Z])/i);return {standard:standardMatch?Number(standardMatch[1]):null,division:divisionMatch?divisionMatch[1].toUpperCase():''}}
+const belongsToStudent=(entry,user)=>{const own=classDetails(user?.className);const standard=Number(user?.std)||own.standard;const division=String(user?.division||own.division||'').toUpperCase();const item=classDetails(entry.className);if(standard&&item.standard&&standard!==item.standard)return false;if(division&&item.division&&division!==item.division)return false;return true}
 
 export default function TimetablePage(){
   const {role}=useOutletContext(); const {token,user}=useAuth(); const navigate=useNavigate(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
@@ -22,7 +24,8 @@ export default function TimetablePage(){
   const load=useCallback(async()=>{setLoading(true);setError('');try{const r=await getTimetableRangeApi(token,from,to);setEntries(r.entries||[])}catch(e){setError(e.message||'Unable to load timetable.')}finally{setLoading(false)}},[token,from,to])
   useEffect(()=>{load()},[load])
   useEffect(()=>{if(!principal)return;getTimetableTeachersApi(token).then(r=>setTeachers(r.teachers||[])).catch(e=>setError(e.message||'Unable to load teachers.'))},[principal,token])
-  const grouped=useMemo(()=>{const m=Object.fromEntries(days.map(x=>[x,[]]));entries.forEach(x=>m[x.date]?.push(x));Object.values(m).forEach(x=>x.sort((a,b)=>a.startTime.localeCompare(b.startTime)));return m},[days,entries])
+  const visibleEntries=useMemo(()=>user?.role==='student'?entries.filter(entry=>belongsToStudent(entry,user)):entries,[entries,user]);
+  const grouped=useMemo(()=>{const m=Object.fromEntries(days.map(x=>[x,[]]));visibleEntries.forEach(x=>m[x.date]?.push(x));Object.values(m).forEach(x=>x.sort((a,b)=>a.startTime.localeCompare(b.startTime)));return m},[days,visibleEntries])
   const create=date=>{setEditId(null);setForm(blank(date));setError('');setOpen(true)}
   const edit=x=>{setEditId(x.id);setForm({date:x.date,startTime:x.startTime,endTime:x.endTime,subject:x.subject,className:x.className,room:x.room||'',teacherId:x.teacher?.id||'',notes:x.notes||''});setError('');setOpen(true)}
   const save=async e=>{e.preventDefault();setSaving(true);setError('');try{if(editId)await updateTimetableEntryApi(token,editId,form);else await createTimetableEntryApi(token,form);setOpen(false);await load()}catch(e){setError(e.message||'Unable to save lecture.')}finally{setSaving(false)}}
