@@ -195,7 +195,7 @@ export default function WeeklyTimetablePage(){
       </div>
       <div style={{marginTop:14,overflowX:'auto',border:'1px solid #e0e8e3',borderRadius:8}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}><thead><tr>{importPreview.headers.map((header,index)=><th key={index} style={{padding:8,background:'#edf5ef',textAlign:'left',whiteSpace:'nowrap'}}>{String.fromCharCode(65+index)} · {header}</th>)}</tr></thead><tbody>{importPreview.rows.slice(0,3).map((row,index)=><tr key={index}>{importPreview.headers.map((_,col)=><td key={col} style={{padding:8,borderTop:'1px solid #e0e8e3',whiteSpace:'nowrap'}}>{String(row[col]??'')}</td>)}</tr>)}</tbody></table></div>
       <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}><button type="button" className="secondary" onClick={()=>setImportPreview(null)}>Cancel</button><button type="button" className="primary" onClick={confirmExcelImport}><CheckCircle2 size={15}/> Confirm mapping & import</button></div>
-    </section>
+    </section>}
     {success&&<div className="weekly-board-alert success"><CheckCircle2 size={17}/><span>{success}</span><button type="button" onClick={()=>navigate('/principal/timetable')}>View timetable</button></div>}
     <div className="weekly-visual-stats">
       <article><span className="weekly-stat-icon green"><BookOpen size={24}/></span><div><small>Total Periods</small><strong>{lectureCount}</strong><span>Per Week</span></div></article>
