@@ -35,6 +35,9 @@ export default function WeeklyTimetablePage(){
   const [success,setSuccess]=useState('')
   const [importing,setImporting]=useState(false)
   const [importSummary,setImportSummary]=useState('')
+  const [importPreview,setImportPreview]=useState(null)
+  const [importMode,setImportMode]=useState('rows')
+  const [columnMapping,setColumnMapping]=useState({day:'',period:'',subject:'',startTime:'',endTime:'',teacher:'',room:'',standard:'',division:'',notes:''})
   const endDate=useMemo(()=>endDateFor(startDate),[startDate])
   useEffect(()=>{let active=true;const loadCurrentTimetable=async()=>{setLoadingCurrent(true);setError('');try{const from=mondayOf(todayIndia());const to=dateOffset(from,6);const result=await getTimetableRangeApi(token,from,to);if(!active)return;const grouped={};(result.entries||[]).forEach(entry=>{const date=new Date(entry.date+'T12:00:00');const dayOfWeek=date.getDay()===0?7:date.getDay();if(dayOfWeek>6)return;if(!grouped[dayOfWeek])grouped[dayOfWeek]=[];grouped[dayOfWeek].push(entry)});let maxPeriods=1;const currentSlots=[];Object.entries(grouped).forEach(([dayKey,entries])=>{entries.sort((a,b)=>a.startTime.localeCompare(b.startTime));entries.forEach((entry,index)=>{const periodNumber=index+1;maxPeriods=Math.max(maxPeriods,periodNumber);const parsed=splitClassName(entry.className);currentSlots.push({id:entry.id,dayOfWeek:Number(dayKey),periodNumber,startTime:entry.startTime,endTime:entry.endTime,subject:entry.subject||'',classNumber:parsed.classNumber,division:parsed.division || 'A',room:entry.room||'',teacherName:entry.teacher?.name||entry.teacherName||'',notes:entry.notes||'',kind:'lecture'})})});setAllLoadedSlots(currentSlots);setSlots(currentSlots);setPeriodCount(Math.max(7,maxPeriods));if(currentSlots.length)setSuccess('Loaded existing timetable entries. Select a standard and division to view that timetable.')}catch(e){if(active)setError(e.message||'Could not load the current timetable.')}finally{if(active)setLoadingCurrent(false)}};if(token)loadCurrentTimetable();else setLoadingCurrent(false);return()=>{active=false}},[token])
   useEffect(()=>{if(!allLoadedSlots.length)return;const matches=allLoadedSlots.filter(slot=>{const standardMatches=!standard||!slot.classNumber||String(slot.classNumber)===String(standard);const divisionMatches=(slot.division||'A')===division;return standardMatches&&divisionMatches});setSlots(matches);const max=Math.max(1,...matches.map(slot=>slot.periodNumber));setPeriodCount(n=>Math.max(7,max))},[standard,division,allLoadedSlots])
@@ -49,40 +52,109 @@ export default function WeeklyTimetablePage(){
     const file = event.target.files && event.target.files[0]
     event.target.value = ''
     if (!file) return
-    if (!standard) { setError('Select a standard and division before importing.'); return }
-    setError(''); setSuccess(''); setImportSummary(''); setImporting(true)
+    setError(''); setSuccess(''); setImportSummary(''); setImportPreview(null); setImporting(true)
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
       const sheet = workbook.Sheets[workbook.SheetNames[0]]
       if (!sheet) throw new Error('The Excel file has no worksheet.')
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
-      if (!rows.length) throw new Error('The first worksheet is empty.')
+      const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false })
+      const nonEmpty = matrix.filter(row => row.some(cell => String(cell ?? '').trim() !== ''))
+      if (!nonEmpty.length) throw new Error('The worksheet is empty.')
       const norm = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
-      const dayNumber = value => { const v=String(value||'').trim().toLowerCase(); const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6,sunday:null,sun:null}; if(names[v]!==undefined)return names[v]; const n=Number(v); return Number.isInteger(n)&&n>=1&&n<=6?n:null }
-      const timeValue = value => { const text=String(value||'').trim(); if(typeof value==='number'&&Number.isFinite(value)){const mins=Math.round(value*1440);return String(Math.floor(mins/60)%24).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')} const m=text.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i); if(!m)return ''; let h=Number(m[1]);const min=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(min>59||h>23||(ap&&(h<1||h>12)))return '';if(ap)h=h%12+(ap==='PM'?12:0);return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0') }
-      const mapped=[]; const issues=[]
-      rows.forEach((row,index)=>{
-        const values=Object.fromEntries(Object.entries(row).map(([key,value])=>[norm(key),value]))
-        const pick=(...keys)=>{for(const key of keys){const v=values[norm(key)];if(v!==undefined&&v!=='')return v}return ''}
-        const day=dayNumber(pick('day','weekday','dayOfWeek'))
-        const subject=String(pick('subject','lecture','subjectName','topic')).trim()
-        const startTime=timeValue(pick('startTime','start','from'))
-        const endTime=timeValue(pick('endTime','end','to'))
-        const periodNumber=Number(pick('period','periodNumber','periodNo'))||index+1
-        const rowStandard=String(pick('standard','std','classNumber','class')).trim().replace(/^class\s*/i,'')
-        const rowDivision=String(pick('division','div')).trim().toUpperCase()
-        if(rowStandard&&Number(rowStandard)!==Number(standard))issues.push('Row '+(index+2)+': standard does not match selected Class '+standard+'.')
-        else if(rowDivision&&rowDivision!==division)issues.push('Row '+(index+2)+': division does not match selected Division '+division+'.')
-        else if(day===null||!subject||!startTime||!endTime||startTime>=endTime||!Number.isInteger(periodNumber)||periodNumber<1)issues.push('Row '+(index+2)+': check Day, Subject, Start Time, End Time and Period.')
-        else mapped.push({id:'excel-'+Date.now()+'-'+index,dayOfWeek:day,periodNumber,startTime,endTime,subject,classNumber:String(standard),division,teacherName:String(pick('teacher','teacherName','faculty')).trim(),room:String(pick('room','classroom','lab')).trim(),notes:String(pick('notes','remark','remarks')).trim(),kind:'lecture'})
+      const aliases = {
+        day:['day','weekday','dayofweek'], period:['period','periodnumber','periodno','slot'],
+        subject:['subject','lecture','subjectname','topic'], startTime:['starttime','start','from'],
+        endTime:['endtime','end','to'], teacher:['teacher','teachername','faculty'],
+        room:['room','classroom','lab'], standard:['standard','std','classnumber','class'],
+        division:['division','div'], notes:['notes','remark','remarks']
+      }
+      const headers = nonEmpty[0].map((v,i)=>String(v || ('Column '+(i+1))).trim())
+      const headerNorm = headers.map(norm)
+      const detected = {}
+      Object.entries(aliases).forEach(([field, names]) => {
+        const idx = headerNorm.findIndex(h => names.some(alias => norm(alias) === h))
+        detected[field] = idx >= 0 ? String(idx) : ''
       })
-      if(!mapped.length)throw new Error(issues.slice(0,4).join(' ')||'No valid lecture rows found.')
-      setSlots(mapped);setAllLoadedSlots([]);setPeriodCount(Math.max(7,...mapped.map(slot=>slot.periodNumber)))
-      setImportSummary('Imported '+mapped.length+' lectures from '+file.name+'. '+(issues.length?'Skipped '+issues.length+' invalid or mismatched rows. ':'All rows were valid. ')+'Review the grid and click Apply Weekly Timetable to publish it for 52 weeks.')
-      if(issues.length)setError(issues.slice(0,5).join(' '))
-    } catch(error) { setError(error.message||'Could not read this Excel file. Use .xlsx, .xls or .csv format.') }
+      const headerLike = Object.values(detected).filter(Boolean).length >= 2
+      const rows = headerLike ? nonEmpty.slice(1) : nonEmpty
+      const defaultMapping = headerLike ? detected : Object.fromEntries(Object.keys(aliases).map(k=>[k,'']))
+      setColumnMapping(defaultMapping)
+      setImportPreview({fileName:file.name,headers:headerLike?headers:headers.map((_,i)=>'Column '+(i+1)),rows,hasHeaders:headerLike,sourceRows:nonEmpty})
+      setImportMode('rows')
+      setImportSummary('Choose whether your file is a list of lectures (one lecture per row) or a weekly grid (days across columns). Then map the columns and confirm the import.')
+    } catch(error) { setError(error.message || 'Could not read this Excel file. Use .xlsx, .xls or .csv format.') }
     finally { setImporting(false) }
   }
+
+  const confirmExcelImport = () => {
+    if (!importPreview) return
+    const norm = value => String(value || '').trim().toLowerCase()
+    const get = (row, field) => {
+      const key = columnMapping[field]
+      if (key === '' || key === undefined) return ''
+      return row[Number(key)] ?? ''
+    }
+    const dayNumber = value => {
+      const v=norm(value)
+      const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6}
+      if(names[v]!==undefined)return names[v]
+      const n=Number(v);return Number.isInteger(n)&&n>=1&&n<=6?n:null
+    }
+    const timeValue = value => {
+      const text=String(value||'').trim()
+      if(typeof value==='number'&&Number.isFinite(value)){const mins=Math.round(value*1440);return String(Math.floor(mins/60)%24).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')}
+      const m=text.match(/^(\\d{1,2}):(\\d{2})(?:\\s*(AM|PM))?$/i);if(!m)return ''
+      let h=Number(m[1]);const min=Number(m[2]);const ap=(m[3]||'').toUpperCase()
+      if(min>59||h>23||(ap&&(h<1||h>12)))return ''
+      if(ap)h=h%12+(ap==='PM'?12:0)
+      return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0')
+    }
+    const issues=[];const mapped=[]
+    const pushLecture=(day,period,subject,start,end,teacher,room,notes,rowNo)=>{
+      const dayOfWeek=dayNumber(day), startTime=timeValue(start), endTime=timeValue(end), periodNumber=Number(period)
+      if(dayOfWeek===null||!String(subject||'').trim()||!startTime||!endTime||startTime>=endTime||!Number.isInteger(periodNumber)||periodNumber<1){
+        issues.push('Row '+rowNo+': check the mapped day, subject, start/end time and period.');return
+      }
+      mapped.push({id:'excel-'+Date.now()+'-'+mapped.length,dayOfWeek,periodNumber,startTime,endTime,subject:String(subject).trim(),classNumber:String(standard),division,teacherName:String(teacher||'').trim(),room:String(room||'').trim(),notes:String(notes||'').trim(),kind:'lecture'})
+    }
+    if (!standard) { setError('Select the target standard before importing.'); return }
+    if (importMode === 'rows') {
+      const required=['day','subject','startTime','endTime']
+      const missing=required.filter(field=>columnMapping[field]==='')
+      if(missing.length){setError('Map these required fields before importing: '+missing.join(', '));return}
+      importPreview.rows.forEach((row,index)=>{
+        const rowStd=get(row,'standard'), rowDiv=get(row,'division')
+        if(String(rowStd).trim()&&Number(String(rowStd).replace(/^class\\s*/i,''))!==Number(standard)){issues.push('Row '+(index+2)+': standard does not match selected class.');return}
+        if(String(rowDiv).trim()&&String(rowDiv).trim().toUpperCase()!==division){issues.push('Row '+(index+2)+': division does not match selected division.');return}
+        pushLecture(get(row,'day'),get(row,'period')||index+1,get(row,'subject'),get(row,'startTime'),get(row,'endTime'),get(row,'teacher'),get(row,'room'),get(row,'notes'),index+2)
+      })
+    } else {
+      // Grid mode expects one time/period column and one column per weekday; each cell contains the subject.
+      const timeCol=columnMapping.startTime
+      if(timeCol===''){setError('Choose the column that contains period times.');return}
+      const dayCols={Monday:columnMapping.day,Tuesday:columnMapping.period,Wednesday:columnMapping.subject,Thursday:columnMapping.startTime,Friday:columnMapping.endTime,Saturday:columnMapping.teacher}
+      const missing=Object.entries(dayCols).filter(([day,col])=>!col && day!=='Thursday').map(([day])=>day)
+      if(missing.length){setError('Map a column for each weekday: '+missing.join(', '));return}
+      importPreview.rows.forEach((row,index)=>{
+        const timeText=String(row[Number(timeCol)]||'').trim()
+        const range=timeText.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)[\\s–—-]+(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i)
+        const start=range?range[1]:'';const end=range?range[2]:''
+        Object.entries(dayCols).forEach(([day,col])=>{
+          if(!col)return
+          const subject=String(row[Number(col)]||'').trim()
+          if(!subject||/^break$|^lunch/i.test(subject))return
+          const period=index+1
+          pushLecture(day,period,subject,start,end,'','', '',index+2)
+        })
+      })
+    }
+    if(!mapped.length){setError(issues.slice(0,5).join(' ')||'No valid lecture rows found. Check your column mapping.');return}
+    setSlots(mapped);setAllLoadedSlots([]);setPeriodCount(Math.max(7,...mapped.map(slot=>slot.periodNumber)))
+    setImportSummary('Imported '+mapped.length+' lectures from '+importPreview.fileName+'. '+(issues.length?'Skipped '+issues.length+' invalid rows. ':'All mapped rows were valid. ')+'Review the grid, then click Apply Weekly Timetable.')
+    setImportPreview(null)
+    setError(issues.slice(0,5).join(' '))
+  }
+
   const clearSelectedTimetable = async () => {
     if (!standard) { setError('Select a standard before clearing its timetable.'); return }
     const label = 'Class ' + standard + ', Division ' + division
