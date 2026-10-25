@@ -45,6 +45,44 @@ export default function WeeklyTimetablePage(){
   const removeLecture=(dayOfWeek,periodNumber)=>setSlots(current=>current.filter(s=>!(s.dayOfWeek===dayOfWeek&&s.periodNumber===periodNumber)))
   const addPeriod=()=>setPeriodCount(n=>n+1)
   const removePeriod=periodNumber=>{if(periodCount<=1)return;setSlots(current=>current.filter(s=>s.periodNumber!==periodNumber).map(s=>s.periodNumber>periodNumber?{...s,periodNumber:s.periodNumber-1}:s));setPeriodCount(n=>n-1)}
+  const importExcel = async event => {
+    const file = event.target.files && event.target.files[0]
+    event.target.value = ''
+    if (!file) return
+    if (!standard) { setError('Select a standard and division before importing.'); return }
+    setError(''); setSuccess(''); setImportSummary(''); setImporting(true)
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      if (!sheet) throw new Error('The Excel file has no worksheet.')
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
+      if (!rows.length) throw new Error('The first worksheet is empty.')
+      const norm = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+      const dayNumber = value => { const v=String(value||'').trim().toLowerCase(); const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6,sunday:0,sun:0}; if(names[v]!==undefined)return names[v]; const n=Number(v); return Number.isInteger(n)&&n>=0&&n<=6?n:null }
+      const timeValue = value => { const text=String(value||'').trim(); if(typeof value==='number'&&Number.isFinite(value)){const mins=Math.round(value*1440);return String(Math.floor(mins/60)%24).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')} const m=text.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i); if(!m)return ''; let h=Number(m[1]);const min=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(min>59||h>23||(ap&&(h<1||h>12)))return '';if(ap)h=h%12+(ap==='PM'?12:0);return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0') }
+      const mapped=[]; const issues=[]
+      rows.forEach((row,index)=>{
+        const values=Object.fromEntries(Object.entries(row).map(([key,value])=>[norm(key),value]))
+        const pick=(...keys)=>{for(const key of keys){const v=values[norm(key)];if(v!==undefined&&v!=='')return v}return ''}
+        const day=dayNumber(pick('day','weekday','dayOfWeek'))
+        const subject=String(pick('subject','lecture','subjectName','topic')).trim()
+        const startTime=timeValue(pick('startTime','start','from'))
+        const endTime=timeValue(pick('endTime','end','to'))
+        const periodNumber=Number(pick('period','periodNumber','periodNo'))||index+1
+        const rowStandard=String(pick('standard','std','classNumber','class')).trim().replace(/^class\s*/i,'')
+        const rowDivision=String(pick('division','div')).trim().toUpperCase()
+        if(rowStandard&&Number(rowStandard)!==Number(standard))issues.push('Row '+(index+2)+': standard does not match selected Class '+standard+'.')
+        else if(rowDivision&&rowDivision!==division)issues.push('Row '+(index+2)+': division does not match selected Division '+division+'.')
+        else if(day===null||!subject||!startTime||!endTime||startTime>=endTime||!Number.isInteger(periodNumber)||periodNumber<1)issues.push('Row '+(index+2)+': check Day, Subject, Start Time, End Time and Period.')
+        else mapped.push({id:'excel-'+Date.now()+'-'+index,dayOfWeek:day,periodNumber,startTime,endTime,subject,classNumber:String(standard),division,teacherName:String(pick('teacher','teacherName','faculty')).trim(),room:String(pick('room','classroom','lab')).trim(),notes:String(pick('notes','remark','remarks')).trim(),kind:'lecture'})
+      })
+      if(!mapped.length)throw new Error(issues.slice(0,4).join(' ')||'No valid lecture rows found.')
+      setSlots(mapped);setAllLoadedSlots([]);setPeriodCount(Math.max(7,...mapped.map(slot=>slot.periodNumber)))
+      setImportSummary('Imported '+mapped.length+' lectures from '+file.name+'. '+(issues.length?'Skipped '+issues.length+' invalid or mismatched rows. ':'All rows were valid. ')+'Review the grid and click Apply Weekly Timetable to publish it for 52 weeks.')
+      if(issues.length)setError(issues.slice(0,5).join(' '))
+    } catch(error) { setError(error.message||'Could not read this Excel file. Use .xlsx, .xls or .csv format.') }
+    finally { setImporting(false) }
+  }
   const clearSelectedTimetable = async () => {
     if (!standard) { setError('Select a standard before clearing its timetable.'); return }
     const label = 'Class ' + standard + ', Division ' + division
