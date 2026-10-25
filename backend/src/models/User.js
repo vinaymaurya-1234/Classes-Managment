@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, trim: true, default: '' },
   avatarUrl: { type: String, trim: true, default: '' },
   className: { type: String, trim: true, default: '' },
-  std: { type: Number, enum: [10, 11, 12] },
+  std: { type: Number, enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
   division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
   teachingClasses: { type: [String], default: [] },
   children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
