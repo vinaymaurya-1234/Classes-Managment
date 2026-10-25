@@ -6,6 +6,8 @@ const timetableEntrySchema = new mongoose.Schema({
   endTime: { type: String, required: true },
   subject: { type: String, required: true, trim: true },
   className: { type: String, required: true, trim: true },
+  standard: { type: Number, min: 1, max: 12, index: true },
+  division: { type: String, enum: ['A', 'B', 'C'], default: 'A', index: true },
   room: { type: String, trim: true, default: '' },
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   teacherName: { type: String, trim: true, default: '' },
