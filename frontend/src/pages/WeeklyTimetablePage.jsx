@@ -37,7 +37,7 @@ export default function WeeklyTimetablePage(){
   const [importSummary,setImportSummary]=useState('')
   const [importPreview,setImportPreview]=useState(null)
   const [importMode,setImportMode]=useState('rows')
-  const [columnMapping,setColumnMapping]=useState({day:'',period:'',subject:'',startTime:'',endTime:'',teacher:'',room:'',standard:'',division:'',notes:''})
+  const [columnMapping,setColumnMapping]=useState({day:'',period:'',subject:'',startTime:'',endTime:'',teacher:'',room:'',standard:'',division:'',notes:'',gridTime:''})
   const endDate=useMemo(()=>endDateFor(startDate),[startDate])
   useEffect(()=>{let active=true;const loadCurrentTimetable=async()=>{setLoadingCurrent(true);setError('');try{const from=mondayOf(todayIndia());const to=dateOffset(from,6);const result=await getTimetableRangeApi(token,from,to);if(!active)return;const grouped={};(result.entries||[]).forEach(entry=>{const date=new Date(entry.date+'T12:00:00');const dayOfWeek=date.getDay()===0?7:date.getDay();if(dayOfWeek>6)return;if(!grouped[dayOfWeek])grouped[dayOfWeek]=[];grouped[dayOfWeek].push(entry)});let maxPeriods=1;const currentSlots=[];Object.entries(grouped).forEach(([dayKey,entries])=>{entries.sort((a,b)=>a.startTime.localeCompare(b.startTime));entries.forEach((entry,index)=>{const periodNumber=index+1;maxPeriods=Math.max(maxPeriods,periodNumber);const parsed=splitClassName(entry.className);currentSlots.push({id:entry.id,dayOfWeek:Number(dayKey),periodNumber,startTime:entry.startTime,endTime:entry.endTime,subject:entry.subject||'',classNumber:parsed.classNumber,division:parsed.division || 'A',room:entry.room||'',teacherName:entry.teacher?.name||entry.teacherName||'',notes:entry.notes||'',kind:'lecture'})})});setAllLoadedSlots(currentSlots);setSlots(currentSlots);setPeriodCount(Math.max(7,maxPeriods));if(currentSlots.length)setSuccess('Loaded existing timetable entries. Select a standard and division to view that timetable.')}catch(e){if(active)setError(e.message||'Could not load the current timetable.')}finally{if(active)setLoadingCurrent(false)}};if(token)loadCurrentTimetable();else setLoadingCurrent(false);return()=>{active=false}},[token])
   useEffect(()=>{if(!allLoadedSlots.length)return;const matches=allLoadedSlots.filter(slot=>{const standardMatches=!standard||!slot.classNumber||String(slot.classNumber)===String(standard);const divisionMatches=(slot.division||'A')===division;return standardMatches&&divisionMatches});setSlots(matches);const max=Math.max(1,...matches.map(slot=>slot.periodNumber));setPeriodCount(n=>Math.max(7,max))},[standard,division,allLoadedSlots])
@@ -130,9 +130,9 @@ export default function WeeklyTimetablePage(){
       })
     } else {
       // Grid mode expects one time/period column and one column per weekday; each cell contains the subject.
-      const timeCol=columnMapping.startTime
+      const timeCol=columnMapping.gridTime
       if(timeCol===''){setError('Choose the column that contains period times.');return}
-      const dayCols={Monday:columnMapping.day,Tuesday:columnMapping.period,Wednesday:columnMapping.subject,Thursday:columnMapping.startTime,Friday:columnMapping.endTime,Saturday:columnMapping.teacher}
+      const dayCols={Monday:columnMapping.day,Tuesday:columnMapping.period,Wednesday:columnMapping.subject,Thursday:columnMapping.endTime,Friday:columnMapping.teacher,Saturday:columnMapping.room}
       const missing=Object.entries(dayCols).filter(([day,col])=>!col && day!=='Thursday').map(([day])=>day)
       if(missing.length){setError('Map a column for each weekday: '+missing.join(', '));return}
       importPreview.rows.forEach((row,index)=>{
@@ -190,7 +190,7 @@ export default function WeeklyTimetablePage(){
         {(importMode==='rows'?[
           ['day','Day / weekday',true],['period','Period number',false],['subject','Subject / lecture',true],['startTime','Start time',true],['endTime','End time',true],['teacher','Teacher',false],['room','Room / classroom',false],['standard','Standard / class',false],['division','Division',false],['notes','Notes',false]
         ]:[
-          ['startTime','Time range column',true],['day','Monday column',true],['period','Tuesday column',true],['subject','Wednesday column',true],['endTime','Thursday column',true],['teacher','Friday column',true],['room','Saturday column',true]
+          ['gridTime','Time range column',true],['day','Monday column',true],['period','Tuesday column',true],['subject','Wednesday column',true],['endTime','Thursday column',true],['teacher','Friday column',true],['room','Saturday column',true]
         ]).map(([field,label,required])=><label key={field} style={{display:'flex',flexDirection:'column',gap:5,fontSize:13,fontWeight:600}}>{label}{required?' *':''}<select value={columnMapping[field]} onChange={e=>setColumnMapping(current=>({...current,[field]:e.target.value}))} style={{padding:'9px 10px',border:'1px solid #cbd9d0',borderRadius:7,background:'#fff'}}><option value="">— Not mapped —</option>{importPreview.headers.map((header,index)=><option key={index} value={String(index)}>{String.fromCharCode(65+index)} · {header}</option>)}</select></label>)}
       </div>
       <div style={{marginTop:14,overflowX:'auto',border:'1px solid #e0e8e3',borderRadius:8}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}><thead><tr>{importPreview.headers.map((header,index)=><th key={index} style={{padding:8,background:'#edf5ef',textAlign:'left',whiteSpace:'nowrap'}}>{String.fromCharCode(65+index)} · {header}</th>)}</tr></thead><tbody>{importPreview.rows.slice(0,3).map((row,index)=><tr key={index}>{importPreview.headers.map((_,col)=><td key={col} style={{padding:8,borderTop:'1px solid #e0e8e3',whiteSpace:'nowrap'}}>{String(row[col]??'')}</td>)}</tr>)}</tbody></table></div>
