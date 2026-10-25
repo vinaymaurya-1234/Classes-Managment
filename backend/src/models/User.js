@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('validate', function normalizeStudentDivision(next) { if (this.role === 'student' && !String(this.division || '').trim()) this.division = 'A'; next() })
 
 userSchema.set('toJSON', {
-  transform: (_doc, ret) => { delete ret.password; return ret },
+  transform: (_doc, ret) => { if (ret.role === 'student' && !String(ret.division || '').trim()) ret.division = 'A'; delete ret.password; return ret },
 })
 userSchema.index({ role: 1, className: 1 })
 userSchema.index({ role: 1, std: 1, division: 1 })
