@@ -449,7 +449,7 @@ router.get('/results', async (req, res, next) => {
   try {
     const user = req.user
     let filter = {}
-    if (isStudent(user)) filter = { student: user._id, published: true }
+    if (isStudent(user)) filter = { student: user._id }
     else if (user.role === 'parent') {
       const parent = await User.findById(user._id).populate('children', '_id')
       const ids = (parent?.children || []).map(c => c._id)
