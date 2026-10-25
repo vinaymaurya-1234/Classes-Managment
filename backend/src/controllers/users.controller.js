@@ -13,7 +13,7 @@ const publicUser = user => ({
   avatarUrl: user.avatarUrl || '',
   className: user.className || '',
   std: user.std ?? null,
-  division: user.division || '',
+  division: user.division || (user.role === 'student' ? 'A' : ''),
   teachingClasses: user.teachingClasses || [],
   children: (user.children || []).map(child => child?._id ? ({ id: child._id.toString(), name: child.name, email: child.email, std: child.std ?? null, division: child.division || '', className: child.className || '' }) : ({ id: child.toString() })),
   createdAt: user.createdAt,
@@ -41,7 +41,7 @@ export const createUser = async (req, res, next) => {
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
-    const division = String(req.body.division || '').trim().toUpperCase()
+    const division = String(req.body.division || (role === 'student' ? 'A' : '')).trim().toUpperCase()
     const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(normalizeTeachingClass))] : []
     const childIds = Array.isArray(req.body.childIds)
       ? [...new Set(req.body.childIds.map(id => String(id).trim()).filter(Boolean))]
