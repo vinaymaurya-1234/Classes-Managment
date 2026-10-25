@@ -91,6 +91,7 @@ export const createTimetableEntry = async (req, res, next) => {
     const endTime = String(req.body.endTime || '').trim()
     const subject = String(req.body.subject || '').trim()
     const className = String(req.body.className || '').trim()
+    const placement = { standard: Number(req.body.standard) || parseClassPlacement(className).standard, division: String(req.body.division || parseClassPlacement(className).division || 'A').toUpperCase() }
     const room = String(req.body.room || '').trim()
     const notes = String(req.body.notes || '').trim()
     const teacherId = String(req.body.teacherId || '').trim()
@@ -107,7 +108,7 @@ export const createTimetableEntry = async (req, res, next) => {
       if (!teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
     }
 
-    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
+    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
     await entry.populate('teacher', 'name email avatarUrl')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
@@ -122,6 +123,10 @@ export const updateTimetableEntry = async (req, res, next) => {
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
     const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
+    if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
+    if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
+    if (req.body.className !== undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(entry.className).standard
+    if (req.body.className !== undefined && req.body.division === undefined) entry.division = parseClassPlacement(entry.className).division
     for (const field of fields) if (req.body[field] !== undefined) entry[field] = String(req.body[field]).trim()
 
     if (!isValidDate(entry.date) || !isValidTime(entry.startTime) || !isValidTime(entry.endTime) || !entry.subject || !entry.className) {
@@ -151,7 +156,7 @@ export const clearClassTimetable = async (req, res, next) => {
     const division = String(req.query.division || '').trim().toUpperCase()
     if (!/^([1-9]|1[0-2])$/.test(standard) || !['A', 'B', 'C'].includes(division)) return res.status(400).json({ success: false, message: 'Select a valid standard and division before clearing the timetable.' })
     const className = 'Class ' + standard + ' - Division ' + division
-    const result = await TimetableEntry.deleteMany({ className })
+    const result = await TimetableEntry.deleteMany({ $or: [{ standard: Number(standard), division }, { standard: { $exists: false }, className }] })
     return res.json({ success: true, message: 'Cleared ' + result.deletedCount + ' timetable entries for Class ' + standard + ', Division ' + division + '.', deletedCount: result.deletedCount })
   } catch (error) { next(error) }
 }
@@ -190,6 +195,9 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const endTime = String(slot.endTime || '').trim()
       const subject = String(slot.subject || '').trim()
       const className = String(slot.className || '').trim()
+      const parsedPlacement = parseClassPlacement(className)
+      const standard = Number(slot.standard) || parsedPlacement.standard
+      const division = String(slot.division || parsedPlacement.division || 'A').toUpperCase()
       const room = String(slot.room || '').trim()
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
@@ -202,7 +210,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         teacher = await User.findOne({ _id: teacherId, role: 'teacher' }).select('_id').lean()
         if (!teacher) return res.status(400).json({ success: false, message: `Teacher for weekly lecture ${index + 1} was not found.` })
       }
-      prepared.push({ dayOfWeek, startTime, endTime, subject, className, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
+      prepared.push({ dayOfWeek, startTime, endTime, subject, className, standard, division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
     }
 
     const start = new Date(startDate + 'T00:00:00.000Z')
@@ -220,7 +228,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         if (dateString < startDate || dateString > endDate) continue
         occurrences.push({
           date: dateString, startTime: slot.startTime, endTime: slot.endTime,
-          subject: slot.subject, className: slot.className, room: slot.room,
+          subject: slot.subject, className: slot.className, standard: slot.standard, division: slot.division, room: slot.room,
           notes: slot.notes, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
         })
       }
