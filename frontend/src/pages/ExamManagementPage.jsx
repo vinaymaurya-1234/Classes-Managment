@@ -208,7 +208,7 @@ export default function ExamManagementPage() {
       const mapped = importRows.map(row => {
         const value = key => columnMap[key] ? row[columnMap[key]] : ''
         const classValue = String(value('std') || '').trim()
-        const detectedStandard = classValue.match(/\\d+/)?.[0] || ''
+        const detectedStandard = classValue.match(/\d+/)?.[0] || ''
         const stdValue = standardMode === 'manual' ? manualStandard.trim() : detectedStandard
         const detectedDivision = String(value('division') || classValue.match(/([ABC])$/i)?.[1] || '').trim().toUpperCase()
         const divisionValue = divisionMode === 'manual' ? manualDivision : detectedDivision
