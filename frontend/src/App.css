@@ -1165,3 +1165,13 @@
  .weekly-edit-modal>form>footer{grid-template-columns:minmax(0,1fr)}
  .weekly-edit-delete{grid-column:1}
 }
+
+
+/* Timetable navigation actions */
+.timetable-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.timetable-head-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;min-height:40px}
+@media(max-width:700px){
+ .timetable-head{align-items:flex-start;flex-direction:column;gap:12px}
+ .timetable-head-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+ .timetable-head-actions button{width:100%;min-height:42px}
+}
