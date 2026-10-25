@@ -12,7 +12,7 @@ const periodTime=(periodNumber)=>{const start=8*60+(periodNumber-1)*45;const end
 const displayTime=value=>{if(!value)return '—';const [h,m]=value.split(':').map(Number);return new Date(2000,0,1,h,m).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}
 const dateOffset=(value,amount)=>{const date=new Date(value+'T12:00:00');date.setDate(date.getDate()+amount);return date.toISOString().slice(0,10)}
 const mondayOf=value=>{const date=new Date(value+'T12:00:00');const weekday=date.getDay();date.setDate(date.getDate()+(weekday===0?1:1-weekday));return date.toISOString().slice(0,10)}
-const splitClassName=value=>{const text=String(value||'').trim();const match=text.match(/^(.*?)\s*(?:-|·)\s*Division\s+(.+)$/i);return {classNumber:(match?match[1]:text).replace(/^class\s*/i,'').trim(),division:match?match[2].trim():''}}
+const splitClassName=value=>{const text=String(value||'').trim();const divisionOnly=text.match(/^Division\s+([A-Z])$/i);if(divisionOnly)return {classNumber:'',division:divisionOnly[1].toUpperCase()};const match=text.match(/^(.*?)\s*(?:-|·)\s*Division\s+(.+)$/i);return {classNumber:(match?match[1]:text).replace(/^class\s*/i,'').trim(),division:match?match[2].trim().toUpperCase():'A'}}
 const endDateFor=startDate=>{if(!startDate)return '';const date=new Date(startDate+'T12:00:00');date.setDate(date.getDate()+52*7-1);return date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
 
 export default function WeeklyTimetablePage(){
