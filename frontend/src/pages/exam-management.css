@@ -46,3 +46,29 @@
   .exam-bank-item{gap:10px;padding:14px 0}
   .exam-bank-actions{flex-direction:row;flex-wrap:wrap}
 }
+
+
+/* Teacher exam centre: consistent card spacing and spreadsheet import controls */
+.exam-centre,
+.exam-tabs,
+.exam-alert,
+.exam-notice { box-sizing: border-box; }
+.exam-tabs { flex-wrap: nowrap; }
+.exam-import-assignment { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.exam-import-assignment-card { display: flex; flex-direction: column; align-items: stretch; gap: 13px; min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfdfb; }
+.exam-import-assignment-card strong { display: block; color: var(--ink); font-size: 13px; line-height: 1.45; }
+.exam-import-assignment-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.exam-import-mode { display: grid; gap: 10px; }
+.exam-import-mode label { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid #dbe8df; border-radius: 10px; background: #fff; color: #355b44; font-size: 12px; font-weight: 650; line-height: 1.45; cursor: pointer; }
+.exam-import-mode input { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--green); }
+.exam-import-manual { display: flex; flex-direction: column; gap: 7px; color: #486354; font-size: 12px; font-weight: 700; }
+.exam-import-manual input, .exam-import-manual select { box-sizing: border-box; width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #d5e5da; border-radius: 10px; background: #fff; color: var(--ink); font: inherit; }
+.exam-import-help { padding: 10px 12px; border-radius: 9px; background: #eef7f0; color: #3f7450 !important; }
+.exam-column-map { gap: 14px; margin: 18px 0; }
+.exam-column-map label { min-width: 0; line-height: 1.4; }
+.exam-column-map select { box-sizing: border-box; width: 100%; min-height: 40px; padding: 9px 10px; }
+@media (max-width: 760px) {
+  .exam-import-assignment { grid-template-columns: minmax(0, 1fr); }
+  .exam-import-assignment-card { padding: 15px; }
+  .exam-column-map { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
