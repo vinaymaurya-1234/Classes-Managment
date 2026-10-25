@@ -190,7 +190,7 @@ export default function ExamManagementPage() {
       setError('Choose the Standard column in Excel, or select “Set once” and enter a standard number.')
       return
     }
-    if (standardMode === 'manual' && (!manualStandard.trim() || !/^\\d+$/.test(manualStandard.trim()))) {
+    if (standardMode === 'manual' && (!/^\d+$/.test(manualStandard.trim()) || !Number.isSafeInteger(Number(manualStandard.trim())) || Number(manualStandard.trim()) < 1)) {
       setError('Enter a valid standard number for the whole spreadsheet.')
       return
     }
