@@ -113,6 +113,17 @@ export const updateTimetableEntry = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+export const clearClassTimetable = async (req, res, next) => {
+  try {
+    if (!requirePrincipal(req)) return res.status(403).json({ success: false, message: 'Only the principal can manage the timetable.' })
+    const standard = String(req.query.standard || '').trim()
+    const division = String(req.query.division || '').trim().toUpperCase()
+    if (!/^([1-9]|1[0-2])$/.test(standard) || !['A', 'B', 'C'].includes(division)) return res.status(400).json({ success: false, message: 'Select a valid standard and division before clearing the timetable.' })
+    const className = 'Class ' + standard + ' - Division ' + division
+    const result = await TimetableEntry.deleteMany({ className })
+    return res.json({ success: true, message: 'Cleared ' + result.deletedCount + ' timetable entries for Class ' + standard + ', Division ' + division + '.', deletedCount: result.deletedCount })
+  } catch (error) { next(error) }
+}
 export const deleteTimetableEntry = async (req, res, next) => {
   try {
     if (!requirePrincipal(req)) return res.status(403).json({ success: false, message: 'Only the principal can manage the timetable.' })
