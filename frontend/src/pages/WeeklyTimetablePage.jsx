@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Plus, Trash2, ListChecks, Pencil, X, BookOpen, Users, DoorOpen, ArrowLeftRight, CheckCircle, FileSpreadsheet, Upload } from 'lucide-react'
+import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Plus, Trash2, ListChecks, Pencil, X, BookOpen, Users, DoorOpen, ArrowLeftRight, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import * as XLSX from 'xlsx'
 import { createWeeklyTimetableTemplateApi, getTimetableRangeApi, clearClassTimetableApi } from '../api/timetable.api'
 
 const todayIndia=()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=Object.fromEntries(parts.map(p=>[p.type,p.value]));return value.year+'-'+value.month+'-'+value.day}
@@ -33,11 +32,6 @@ export default function WeeklyTimetablePage(){
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [success,setSuccess]=useState('')
-  const [importing,setImporting]=useState(false)
-  const [importSummary,setImportSummary]=useState('')
-  const [importPreview,setImportPreview]=useState(null)
-  const [importMode,setImportMode]=useState('rows')
-  const [columnMapping,setColumnMapping]=useState({day:'',period:'',subject:'',startTime:'',endTime:'',teacher:'',room:'',standard:'',division:'',notes:'',gridTime:''})
   const endDate=useMemo(()=>endDateFor(startDate),[startDate])
   useEffect(()=>{let active=true;const loadCurrentTimetable=async()=>{setLoadingCurrent(true);setError('');try{const from=mondayOf(todayIndia());const to=dateOffset(from,6);const result=await getTimetableRangeApi(token,from,to);if(!active)return;const grouped={};(result.entries||[]).forEach(entry=>{const date=new Date(entry.date+'T12:00:00');const dayOfWeek=date.getDay()===0?7:date.getDay();if(dayOfWeek>6)return;if(!grouped[dayOfWeek])grouped[dayOfWeek]=[];grouped[dayOfWeek].push(entry)});let maxPeriods=1;const currentSlots=[];Object.entries(grouped).forEach(([dayKey,entries])=>{entries.sort((a,b)=>a.startTime.localeCompare(b.startTime));entries.forEach((entry,index)=>{const periodNumber=index+1;maxPeriods=Math.max(maxPeriods,periodNumber);const parsed=splitClassName(entry.className);currentSlots.push({id:entry.id,dayOfWeek:Number(dayKey),periodNumber,startTime:entry.startTime,endTime:entry.endTime,subject:entry.subject||'',classNumber:parsed.classNumber,division:parsed.division || 'A',room:entry.room||'',teacherName:entry.teacher?.name||entry.teacherName||'',notes:entry.notes||'',kind:'lecture'})})});setAllLoadedSlots(currentSlots);setSlots(currentSlots);setPeriodCount(Math.max(7,maxPeriods));if(currentSlots.length)setSuccess('Loaded existing timetable entries. Select a standard and division to view that timetable.')}catch(e){if(active)setError(e.message||'Could not load the current timetable.')}finally{if(active)setLoadingCurrent(false)}};if(token)loadCurrentTimetable();else setLoadingCurrent(false);return()=>{active=false}},[token])
   useEffect(()=>{if(!allLoadedSlots.length)return;const matches=allLoadedSlots.filter(slot=>{const standardMatches=!standard||!slot.classNumber||String(slot.classNumber)===String(standard);const divisionMatches=(slot.division||'A')===division;return standardMatches&&divisionMatches});setSlots(matches);const max=Math.max(1,...matches.map(slot=>slot.periodNumber));setPeriodCount(n=>Math.max(7,max))},[standard,division,allLoadedSlots])
@@ -48,113 +42,6 @@ export default function WeeklyTimetablePage(){
   const removeLecture=(dayOfWeek,periodNumber)=>setSlots(current=>current.filter(s=>!(s.dayOfWeek===dayOfWeek&&s.periodNumber===periodNumber)))
   const addPeriod=()=>setPeriodCount(n=>n+1)
   const removePeriod=periodNumber=>{if(periodCount<=1)return;setSlots(current=>current.filter(s=>s.periodNumber!==periodNumber).map(s=>s.periodNumber>periodNumber?{...s,periodNumber:s.periodNumber-1}:s));setPeriodCount(n=>n-1)}
-  const importExcel = async event => {
-    const file = event.target.files && event.target.files[0]
-    event.target.value = ''
-    if (!file) return
-    setError(''); setSuccess(''); setImportSummary(''); setImportPreview(null); setImporting(true)
-    try {
-      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
-      if (!sheet) throw new Error('The Excel file has no worksheet.')
-      const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false })
-      const nonEmpty = matrix.filter(row => row.some(cell => String(cell ?? '').trim() !== ''))
-      if (!nonEmpty.length) throw new Error('The worksheet is empty.')
-      const norm = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
-      const aliases = {
-        day:['day','weekday','dayofweek'], period:['period','periodnumber','periodno','slot'],
-        subject:['subject','lecture','subjectname','topic'], startTime:['starttime','start','from'],
-        endTime:['endtime','end','to'], teacher:['teacher','teachername','faculty'],
-        room:['room','classroom','lab'], standard:['standard','std','classnumber','class'],
-        division:['division','div'], notes:['notes','remark','remarks']
-      }
-      const headers = nonEmpty[0].map((v,i)=>String(v || ('Column '+(i+1))).trim())
-      const headerNorm = headers.map(norm)
-      const detected = {}
-      Object.entries(aliases).forEach(([field, names]) => {
-        const idx = headerNorm.findIndex(h => names.some(alias => norm(alias) === h))
-        detected[field] = idx >= 0 ? String(idx) : ''
-      })
-      const headerLike = Object.values(detected).filter(Boolean).length >= 2
-      const rows = headerLike ? nonEmpty.slice(1) : nonEmpty
-      const defaultMapping = headerLike ? detected : Object.fromEntries(Object.keys(aliases).map(k=>[k,'']))
-      setColumnMapping(defaultMapping)
-      setImportPreview({fileName:file.name,headers:headerLike?headers:headers.map((_,i)=>'Column '+(i+1)),rows,hasHeaders:headerLike,sourceRows:nonEmpty})
-      setImportMode('rows')
-      setImportSummary('Choose whether your file is a list of lectures (one lecture per row) or a weekly grid (days across columns). Then map the columns and confirm the import.')
-    } catch(error) { setError(error.message || 'Could not read this Excel file. Use .xlsx, .xls or .csv format.') }
-    finally { setImporting(false) }
-  }
-
-  const confirmExcelImport = () => {
-    if (!importPreview) return
-    const norm = value => String(value || '').trim().toLowerCase()
-    const get = (row, field) => {
-      const key = columnMapping[field]
-      if (key === '' || key === undefined) return ''
-      return row[Number(key)] ?? ''
-    }
-    const dayNumber = value => {
-      const v=norm(value)
-      const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6}
-      if(names[v]!==undefined)return names[v]
-      const n=Number(v);return Number.isInteger(n)&&n>=1&&n<=6?n:null
-    }
-    const timeValue = value => {
-      const text=String(value||'').trim()
-      if(typeof value==='number'&&Number.isFinite(value)){const mins=Math.round(value*1440);return String(Math.floor(mins/60)%24).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')}
-      const m=text.match(/^(\\d{1,2}):(\\d{2})(?:\\s*(AM|PM))?$/i);if(!m)return ''
-      let h=Number(m[1]);const min=Number(m[2]);const ap=(m[3]||'').toUpperCase()
-      if(min>59||h>23||(ap&&(h<1||h>12)))return ''
-      if(ap)h=h%12+(ap==='PM'?12:0)
-      return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0')
-    }
-    const issues=[];const mapped=[]
-    const pushLecture=(day,period,subject,start,end,teacher,room,notes,rowNo)=>{
-      const dayOfWeek=dayNumber(day), startTime=timeValue(start), endTime=timeValue(end), periodNumber=Number(period)
-      if(dayOfWeek===null||!String(subject||'').trim()||!startTime||!endTime||startTime>=endTime||!Number.isInteger(periodNumber)||periodNumber<1){
-        issues.push('Row '+rowNo+': check the mapped day, subject, start/end time and period.');return
-      }
-      mapped.push({id:'excel-'+Date.now()+'-'+mapped.length,dayOfWeek,periodNumber,startTime,endTime,subject:String(subject).trim(),classNumber:String(standard),division,teacherName:String(teacher||'').trim(),room:String(room||'').trim(),notes:String(notes||'').trim(),kind:'lecture'})
-    }
-    if (!standard) { setError('Select the target standard before importing.'); return }
-    if (importMode === 'rows') {
-      const required=['day','subject','startTime','endTime']
-      const missing=required.filter(field=>columnMapping[field]==='')
-      if(missing.length){setError('Map these required fields before importing: '+missing.join(', '));return}
-      importPreview.rows.forEach((row,index)=>{
-        const rowStd=get(row,'standard'), rowDiv=get(row,'division')
-        if(String(rowStd).trim()&&Number(String(rowStd).replace(/^class\\s*/i,''))!==Number(standard)){issues.push('Row '+(index+2)+': standard does not match selected class.');return}
-        if(String(rowDiv).trim()&&String(rowDiv).trim().toUpperCase()!==division){issues.push('Row '+(index+2)+': division does not match selected division.');return}
-        pushLecture(get(row,'day'),get(row,'period')||index+1,get(row,'subject'),get(row,'startTime'),get(row,'endTime'),get(row,'teacher'),get(row,'room'),get(row,'notes'),index+2)
-      })
-    } else {
-      // Grid mode expects one time/period column and one column per weekday; each cell contains the subject.
-      const timeCol=columnMapping.gridTime
-      if(timeCol===''){setError('Choose the column that contains period times.');return}
-      const dayCols={Monday:columnMapping.day,Tuesday:columnMapping.period,Wednesday:columnMapping.subject,Thursday:columnMapping.endTime,Friday:columnMapping.teacher,Saturday:columnMapping.room}
-      const missing=Object.entries(dayCols).filter(([day,col])=>!col && day!=='Thursday').map(([day])=>day)
-      if(missing.length){setError('Map a column for each weekday: '+missing.join(', '));return}
-      importPreview.rows.forEach((row,index)=>{
-        const timeText=String(row[Number(timeCol)]||'').trim()
-        const range=timeText.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)[\\s–—-]+(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i)
-        const start=range?range[1]:'';const end=range?range[2]:''
-        Object.entries(dayCols).forEach(([day,col])=>{
-          if(!col)return
-          const subject=String(row[Number(col)]||'').trim()
-          if(!subject||/^break$|^lunch/i.test(subject))return
-          const period=index+1
-          pushLecture(day,period,subject,start,end,'','', '',index+2)
-        })
-      })
-    }
-    if(!mapped.length){setError(issues.slice(0,5).join(' ')||'No valid lecture rows found. Check your column mapping.');return}
-    setSlots(mapped);setAllLoadedSlots([]);setPeriodCount(Math.max(7,...mapped.map(slot=>slot.periodNumber)))
-    setImportSummary('Imported '+mapped.length+' lectures from '+importPreview.fileName+'. '+(issues.length?'Skipped '+issues.length+' invalid rows. ':'All mapped rows were valid. ')+'Review the grid, then click Apply Weekly Timetable.')
-    setImportPreview(null)
-    setError(issues.slice(0,5).join(' '))
-  }
-
   const clearSelectedTimetable = async () => {
     if (!standard) { setError('Select a standard before clearing its timetable.'); return }
     const label = 'Class ' + standard + ', Division ' + division
@@ -178,24 +65,6 @@ export default function WeeklyTimetablePage(){
     <div className="weekly-board-breadcrumb"><button type="button" onClick={()=>navigate('/principal/overview')}>Home</button><ChevronRight size={13}/><button type="button" onClick={()=>navigate('/principal/timetable')}>Timetable</button><ChevronRight size={13}/><strong>Weekly Timetable</strong><span className="weekly-board-user"><Bell size={17}/><span className="weekly-user-avatar">P</span> Principal</span></div>
     <header className="weekly-visual-heading"><div><h1>Weekly Timetable</h1><p>Select a standard and division to view and edit only that class's weekly timetable. Changes stay within the selected class.</p></div><div className="weekly-visual-heading-actions"><label>Standard<select name="weeklyStandard" value={standard} onChange={e=>setStandard(e.target.value)}><option value="">Select standard</option>{Array.from({length:12},(_,i)=>i+1).map(n=><option key={n} value={String(n)}>Class {n}</option>)}</select></label><label>Division<select name="weeklyDivision" value={division} onChange={e=>setDivision(e.target.value)}><option value="A">Division A</option><option value="B">Division B</option><option value="C">Division C</option></select></label><label>Start date<input type="date" name="weeklyStartDate" value={startDate} onChange={e=>setStartDate(e.target.value)} required/></label><button type="button" className="primary" onClick={event=>{event.preventDefault();document.getElementById('weekly-template-form')?.requestSubmit()}}><CalendarDays size={15}/> Apply timetable</button></div></header>
     {error&&<div className="weekly-board-alert error">{error}</div>}
-    {importSummary&&<div className="weekly-board-alert success"><FileSpreadsheet size={17}/><span>{importSummary}</span></div>}
-    {importPreview&&<section style={{margin:'12px 0',padding:18,border:'1px solid #d7e5dc',borderRadius:12,background:'#fff'}}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',flexWrap:'wrap'}}><div><strong>Import preview: {importPreview.fileName}</strong><p style={{margin:'5px 0',fontSize:13,color:'#60766a'}}>Choose the layout, then assign each Excel column to the data it contains.</p></div><button type="button" className="secondary" onClick={()=>setImportPreview(null)}>Cancel</button></div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',margin:'12px 0'}}>
-        <button type="button" className={importMode==='rows'?'primary':'secondary'} onClick={()=>setImportMode('rows')}>Each row is a lecture</button>
-        <button type="button" className={importMode==='grid'?'primary':'secondary'} onClick={()=>setImportMode('grid')}>Days are columns (weekly grid)</button>
-      </div>
-      <p style={{fontSize:13,color:'#60766a'}}>Detected {importPreview.rows.length} data rows. Map the columns below; change any selection if the detected mapping is wrong.</p>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12}}>
-        {(importMode==='rows'?[
-          ['day','Day / weekday',true],['period','Period number',false],['subject','Subject / lecture',true],['startTime','Start time',true],['endTime','End time',true],['teacher','Teacher',false],['room','Room / classroom',false],['standard','Standard / class',false],['division','Division',false],['notes','Notes',false]
-        ]:[
-          ['gridTime','Time range column',true],['day','Monday column',true],['period','Tuesday column',true],['subject','Wednesday column',true],['endTime','Thursday column',true],['teacher','Friday column',true],['room','Saturday column',true]
-        ]).map(([field,label,required])=><label key={field} style={{display:'flex',flexDirection:'column',gap:5,fontSize:13,fontWeight:600}}>{label}{required?' *':''}<select value={columnMapping[field]} onChange={e=>setColumnMapping(current=>({...current,[field]:e.target.value}))} style={{padding:'9px 10px',border:'1px solid #cbd9d0',borderRadius:7,background:'#fff'}}><option value="">— Not mapped —</option>{importPreview.headers.map((header,index)=><option key={index} value={String(index)}>{String.fromCharCode(65+index)} · {header}</option>)}</select></label>)}
-      </div>
-      <div style={{marginTop:14,overflowX:'auto',border:'1px solid #e0e8e3',borderRadius:8}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}><thead><tr>{importPreview.headers.map((header,index)=><th key={index} style={{padding:8,background:'#edf5ef',textAlign:'left',whiteSpace:'nowrap'}}>{String.fromCharCode(65+index)} · {header}</th>)}</tr></thead><tbody>{importPreview.rows.slice(0,3).map((row,index)=><tr key={index}>{importPreview.headers.map((_,col)=><td key={col} style={{padding:8,borderTop:'1px solid #e0e8e3',whiteSpace:'nowrap'}}>{String(row[col]??'')}</td>)}</tr>)}</tbody></table></div>
-      <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14}}><button type="button" className="secondary" onClick={()=>setImportPreview(null)}>Cancel</button><button type="button" className="primary" onClick={confirmExcelImport}><CheckCircle2 size={15}/> Confirm mapping & import</button></div>
-    </section>}
     {success&&<div className="weekly-board-alert success"><CheckCircle2 size={17}/><span>{success}</span><button type="button" onClick={()=>navigate('/principal/timetable')}>View timetable</button></div>}
     <div className="weekly-visual-stats">
       <article><span className="weekly-stat-icon green"><BookOpen size={24}/></span><div><small>Total Periods</small><strong>{lectureCount}</strong><span>Per Week</span></div></article>
@@ -206,7 +75,7 @@ export default function WeeklyTimetablePage(){
     </div>
     <form id="weekly-template-form" onSubmit={save} className="weekly-visual-form">
       <section className="weekly-visual-table-card">
-        <div className="weekly-visual-table-toolbar"><div><strong>Weekly schedule</strong><span>Double-click any lecture card to edit it. Click an empty cell to add a lecture.</span></div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><label className="secondary" style={{display:"inline-flex",alignItems:"center",gap:8,cursor:"pointer"}}><Upload size={15}/>{importing?"Reading Excel...":"Import Excel"}<input type="file" accept=".xlsx,.xls,.csv" onChange={importExcel} disabled={importing||saving} style={{display:"none"}}/></label><button type="button" className="secondary" onClick={addPeriod}><Plus size={15}/> Add period</button></div></div>
+        <div className="weekly-visual-table-toolbar"><div><strong>Weekly schedule</strong><span>Double-click any lecture card to edit it. Click an empty cell to add a lecture.</span></div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="secondary" onClick={addPeriod}><Plus size={15}/> Add period</button></div></div>
         <div className="weekly-visual-legend"><span><i className="lecture-dot"/> Lecture</span><span><i className="lab-dot"/> Lab</span><span><i className="activity-dot"/> Activity</span><span><i className="break-dot"/> Break</span><span><i className="substitution-dot"/> Substitution</span></div>
         <div className="weekly-visual-table-scroll"><table className="weekly-visual-table"><thead><tr><th>Time / Day</th>{days.map(day=><th key={day.value}>{day.label}</th>)}</tr></thead><tbody>{Array.from({length:periodCount},(_,idx)=>{const periodNumber=idx+1;const time=periodTime(periodNumber);return <tr key={periodNumber}><th className="weekly-period-label"><strong>{periodNumber}</strong><span>{displayTime(time.startTime)} – {displayTime(time.endTime)}</span><button type="button" title="Remove this period" onClick={()=>removePeriod(periodNumber)} disabled={periodCount===1}><Trash2 size={12}/></button></th>{days.map(day=>{const item=slots.find(s=>s.dayOfWeek===day.value&&s.periodNumber===periodNumber);return <td key={day.value}><button type="button" className={'weekly-visual-cell'+(item?' has-lecture':' empty-cell')+(item?.kind==='break'?' cell-break':'')+(item?.kind==='lab'?' cell-lab':'')+(item?.kind==='activity'?' cell-activity':'')+(item?.kind==='substitution'?' cell-substitution':'')} onDoubleClick={()=>openEditor(day.value,periodNumber,item)} onClick={()=>{if(!item)openEditor(day.value,periodNumber,null)}} title={item?'Double-click to edit':'Click to add a lecture'}>{item?<><strong>{item.kind==='break'?'Break':item.subject||'Untitled lecture'}</strong>{item.kind!=='break'&&<><span>{item.teacherName||'Teacher not assigned'}</span><small>{item.room||item.classNumber||'Class not assigned'}{item.division?' · '+item.division:''}</small><small>{displayTime(item.startTime)} – {displayTime(item.endTime)}</small></>}<span className="weekly-cell-edit-hint"><Pencil size={11}/> Double-click to edit</span></>:<span className="weekly-cell-add"><Plus size={16}/> Add lecture</span>}</button></td>})}</tr>})}</tbody></table></div>
         <div className="weekly-visual-table-bottom"><span>{lectureCount} lectures scheduled across {days.length} days</span><button type="button" className="secondary" onClick={addPeriod}><Plus size={15}/> Add another period</button></div>
