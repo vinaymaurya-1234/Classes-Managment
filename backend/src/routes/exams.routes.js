@@ -348,8 +348,8 @@ router.put('/exams/:id/answers', async (req, res, next) => {
 router.post('/exams/:id/submit', async (req, res, next) => {
   try {
     if (!isStudent(req.user) || !validId(req.params.id)) return forbidden(res)
-    const exam = await Exam.findOne({ _id: req.params.id, std: Number(req.user.std), $or: [{ division: req.user.division || '' }, { division: '' }] })
-    if (!exam) return fail(res, 404, 'Exam not found.')
+    const exam = await Exam.findById(req.params.id)
+    if (!exam || exam.status === 'cancelled' || !studentCanAccessExam(req.user, exam)) return fail(res, 404, 'Exam not found for your class and division.')
     const attempt = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: 'in_progress' })
     if (!attempt) return fail(res, 404, 'Active exam attempt not found.')
     if (Array.isArray(req.body.answers)) {
