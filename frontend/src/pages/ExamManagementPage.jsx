@@ -43,6 +43,10 @@ export default function ExamManagementPage() {
   const [importHeaders, setImportHeaders] = useState([])
   const [columnMap, setColumnMap] = useState({})
   const [importName, setImportName] = useState('')
+  const [standardMode, setStandardMode] = useState('excel')
+  const [manualStandard, setManualStandard] = useState('10')
+  const [divisionMode, setDivisionMode] = useState('excel')
+  const [manualDivision, setManualDivision] = useState('A')
   const [activeAttempt, setActiveAttempt] = useState(null)
   const [answerReview, setAnswerReview] = useState(null)
   const [printTarget, setPrintTarget] = useState(null)
@@ -178,15 +182,42 @@ export default function ExamManagementPage() {
   }
 
   const importQuestions = async () => {
+    if (!importRows.length) {
+      setError('Choose a spreadsheet before importing.')
+      return
+    }
+    if (standardMode === 'excel' && !columnMap.std) {
+      setError('Choose the Standard column in Excel, or select “Set once” and enter a standard number.')
+      return
+    }
+    if (standardMode === 'manual' && (!manualStandard.trim() || !/^\\d+$/.test(manualStandard.trim()))) {
+      setError('Enter a valid standard number for the whole spreadsheet.')
+      return
+    }
+    if (divisionMode === 'excel' && !columnMap.division) {
+      setError('Choose the Division column in Excel, or select “Set once” and choose a division.')
+      return
+    }
+    if (divisionMode === 'manual' && !divisions.includes(manualDivision)) {
+      setError('Choose a valid division for the whole spreadsheet.')
+      return
+    }
+
     setSaving(true); setError(''); setNotice('')
     try {
       const mapped = importRows.map(row => {
         const value = key => columnMap[key] ? row[columnMap[key]] : ''
-        const classValue = String(value('std') || filters.std)
-        const stdValue = classValue.match(/\d+/)?.[0] || filters.std
-        const divisionValue = String(value('division') || classValue.match(/([ABC])$/i)?.[1] || filters.division || '').trim().toUpperCase()
+        const classValue = String(value('std') || '').trim()
+        const detectedStandard = classValue.match(/\\d+/)?.[0] || ''
+        const stdValue = standardMode === 'manual' ? manualStandard.trim() : detectedStandard
+        const detectedDivision = String(value('division') || classValue.match(/([ABC])$/i)?.[1] || '').trim().toUpperCase()
+        const divisionValue = divisionMode === 'manual' ? manualDivision : detectedDivision
         return { std: Number(stdValue), division: divisionValue, subject: String(value('subject') || filters.subject).trim(), chapter: String(value('chapter') || '').trim(), text: String(value('text') || '').trim(), optionA: String(value('optionA') || '').trim(), optionB: String(value('optionB') || '').trim(), optionC: String(value('optionC') || '').trim(), optionD: String(value('optionD') || '').trim(), correctAnswer: String(value('correctAnswer') || '').trim(), type: String(value('type') || 'mcq').toLowerCase(), marks: Number(value('marks') || 1), difficulty: String(value('difficulty') || 'medium').toLowerCase(), explanation: String(value('explanation') || '').trim() }
       })
+      const invalidRow = mapped.findIndex(row => !Number.isInteger(row.std) || row.std < 1 || !divisions.includes(row.division))
+      if (invalidRow !== -1) {
+        throw new Error(`Row ${invalidRow + 2} is missing a valid Standard or Division. Check the mapped Excel columns or use the “Set once” options.`)
+      }
       const response = await api.post('/api/exams/questions/import', { rows: mapped }, token)
       setNotice(`Imported ${response.imported} questions; skipped ${response.skipped}.`)
       if (response.errors?.length) setError(response.errors.slice(0, 8).map(e => `Row ${e.row}: ${e.message}`).join(' · '))
@@ -343,7 +374,7 @@ export default function ExamManagementPage() {
           <div className="exam-form-actions exam-full"><button className="primary" disabled={saving}>{saving ? 'Saving...' : editingQuestion ? 'Update question' : <><Plus size={15}/>Add question</>}</button>{editingQuestion && <button type="button" className="secondary" onClick={() => { setEditingQuestion(null); setQuestionForm(emptyQuestion) }}>Cancel edit</button>}</div>
         </form>
       </Card>
-      <Card title="Import questions from Excel"><div className="exam-import-intro"><FileSpreadsheet size={24}/><div><strong>Upload .xlsx, .xls or .csv</strong><p>Choose a file, map its column names to question fields, review errors and import valid rows.</p></div></div><label className="exam-upload"><Upload size={16}/>Choose spreadsheet<input type="file" accept=".xlsx,.xls,.csv" onChange={e => parseFile(e.target.files?.[0])}/></label>{importName && <><p className="exam-muted">Selected: {importName} · {importRows.length} rows</p><div className="exam-column-map">{['std','division','subject','chapter','text','optionA','optionB','optionC','optionD','correctAnswer','type','marks','difficulty','explanation'].map(key => <label key={key}>{({std:'Class / standard',division:'Division',subject:'Subject',chapter:'Chapter',text:'Question text',optionA:'Option A',optionB:'Option B',optionC:'Option C',optionD:'Option D',correctAnswer:'Correct answer',type:'Question type',marks:'Marks',difficulty:'Difficulty',explanation:'Explanation'})[key]}<select value={columnMap[key] || ''} onChange={e => setColumnMap({ ...columnMap, [key]: e.target.value })}><option value="">Use default / skip</option>{importHeaders.map(header => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><button className="primary" disabled={saving || !columnMap.text || !columnMap.subject} onClick={importQuestions}><Upload size={15}/>{saving ? 'Importing...' : 'Validate and import'}</button></>}</Card>
+      <Card title="Import questions from Excel"><div className="exam-import-intro"><FileSpreadsheet size={24}/><div><strong>Upload .xlsx, .xls or .csv</strong><p>Choose a file, map its column names to question fields, review errors and import valid rows.</p></div></div><label className="exam-upload"><Upload size={16}/>Choose spreadsheet<input type="file" accept=".xlsx,.xls,.csv" onChange={e => parseFile(e.target.files?.[0])}/></label>{importName && <><p className="exam-muted">Selected: {importName} · {importRows.length} rows</p><div className="exam-import-assignment"><section className="exam-import-assignment-card"><div><strong>Standard for imported questions</strong><p>Choose whether each row supplies its own standard or use one standard for every question.</p></div><div className="exam-import-mode"><label><input type="radio" name="standardMode" checked={standardMode === 'excel'} onChange={() => setStandardMode('excel')}/> Find Standard in Excel</label><label><input type="radio" name="standardMode" checked={standardMode === 'manual'} onChange={() => setStandardMode('manual')}/> Set Standard once for the whole file</label></div>{standardMode === 'manual' ? <label className="exam-import-manual">Standard number<input type="number" min="1" step="1" value={manualStandard} onChange={e => setManualStandard(e.target.value)} placeholder="e.g. 5"/></label> : <p className="exam-import-help">Select the Standard column below.</p>}</section><section className="exam-import-assignment-card"><div><strong>Division for imported questions</strong><p>Read a division from each row or apply one division to the entire spreadsheet.</p></div><div className="exam-import-mode"><label><input type="radio" name="divisionMode" checked={divisionMode === 'excel'} onChange={() => setDivisionMode('excel')}/> Find Division in Excel</label><label><input type="radio" name="divisionMode" checked={divisionMode === 'manual'} onChange={() => setDivisionMode('manual')}/> Set Division once for the whole file</label></div>{divisionMode === 'manual' ? <label className="exam-import-manual">Division<select value={manualDivision} onChange={e => setManualDivision(e.target.value)}>{divisions.map(division => <option key={division} value={division}>Division {division}</option>)}</select></label> : <p className="exam-import-help">Select the Division column below.</p>}</section></div><div className="exam-column-map">{['std','division','subject','chapter','text','optionA','optionB','optionC','optionD','correctAnswer','type','marks','difficulty','explanation'].map(key => <label key={key}>{({std:'Class / standard',division:'Division',subject:'Subject',chapter:'Chapter',text:'Question text',optionA:'Option A',optionB:'Option B',optionC:'Option C',optionD:'Option D',correctAnswer:'Correct answer',type:'Question type',marks:'Marks',difficulty:'Difficulty',explanation:'Explanation'})[key]}<select value={columnMap[key] || ''} onChange={e => setColumnMap({ ...columnMap, [key]: e.target.value })}><option value="">Do not map this column</option>{importHeaders.map(header => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><button className="primary" disabled={saving || !columnMap.text || !columnMap.subject} onClick={importQuestions}><Upload size={15}/>{saving ? 'Importing...' : 'Validate and import'}</button></>}</Card>
       <Card title="Question bank"><div className="exam-filter-grid"><label>Class<select value={filters.std} onChange={e => { setFilters({ ...filters, std: e.target.value }); setSelectedQuestions([]) }}>{stds.map(std => <option key={std}>{std}</option>)}</select></label><label>Division filter<select value={filters.division} onChange={e => { setFilters({ ...filters, division: e.target.value }); setSelectedQuestions([]) }}><option value="">All divisions</option>{divisions.map(d => <option key={d}>{d}</option>)}</select></label><label>Subject<select value={filters.subject} onChange={e => setFilters({ ...filters, subject: e.target.value })}><option value="">All subjects</option>{subjects.map(s => <option key={s}>{s}</option>)}</select></label><label>Chapter<select value={filters.chapter} onChange={e => setFilters({ ...filters, chapter: e.target.value })}><option value="">All chapters</option>{chapters.map(c => <option key={c}>{c}</option>)}</select></label><label>Difficulty<select value={filters.difficulty} onChange={e => setFilters({ ...filters, difficulty: e.target.value })}><option value="">All levels</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label><label>Search<input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} placeholder="Find a question"/></label></div><div className="exam-list-head"><span>{filteredQuestions.length} questions</span><button className="secondary" onClick={() => setTab('generator')}><FileText size={15}/>Use selected in paper</button></div>{filteredQuestions.length ? <div className="exam-question-list">{filteredQuestions.map(q => <article key={q._id} className="exam-bank-item"><label className="exam-select-question"><input type="checkbox" checked={selectedQuestions.includes(q._id)} onChange={e => setSelectedQuestions(current => e.target.checked ? [...current, q._id] : current.filter(id => id !== q._id))}/></label><div className="exam-bank-body"><div className="exam-badges"><span>{q.subject}</span><span>{q.chapter || 'No chapter'}</span><span>{q.difficulty}</span><span>{q.marks} marks</span></div><p>{q.text}</p><small>{q.type.replace('_',' ')} · {q.className}{q.division ? ' - ' + q.division : ''}</small></div><div className="exam-bank-actions"><button className="secondary" onClick={() => editQuestion(q)}>Edit</button><button className="danger-quiet" onClick={() => deleteQuestion(q._id)}>Delete</button></div></article>)}</div> : <div className="exam-state">No questions match the selected filters. Add a question or import a spreadsheet.</div>}</Card>
     </>}
 
