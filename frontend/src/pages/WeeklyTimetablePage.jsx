@@ -58,7 +58,7 @@ export default function WeeklyTimetablePage(){
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
       if (!rows.length) throw new Error('The first worksheet is empty.')
       const norm = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
-      const dayNumber = value => { const v=String(value||'').trim().toLowerCase(); const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6,sunday:0,sun:0}; if(names[v]!==undefined)return names[v]; const n=Number(v); return Number.isInteger(n)&&n>=0&&n<=6?n:null }
+      const dayNumber = value => { const v=String(value||'').trim().toLowerCase(); const names={monday:1,mon:1,tuesday:2,tue:2,tues:2,wednesday:3,wed:3,thursday:4,thu:4,thur:4,friday:5,fri:5,saturday:6,sat:6,sunday:null,sun:null}; if(names[v]!==undefined)return names[v]; const n=Number(v); return Number.isInteger(n)&&n>=1&&n<=6?n:null }
       const timeValue = value => { const text=String(value||'').trim(); if(typeof value==='number'&&Number.isFinite(value)){const mins=Math.round(value*1440);return String(Math.floor(mins/60)%24).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')} const m=text.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i); if(!m)return ''; let h=Number(m[1]);const min=Number(m[2]);const ap=(m[3]||'').toUpperCase();if(min>59||h>23||(ap&&(h<1||h>12)))return '';if(ap)h=h%12+(ap==='PM'?12:0);return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0') }
       const mapped=[]; const issues=[]
       rows.forEach((row,index)=>{
