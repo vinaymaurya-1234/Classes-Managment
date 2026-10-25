@@ -198,6 +198,9 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const parsedPlacement = parseClassPlacement(className)
       const standard = Number(slot.standard) || parsedPlacement.standard
       const division = String(slot.division || parsedPlacement.division || 'A').toUpperCase()
+      if (!Number.isInteger(standard) || standard < 1 || standard > 12 || !['A', 'B', 'C'].includes(division)) {
+        return res.status(400).json({ success: false, message: `Select a valid standard and division for weekly lecture ${index + 1}.` })
+      }
       const room = String(slot.room || '').trim()
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
