@@ -42,7 +42,21 @@ const canTeach = async (user, std, division) => {
     return parsed && parsed.std === Number(std) && (!parsed.division || parsed.division === String(division).toUpperCase())
   })
 }
-const getStudentClass = user => ({ std: Number(user.std), division: user.division, className: `Class ${Number(user.std)}` })
+const getStudentClass = user => {
+  const classMatch = String(user.className || '').match(/\\d+/)
+  const std = Number(user.std || classMatch?.[0])
+  const division = String(user.division || 'A').trim().toUpperCase()
+  return { std, division, className: `Class ${std}` }
+}
+const studentExamFilter = user => {
+  const { std, division } = getStudentClass(user)
+  return { std, $or: [{ division }, { division: '' }, { division: { $exists: false } }, { division: null }] }
+}
+const studentCanAccessExam = (user, exam) => {
+  const { std, division } = getStudentClass(user)
+  return Number.isInteger(std) && std === Number(exam.std) &&
+    (!String(exam.division || '').trim() || String(exam.division).trim().toUpperCase() === division)
+}
 const safeQuestion = question => ({
   _id: question._id,
   text: question.text,
@@ -293,7 +307,7 @@ router.post('/exams/:id/start', async (req, res, next) => {
   try {
     if (!isStudent(req.user) || !validId(req.params.id)) return forbidden(res)
     const exam = await Exam.findById(req.params.id)
-    if (!exam || exam.status === 'cancelled' || Number(req.user.std) !== exam.std || (exam.division && (req.user.division || '') !== exam.division)) return fail(res, 404, 'Exam not found for your class and division.')
+    if (!exam || exam.status === 'cancelled' || !studentCanAccessExam(req.user, exam)) return fail(res, 404, 'Exam not found for your class and division.')
     const now = Date.now(), start = new Date(exam.startsAt).getTime(), end = start + exam.durationMinutes * 60000
     if (now < start) return fail(res, 409, 'This exam has not started yet.')
     if (now >= end) return fail(res, 409, 'The exam time window has ended.')
@@ -312,7 +326,8 @@ router.post('/exams/:id/start', async (req, res, next) => {
 router.put('/exams/:id/answers', async (req, res, next) => {
   try {
     if (!isStudent(req.user) || !validId(req.params.id)) return forbidden(res)
-    const exam = await Exam.findOne({ _id: req.params.id, std: Number(req.user.std), $or: [{ division: req.user.division || '' }, { division: '' }] })
+    const exam = await Exam.findById(req.params.id)
+    if (!exam || !studentCanAccessExam(req.user, exam)) return fail(res, 404, 'Exam not found for your class and division.')
     if (!exam) return fail(res, 404, 'Exam not found.')
     const attempt = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: 'in_progress' })
     if (!attempt) return fail(res, 404, 'Active exam attempt not found.')
