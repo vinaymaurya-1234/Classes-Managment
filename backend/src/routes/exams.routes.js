@@ -425,8 +425,8 @@ router.get('/attempts', async (req, res, next) => {
 router.get('/exams/:id/review', async (req, res, next) => {
   try {
     if (!isStudent(req.user) || !validId(req.params.id)) return forbidden(res)
-    const exam = await Exam.findOne({ _id: req.params.id, std: Number(req.user.std), $or: [{ division: req.user.division || '' }, { division: '' }], resultsPublished: true, answerReviewEnabled: true })
-    if (!exam) return fail(res, 404, 'Answer review is not available for this exam.')
+    const exam = await Exam.findOne({ _id: req.params.id, resultsPublished: true, answerReviewEnabled: true })
+    if (!exam || !studentCanAccessExam(req.user, exam)) return fail(res, 404, 'Answer review is not available for this exam.')
     const attempt = await ExamAttempt.findOne({ exam: exam._id, student: req.user._id, status: { $in: ['submitted', 'graded'] } }).lean()
     if (!attempt) return fail(res, 404, 'Submitted attempt not found.')
     const paper = await QuestionPaper.findById(exam.paper).lean()
