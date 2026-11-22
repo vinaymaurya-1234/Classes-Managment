@@ -66,6 +66,7 @@ export const createNotice = async (req, res, next) => {
     const audienceType = String(req.body.audienceType || '').trim().toLowerCase()
     const audienceRole = String(req.body.audienceRole || '').trim().toLowerCase()
     const rawRecipientIds = Array.isArray(req.body.recipientIds) ? req.body.recipientIds : []
+    const rawClassDivisionIds = Array.isArray(req.body.classDivisionIds) ? req.body.classDivisionIds : []
 
     if (!title || !message || !audienceType) {
       return res.status(400).json({
@@ -81,7 +82,7 @@ export const createNotice = async (req, res, next) => {
       })
     }
 
-    if (!['all', 'role', 'users'].includes(audienceType)) {
+    if (!['all', 'role', 'users', 'classes'].includes(audienceType)) {
       return res.status(400).json({ success: false, message: 'Invalid notice audience' })
     }
 
@@ -111,16 +112,25 @@ export const createNotice = async (req, res, next) => {
       }
     }
 
+    let classDivisionIds = []
+    if (audienceType === 'classes') {
+      classDivisionIds = [...new Set(rawClassDivisionIds.map(id => String(id).trim()).filter(Boolean))]
+      if (!classDivisionIds.length || classDivisionIds.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ success: false, message: 'Select at least one configured class division.' })
+      const divisions = await ClassDivision.find({ _id: { $in: classDivisionIds }, active: true }).select('_id')
+      if (divisions.length !== classDivisionIds.length) return res.status(400).json({ success: false, message: 'One or more selected class divisions are inactive or invalid.' })
+    }
+
     const notice = await Notice.create({
       title,
       message,
       audienceType,
       audienceRole: audienceType === 'role' ? audienceRole : null,
       recipientIds,
+      classDivisionIds,
       createdBy: req.user._id,
     })
 
-    await notice.populate('createdBy', 'name')
+    await notice.populate('createdBy', 'name').populate('classDivisionIds', 'displayName')
 
     return res.status(201).json({
       success: true,
