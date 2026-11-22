@@ -19,7 +19,7 @@ const questionPaperSchema = new mongoose.Schema({
   classDivision: { type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision', default: null, index: true },
   std: { type: Number, enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], required: true },
   division: { type: String, trim: true, default: '' },
-  subject: { type: String, required: true, trim: true },
+  subject: { type: String, required: true, trim: true, default: 'All Subjects' },
   instructions: { type: String, default: '' },
   questions: { type: [paperQuestionSchema], default: [] },
   totalMarks: { type: Number, required: true, min: 1 },
