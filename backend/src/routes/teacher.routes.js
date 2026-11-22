@@ -26,7 +26,7 @@ router.get('/classes', async (req, res, next) => {
       const parsed = parseClass(value)
       if (!parsed) continue
       const key = `${parsed.std}-${parsed.division}`
-      if (!classMap.has(key)) classMap.set(key, { ...parsed, className: `Class ${parsed.std}`, division: parsed.division, classDivisionId: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?._id?.toString() || '', subjects: [] })
+      if (!classMap.has(key)) classMap.set(key, { ...parsed, className: `Class ${parsed.std}`, division: parsed.division, classDivisionId: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?._id?.toString() || '', classLabel: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?.displayName || '', subjects: [] })
     }
     const classes = await Promise.all([...classMap.values()].map(async item => {
       const studentFilter = { role: 'student', std: item.std }
@@ -39,7 +39,7 @@ router.get('/classes', async (req, res, next) => {
       const classChapters = chapters.filter(ch => { const parsed = parseClass(ch.className); return parsed && parsed.std === item.std && (!item.division || !parsed.division || parsed.division === item.division) }).map(ch => ({ id: String(ch._id), title: ch.title || ch.chapterName || ch.subject || 'Chapter', subject: ch.subject || '', status: ch.status || 'in-progress', progress: Number(ch.progress || 0), updatedAt: ch.updatedAt || null }))
       return {
         std: item.std, className: item.className, division: item.division, classDivisionId: item.classDivisionId, chapters: classChapters,
-        label: item.division ? `Class ${item.std} - ${item.division}` : item.className,
+        label: item.classLabel || (item.division ? `Class ${item.std} - ${item.division}` : item.className),
         subjects, studentCount: students.length,
         students: students.map(student => ({
           id: student._id.toString(), name: student.name, email: student.email,
