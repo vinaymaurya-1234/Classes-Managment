@@ -251,6 +251,34 @@ export default function PeoplePage({ type, title }) {
     }
   };
 
+  const openParentLinkEditor = async () => {
+    setParentLinkValue(linkedParents[0]?.id || "");
+    setParentLinkOpen(true);
+    setError("");
+    try {
+      const result = await listUsersApi(token, "parent");
+      setParentChoices(result.users || []);
+    } catch (err) {
+      setError(err.message || "Unable to load parent accounts.");
+    }
+  };
+
+  const saveParentLink = async event => {
+    event.preventDefault();
+    if (!selectedPerson || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const result = await api.put(`/api/users/${encodeURIComponent(selectedPerson.id)}/parent-link`, { parentId: parentLinkValue || null }, token);
+      setLinkedParents(result.parent ? [result.parent] : []);
+      setParentLinkOpen(false);
+    } catch (err) {
+      setError(err.message || "Unable to change parent link.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const startProfileEdit = person => {
     setProfileTarget(person);
     setProfileForm({ name: person.name || "", email: person.email || "", phone: person.phone || "" });
@@ -525,6 +553,7 @@ export default function PeoplePage({ type, title }) {
                     <div className="person-detail-section-head">
                       <h3><Users size={16} /> Parent / guardian</h3>
                       <span>{linkedParents.length} linked</span>
+                      {role === "principal" && <button type="button" className="secondary parent-link-manage" onClick={openParentLinkEditor}>Change parent</button>}
                     </div>
                     {linkedParents.length ? linkedParents.map(parent => (
                       <div className="linked-parent-card linked-parent-actions-card" key={parent.id}>
@@ -829,6 +858,27 @@ export default function PeoplePage({ type, title }) {
               <label>Phone<input value={profileForm.phone} onChange={event=>setProfileForm(current=>({...current,phone:event.target.value}))} placeholder="Phone number"/></label>
               {error && <div className="login-error user-modal-error">{error}</div>}
               <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setProfileEditing(false)} disabled={saving}>Cancel</button><button type="submit" className="primary" disabled={saving}>{saving ? "Saving..." : "Save changes"}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+      {parentLinkOpen && (
+        <div className="user-modal-backdrop" onMouseDown={() => !saving && setParentLinkOpen(false)}>
+          <div className="user-modal" onMouseDown={event => event.stopPropagation()}>
+            <div className="user-modal-head">
+              <div><span className="eyebrow">FAMILY LINK</span><h3>Change student's parent</h3><p>Remove the current parent and link this student to another parent account.</p></div>
+              <button type="button" className="modal-close" onClick={() => !saving && setParentLinkOpen(false)} disabled={saving} aria-label="Close"><X size={18}/></button>
+            </div>
+            <form onSubmit={saveParentLink}>
+              <label>Parent / guardian
+                <select value={parentLinkValue} onChange={event=>setParentLinkValue(event.target.value)}>
+                  <option value="">No parent linked</option>
+                  {parentChoices.map(parent=><option key={parent.id} value={parent.id}>{parent.name} · {parent.email}</option>)}
+                </select>
+              </label>
+              <p className="parent-link-warning">Saving will unlink this student from their current parent and link them to the selected account. It will not delete either account.</p>
+              {error && <div className="login-error user-modal-error">{error}</div>}
+              <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setParentLinkOpen(false)} disabled={saving}>Cancel</button><button type="submit" className="primary" disabled={saving}>{saving ? "Saving..." : "Save parent link"}</button></div>
             </form>
           </div>
         </div>
