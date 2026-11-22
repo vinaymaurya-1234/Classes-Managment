@@ -7,8 +7,16 @@ const publicUser = user => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  mustChangePassword: Boolean(user.mustChangePassword),
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
+  className: user.classDivision?.displayName || user.className || '',
+  classDivisionId: user.classDivision?._id?.toString() || user.classDivision?.toString() || '',
+  std: user.classDivision?.standard ?? user.std ?? null,
+  division: user.classDivision?.division || user.division || '',
+  teachingClasses: user.teachingClassDivisions?.length ? user.teachingClassDivisions.map(item=>item.displayName) : (user.teachingClasses || []),
+  teachingClassDivisionIds: (user.teachingClassDivisions || []).map(item=>item?._id?.toString() || item.toString()),
+  children: (user.children || []).map(child => ({ id: child._id.toString(), name: child.name, email: child.email, std: child.classDivision?.standard ?? child.std ?? null, division: child.classDivision?.division || child.division || '', className: child.classDivision?.displayName || child.className || '' })),
 })
 
 export const login = async (req, res, next) => {
@@ -20,7 +28,7 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' })
     }
 
-    const user = await User.findOne({ email }).select('+password')
+    const user = await User.findOne({ email }).select('+password').populate('classDivision').populate('teachingClassDivisions').populate({ path:'children', select:'name email std division className classDivision', populate:{path:'classDivision'} })
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' })
     }
@@ -108,7 +116,8 @@ export const createPrincipal = async (req, res, next) => {
 }
 
 export const me = async (req, res) => {
-  res.json({ success: true, user: publicUser(req.user) })
+  const user = await User.findById(req.user._id).populate('classDivision').populate('teachingClassDivisions').populate({ path:'children', select:'name email std division className classDivision', populate:{path:'classDivision'} })
+  res.json({ success: true, user: publicUser(user) })
 }
 
 export const updateProfile = async (req, res, next) => {
@@ -122,7 +131,7 @@ export const updateProfile = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No profile changes were provided' })
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true })
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions')
     return res.json({ success: true, message: 'Profile updated', user: publicUser(user) })
   } catch (error) {
     next(error)
@@ -139,13 +148,13 @@ export const changePassword = async (req, res, next) => {
     }
 
     const user = await User.findById(req.user._id).select('+password')
-    const matches = await bcrypt.compare(currentPassword, user.password)
-
-    if (!matches) {
-      return res.status(400).json({ success: false, message: 'Current password is incorrect' })
+    if (!(user.role === 'parent' && user.mustChangePassword)) {
+      const matches = await bcrypt.compare(currentPassword, user.password)
+      if (!matches) return res.status(400).json({ success: false, message: 'Current password is incorrect' })
     }
 
     user.password = await bcrypt.hash(newPassword, 12)
+    user.mustChangePassword = false
     await user.save()
 
     return res.json({ success: true, message: 'Password updated successfully' })
