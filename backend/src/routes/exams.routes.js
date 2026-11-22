@@ -144,7 +144,7 @@ router.post('/questions/import', async (req, res, next) => {
       const marks = Number(row.marks || 1)
       const options = Array.isArray(row.options) ? row.options.map((o, j) => ({ key: String(o.key || String.fromCharCode(65 + j)), text: String(o.text || '').trim() })).filter(o => o.text) : ['A','B','C','D'].map(k => ({ key: k, text: String(row['option' + k] || row[k] || '').trim() })).filter(o => o.text)
       const correctAnswer = String(row.correctAnswer || row.answer || '').trim()
-      if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (!classDivisionId || !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, subject, question text or valid marks. Division is optional.' }); continue }
+      if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (!classDivisionId || !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing configured class division, subject, question text or valid marks.' }); continue }
       if (!await canTeach(req.user, std, division, classDivisionId)) { errors.push({ row: i + 2, message: `Class ${std}-${division} is not assigned to you.` }); continue }
       if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) { errors.push({ row: i + 2, message: 'Objective question has missing options or an invalid answer.' }); continue }
       const duplicate = await Question.exists({ teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject, text })
