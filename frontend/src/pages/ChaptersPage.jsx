@@ -43,6 +43,7 @@ export default function ChaptersPage() {
   const { token } = useAuth()
   const [chapters, setChapters] = useState([])
   const [classOptions, setClassOptions] = useState([])
+  const [classDivisionOptions, setClassDivisionOptions] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [selectedClass, setSelectedClass] = useState('all')
   const [showForm, setShowForm] = useState(false)
