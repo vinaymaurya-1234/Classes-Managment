@@ -9,7 +9,7 @@ const publicUser = user => ({
   role: user.role,
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
-  className: user.className || '',
+  className: user.classDivision?.displayName || user.className || '',
   classDivisionId: user.classDivision?.toString() || '',
   std: user.std ?? null,
   division: user.division || '',
@@ -26,7 +26,7 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' })
     }
 
-    const user = await User.findOne({ email }).select('+password')
+    const user = await User.findOne({ email }).select('+password').populate('classDivision').populate('teachingClassDivisions')
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' })
     }
@@ -128,7 +128,7 @@ export const updateProfile = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No profile changes were provided' })
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true })
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions')
     return res.json({ success: true, message: 'Profile updated', user: publicUser(user) })
   } catch (error) {
     next(error)
