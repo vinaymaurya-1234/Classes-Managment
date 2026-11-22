@@ -20,15 +20,18 @@ export default function NoticesPage() {
   const isPrincipal = user?.role === 'principal'
   const [notices,setNotices]=useState([]),[users,setUsers]=useState([]),[loading,setLoading]=useState(true),[loadingUsers,setLoadingUsers]=useState(false),[saving,setSaving]=useState(false),[open,setOpen]=useState(false),[error,setError]=useState('')
   const [form,setForm]=useState({title:'',message:'',audienceType:'all',audienceRole:'student',recipientIds:[],classDivisionIds:[]})
-  const [classDivisions,setClassDivisions]=useState([])\n  const [recipientSearch,setRecipientSearch]=useState('')
+  const [classDivisions,setClassDivisions]=useState([])
+  const [recipientSearch,setRecipientSearch]=useState('')
   const [recipientRoleFilter,setRecipientRoleFilter]=useState('all')
   const loadNotices = async () => { setLoading(true); setError(''); try { const result=await listNoticesApi(token); setNotices(result.notices||[]) } catch(err) { setError(err.message||'Unable to load notices.') } finally { setLoading(false) } }
-  useEffect(()=>{ if(token) loadNotices() },[token])\n  useEffect(()=>{if(token&&isPrincipal)listClassDivisionsApi(token).then(result=>setClassDivisions((result.classes||[]).filter(item=>item.active))).catch(err=>setError(err.message||'Unable to load class divisions.'))},[token,isPrincipal])
+  useEffect(()=>{ if(token) loadNotices() },[token])
+  useEffect(()=>{if(token&&isPrincipal)listClassDivisionsApi(token).then(result=>setClassDivisions((result.classes||[]).filter(item=>item.active))).catch(err=>setError(err.message||'Unable to load class divisions.'))},[token,isPrincipal])
   const loadRecipients = async () => { setLoadingUsers(true); setError(''); try { const result=await listUsersApi(token); setUsers(result.users||[]) } catch(err) { setError(err.message||'Unable to load users.') } finally { setLoadingUsers(false) } }
   const openComposer = () => { setForm({title:'',message:'',audienceType:'all',audienceRole:'student',recipientIds:[],classDivisionIds:[]}); setRecipientSearch(''); setRecipientRoleFilter('all'); setError(''); setOpen(true); if(!users.length) loadRecipients() }
   const closeComposer = () => { if(!saving) setOpen(false) }
   const setAudience = audienceType => setForm(current=>({...current,audienceType,recipientIds:audienceType==='users'?current.recipientIds:[],classDivisionIds:audienceType==='classes'?current.classDivisionIds:[]}))
-  const toggleRecipient = id => setForm(current=>({...current,recipientIds:current.recipientIds.includes(id)?current.recipientIds.filter(item=>item!==id):[...current.recipientIds,id]}))\n  const toggleClassDivision = id => setForm(current=>({...current,classDivisionIds:current.classDivisionIds.includes(id)?current.classDivisionIds.filter(item=>item!==id):[...current.classDivisionIds,id]}))
+  const toggleRecipient = id => setForm(current=>({...current,recipientIds:current.recipientIds.includes(id)?current.recipientIds.filter(item=>item!==id):[...current.recipientIds,id]}))
+  const toggleClassDivision = id => setForm(current=>({...current,classDivisionIds:current.classDivisionIds.includes(id)?current.classDivisionIds.filter(item=>item!==id):[...current.classDivisionIds,id]}))
   const groupedUsers = useMemo(()=>{const q=recipientSearch.trim().toLowerCase();const matching=users.filter(person=>(recipientRoleFilter==='all'||person.role===recipientRoleFilter)&&[person.name,person.email,person.phone,person.className,person.std,person.division].filter(Boolean).join(' ').toLowerCase().includes(q));return {teacher:matching.filter(person=>person.role==='teacher'),student:matching.filter(person=>person.role==='student'),parent:matching.filter(person=>person.role==='parent')}},[users,recipientSearch,recipientRoleFilter])
   const submit = async event => { event.preventDefault(); setSaving(true); setError(''); try { await createNoticeApi(token,form); setOpen(false); await loadNotices() } catch(err) { setError(err.message||'Unable to send notice.') } finally { setSaving(false) } }
   const audienceText = notice => { if(notice.audienceType==='all') return 'EVERYONE'; if(notice.audienceType==='role') return roleLabels[notice.audienceRole]||'GROUP'; if(notice.audienceType==='classes') return (notice.classDivisionNames||[]).join(', ')||'CLASS NOTICE'; const count=notice.recipientIds?.length||0; return count+' SPECIFIC USER'+(count===1?'':'S') }
