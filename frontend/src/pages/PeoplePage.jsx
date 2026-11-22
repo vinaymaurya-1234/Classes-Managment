@@ -70,6 +70,8 @@ export default function PeoplePage({ type, title }) {
   const [assignmentValues, setAssignmentValues] = useState([]);
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     if (!modalOpen) return undefined;
@@ -249,6 +251,27 @@ export default function PeoplePage({ type, title }) {
     }
   };
 
+  const startProfileEdit = person => {
+    setProfileForm({ name: person.name || "", email: person.email || "", phone: person.phone || "" });
+    setProfileEditing(true);
+    setError("");
+  };
+
+  const saveProfile = async event => {
+    event.preventDefault();
+    if (!selectedPerson || saving) return;
+    setSaving(true); setError("");
+    try {
+      const response = await api.put(`/api/users/${encodeURIComponent(selectedPerson.id)}/profile`, profileForm, token);
+      const updated = response.user || {};
+      setSelectedPerson(current => ({ ...current, ...updated }));
+      setData(current => current.map(item => item.id === selectedPerson.id ? { ...item, ...updated } : item));
+      setProfileEditing(false);
+      await loadUsers();
+    } catch (err) { setError(err.message || "Unable to update profile."); }
+    finally { setSaving(false); }
+  };
+
   const saveTeacherClasses = async () => {
     if (!assignmentValues.length) { setError('Select at least one configured class division.'); return }
     try {
@@ -343,6 +366,7 @@ export default function PeoplePage({ type, title }) {
             ) : (
               <>
                 <div className="person-detail-actions">
+                  {(type === "student" || type === "parent") && <button type="button" className="secondary" onClick={() => startProfileEdit(selectedPerson)}>Edit profile</button>
                   {type === "student" && <button type="button" className="secondary" onClick={() => setEditingPlacement(value=>!value)}>Edit class and division</button>}
                   {type === "teacher" && <button type="button" className="secondary" onClick={() => setEditingAssignments(value=>!value)}>Edit teaching assignments</button>}
                 </div>
@@ -554,7 +578,7 @@ export default function PeoplePage({ type, title }) {
                       </span>
                     </div>
                     {(selectedPerson.children || []).map((child) => (
-                      <div className="person-fee-row" key={child.id}>
+                      <div className="person-fee-row parent-child-edit-row" key={child.id}>
                         <span>
                           {child.name} · Class {child.std || "—"}
                           {child.division
@@ -562,6 +586,7 @@ export default function PeoplePage({ type, title }) {
                             : ""}
                         </span>
                         <small>{child.email}</small>
+                        <button type="button" className="secondary" onClick={() => navigate(`/${role || "principal"}/students`, { state: { openPersonId: child.id } })}>Edit child</button>
                       </div>
                     ))}
                     {feeRecords.length ? (
@@ -782,6 +807,23 @@ export default function PeoplePage({ type, title }) {
         </Card>
       )}
 
+      {profileEditing && (
+        <div className="user-modal-backdrop" onMouseDown={() => !saving && setProfileEditing(false)}>
+          <div className="user-modal" onMouseDown={event => event.stopPropagation()}>
+            <div className="user-modal-head">
+              <div><span className="eyebrow">PROFILE EDIT</span><h3>Edit {type} details</h3><p>Update this account's contact information.</p></div>
+              <button type="button" className="modal-close" onClick={() => !saving && setProfileEditing(false)} disabled={saving} aria-label="Close"><X size={18}/></button>
+            </div>
+            <form onSubmit={saveProfile}>
+              <label>Full name<input required value={profileForm.name} onChange={event=>setProfileForm(current=>({...current,name:event.target.value}))}/></label>
+              <label>Email address<input type="email" required value={profileForm.email} onChange={event=>setProfileForm(current=>({...current,email:event.target.value}))}/></label>
+              <label>Phone<input value={profileForm.phone} onChange={event=>setProfileForm(current=>({...current,phone:event.target.value}))} placeholder="Phone number"/></label>
+              {error && <div className="login-error user-modal-error">{error}</div>}
+              <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setProfileEditing(false)} disabled={saving}>Cancel</button><button type="submit" className="primary" disabled={saving}>{saving ? "Saving..." : "Save changes"}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
       {modalOpen && (
         <div className="user-modal-backdrop" onMouseDown={closeModal}>
           <div
