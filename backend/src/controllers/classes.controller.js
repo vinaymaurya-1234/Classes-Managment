@@ -16,7 +16,7 @@ async function seedFromLegacyData() {
     divisions.add(String(student.division || 'A').toUpperCase())
     standards.set(standard, divisions)
   })
-  const timetable = await TimetableEntry.find({}).select('standard division className').lean()
+  const teachers = await User.find({ role: 'teacher' }).select('teachingClasses').lean()\n  teachers.forEach(teacher => (teacher.teachingClasses || []).forEach(value => {\n    const match = String(value).match(/(?:class\\s*)?(\\d{1,2})(?:\\s*[-/]\\s*([a-z]))?/i)\n    if (!match) return\n    const standard = Number(match[1]); if (standard < 1 || standard > 12) return\n    const divisions = standards.get(standard) || new Set(); divisions.add((match[2] || 'A').toUpperCase()); standards.set(standard, divisions)\n  }))\n  const timetable = await TimetableEntry.find({}).select('standard division className').lean()
   timetable.forEach(entry => {
     const standard = Number(entry.standard || String(entry.className || '').match(/\d+/)?.[0])
     if (!standard || standard < 1 || standard > 12) return
