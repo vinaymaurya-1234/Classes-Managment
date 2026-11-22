@@ -9,6 +9,7 @@ import './ChaptersPage.css'
 const emptyForm = {
   subject: '',
   className: '',
+  classDivisionId: '',
   chapterNumber: '',
   title: '',
 }
@@ -43,6 +44,7 @@ export default function ChaptersPage() {
   const { token } = useAuth()
   const [chapters, setChapters] = useState([])
   const [classOptions, setClassOptions] = useState([])
+  const [classDivisionOptions, setClassDivisionOptions] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [selectedClass, setSelectedClass] = useState('all')
   const [showForm, setShowForm] = useState(false)
@@ -78,9 +80,11 @@ export default function ChaptersPage() {
   useEffect(() => {
     if (!token) return
     getTeacherClasses(token).then(response => {
-      const names = (response.classes || []).map(item => item.className)
+      const options = response.classes || []
+      const names = options.map(item => item.label || item.className)
+      setClassDivisionOptions(options)
       setClassOptions([...new Set(names)])
-      setForm(current => ({ ...current, className: current.className || names[0] || '' }))
+      setForm(current => ({ ...current, className: current.className || names[0] || '', classDivisionId: current.classDivisionId || options[0]?.classDivisionId || '' }))
     }).catch(err => setError(err.message || 'Unable to load assigned classes.'))
   }, [token])
 
@@ -276,7 +280,7 @@ export default function ChaptersPage() {
         <div className="chapter-modal-header"><div><span className="eyebrow">TEACHING</span><h3>New chapter</h3></div><button type="button" className="chapter-close" onClick={() => setShowForm(false)}><X size={18} /></button></div>
         <div className="chapter-form-grid">
           <label>Subject<input required value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Physics" /></label>
-          <label>Class<select required value={form.className} onChange={e => setForm({ ...form, className: e.target.value })}>{classOptions.map(className => <option key={className} value={className}>{className}</option>)}</select></label>
+          <label>Class / Division<select required value={form.classDivisionId} onChange={e=>{const selected=classDivisionOptions.find(item=>item.classDivisionId===e.target.value);setForm({...form,classDivisionId:e.target.value,className:selected?.label||selected?.className||''})}}><option value=''>Select configured class</option>{classDivisionOptions.map(item=><option key={item.classDivisionId} value={item.classDivisionId}>{item.label}</option>)}</select></label>
           <label>Chapter number<input required min="1" type="number" value={form.chapterNumber} onChange={e => setForm({ ...form, chapterNumber: e.target.value })} placeholder="4" /></label>
           <label className="full">Chapter title<input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Electrostatics" /></label>
         </div>

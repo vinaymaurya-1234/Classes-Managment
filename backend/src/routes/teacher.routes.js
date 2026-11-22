@@ -8,28 +8,28 @@ router.use(requireAuth)
 
 const parseClass = value => {
   const text = String(value ?? '').trim()
-  const match = text.match(/(?:class\s*)?(10|11|12)(?:\s*[-/]\s*([a-z]))?/i)
+  const match = text.match(/(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z0-9_-]{1,8}))?/i)
   return match ? { std: Number(match[1]), division: (match[2] || '').toUpperCase() } : null
 }
 
 router.get('/classes', async (req, res, next) => {
   try {
     if (!['teacher', 'principal'].includes(req.user?.role)) return res.status(403).json({ success: false, message: 'You do not have permission to view teaching classes.' })
-    const targetTeacher = req.user.role === 'teacher' ? req.user : await User.findOne({ _id: req.query.teacherId, role: 'teacher' })
+    const targetTeacher = req.user.role === 'teacher' ? await User.findById(req.user._id).populate('teachingClassDivisions') : await User.findOne({ _id: req.query.teacherId, role: 'teacher' }).populate('teachingClassDivisions')
     if (!targetTeacher) return res.status(404).json({ success: false, message: 'Teacher not found.' })
     const chapters = await Chapter.find({ teacher: targetTeacher._id }).select('className subject title chapterName status progress updatedAt').lean()
     const configuredClasses = Array.isArray(targetTeacher.teachingClasses) ? targetTeacher.teachingClasses : []
     const classMap = new Map()
-    const classSources = configuredClasses.length ? configuredClasses : chapters.map(item => item.className)
+    const divisionSources = (targetTeacher.teachingClassDivisions || []).map(item => item.displayName)
+    const classSources = divisionSources.length ? divisionSources : (configuredClasses.length ? configuredClasses : chapters.map(item => item.className))
     for (const value of classSources) {
       const parsed = parseClass(value)
       if (!parsed) continue
       const key = `${parsed.std}-${parsed.division}`
-      if (!classMap.has(key)) classMap.set(key, { ...parsed, className: `Class ${parsed.std}`, division: parsed.division, subjects: [] })
+      if (!classMap.has(key)) classMap.set(key, { ...parsed, className: `Class ${parsed.std}`, division: parsed.division, classDivisionId: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?._id?.toString() || '', classLabel: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?.displayName || '', subjects: [] })
     }
     const classes = await Promise.all([...classMap.values()].map(async item => {
-      const studentFilter = { role: 'student', std: item.std }
-      if (item.division) studentFilter.division = item.division
+      const studentFilter = item.classDivisionId ? { role: 'student', classDivision: item.classDivisionId } : { role: 'student', std: item.std, division: item.division }
       const students = await User.find(studentFilter).select('name email phone avatarUrl std division').sort({ name: 1 }).lean()
       const subjects = [...new Set(chapters.filter(ch => {
         const parsed = parseClass(ch.className)
@@ -37,8 +37,8 @@ router.get('/classes', async (req, res, next) => {
       }).map(ch => ch.subject).filter(Boolean))].sort()
       const classChapters = chapters.filter(ch => { const parsed = parseClass(ch.className); return parsed && parsed.std === item.std && (!item.division || !parsed.division || parsed.division === item.division) }).map(ch => ({ id: String(ch._id), title: ch.title || ch.chapterName || ch.subject || 'Chapter', subject: ch.subject || '', status: ch.status || 'in-progress', progress: Number(ch.progress || 0), updatedAt: ch.updatedAt || null }))
       return {
-        std: item.std, className: item.className, division: item.division, chapters: classChapters,
-        label: item.division ? `Class ${item.std} - ${item.division}` : item.className,
+        std: item.std, className: item.className, division: item.division, classDivisionId: item.classDivisionId, chapters: classChapters,
+        label: item.classLabel || (item.division ? `Class ${item.std} - ${item.division}` : item.className),
         subjects, studentCount: students.length,
         students: students.map(student => ({
           id: student._id.toString(), name: student.name, email: student.email,

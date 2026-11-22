@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, Menu, MessageSquare, Search, Trophy, Users, X } from 'lucide-react'
+import { Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, CreditCard, GraduationCap, Layers3, LayoutDashboard, Menu, MessageSquare, Search, Trophy, Users, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { roles } from '../../data/mockData'
 import { useAuth } from '../../context/AuthContext'
 import { listNoticesApi } from '../../api/notices.api'
 
 const nav = {
-  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exam Management','exams'],['Notices','notices'],['Chat','chat']],
-  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Exams & Question Bank','exams'],['Notices','notices'],['Chat','chat']],
-  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Exams','exams'],['Notices','notices'],['Chat','chat']],
-  parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Exams & Reports','exams'],['Notices','notices'],['Timetable','timetable'],['Chat','chat']],
+  principal: [['Overview','overview'],['Students','students'],['Teachers','teachers'],['Parents','parents'],['Class Structure','class-structure'],['Timetable','timetable'],['Attendance','attendance'],['Fees','fees'],['Exam Management','exams'],['Notices','notices']],
+  teacher: [['Overview','overview'],['My Classes','classes'],['Chapters','chapters'],['Timetable','timetable'],['My Attendance','attendance'],['Homework','homework'],['Exams & Question Bank','exams'],['Notices','notices']],
+  student: [['Overview','overview'],["Today's Lectures",'timetable'],['Attendance','attendance'],['Homework','homework'],['Exams','exams'],['Notices','notices']],
+  parent: [['Overview','overview'],['My Children','children'],['Fees','fees'],['Attendance','attendance'],['Exams & Reports','exams'],['Notices','notices'],['Timetable','timetable']],
 }
-const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, exams:ClipboardList, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users, chat:MessageSquare }
+const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, 'class-structure':Layers3, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, exams:ClipboardList, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users }
 
 const Avatar = ({ user, className = 'avatar' }) => user?.avatarUrl ? <img className={className + ' avatar-image'} src={user.avatarUrl} alt={user.name || 'Profile'} /> : <span className={className}>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
 

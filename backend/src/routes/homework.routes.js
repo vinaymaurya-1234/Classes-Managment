@@ -2,6 +2,7 @@ import { Router } from 'express'
 import Homework from '../models/Homework.js'
 import User from '../models/User.js'
 import Chapter from '../models/Chapter.js'
+import ClassDivision from '../models/ClassDivision.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
@@ -23,14 +24,14 @@ router.get('/', async (req, res, next) => {
     }
     if (user.role === 'student') {
       const className = user.className || (user.std ? `Class ${user.std}` : '')
-      const filter = { className, status: 'published' }
-      filter.$or = [{ division: user.division || '' }, { division: '' }]
+      const filter = user.classDivision ? { classDivision: user.classDivision, status: 'published' } : { className, status: 'published', $or: [{ division: user.division || '' }, { division: '' }] }
       const data = className ? await Homework.find(filter).sort({ dueDate: 1, createdAt: -1 }).lean() : []
       return res.json({ success: true, data })
     }
     if (user.role === 'parent') {
-      const parent = await User.findById(user._id).populate('children', 'className std division').lean()
+      const parent = await User.findById(user._id).populate({path:'children',select:'className std division classDivision',populate:{path:'classDivision'}}).lean()
       const filters = (parent?.children || []).filter(child => child.className || child.std).flatMap(child => {
+        if (child.classDivision?._id) return [{ classDivision: child.classDivision._id, status: 'published' }]
         const className = child.className || `Class ${child.std}`
         return [{ className, division: child.division || '', status: 'published' }, { className, division: '', status: 'published' }]
       })
@@ -44,23 +45,18 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     if (!role(req, res, ['teacher'])) return
-    const className = String(req.body.className || '').trim()
-    const division = String(req.body.division || '').trim().toUpperCase()
+    const classDivisionId = String(req.body.classDivisionId || '').trim()
+    const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+    if (!classDivision) return res.status(400).json({ success: false, message: 'Choose an active class division from Class Structure.' })
+    const className = `Class ${classDivision.standard}`
+    const division = classDivision.division
     const subject = String(req.body.subject || '').trim()
     const title = String(req.body.title || '').trim()
-    if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
-    const teacherClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
-    const requested = className.match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
-    const sameAssignment = value => {
-      const assigned = String(value || '').match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
-      if (!requested || !assigned || Number(requested[1]) !== Number(assigned[1])) return false
-      const assignedDivision = String(assigned[2] || '').toUpperCase()
-      return !assignedDivision || (Boolean(division) && assignedDivision === division)
-    }
-    const chapterAssignments = await Chapter.find({ teacher: req.user._id }).select('className').lean()
-    const taught = [...teacherClasses, ...chapterAssignments.map(item => item.className)].some(sameAssignment)
-    if (!taught) return res.status(403).json({ success: false, message: 'You can only assign homework to a class assigned to you.' })
-    const item = await Homework.create({ teacher: req.user._id, className, division, subject, title, instructions: String(req.body.instructions || '').trim(), dueDate: req.body.dueDate || null, status: req.body.status === 'draft' ? 'draft' : 'published' })
+    if (!subject || !title) return res.status(400).json({ success: false, message: 'Subject and title are required.' })
+    const teacherRecord = await User.findById(req.user._id).populate('teachingClassDivisions')
+    const assignedDivisionIds = (teacherRecord?.teachingClassDivisions || []).map(item => String(item._id))
+    if (!assignedDivisionIds.includes(String(classDivision._id))) return res.status(403).json({ success: false, message: 'You can only assign homework to your configured teaching classes.' })
+    const item = await Homework.create({ teacher: req.user._id, className, classDivision: classDivision._id, division, subject, title, instructions: String(req.body.instructions || '').trim(), dueDate: req.body.dueDate || null, status: req.body.status === 'draft' ? 'draft' : 'published' })
     res.status(201).json({ success: true, data: item })
   } catch (error) { next(error) }
 })
@@ -69,7 +65,7 @@ router.post('/:id/submit', async (req, res, next) => {
   try {
     if (!role(req, res, ['student'])) return
     const className = req.user.className || (req.user.std ? `Class ${req.user.std}` : '')
-    const item = await Homework.findOne({ _id: req.params.id, className, $or: [{ division: req.user.division || '' }, { division: '' }], status: 'published' })
+    const item = await Homework.findOne({ _id: req.params.id, ...(req.user.classDivision ? { classDivision: req.user.classDivision } : { className, $or: [{ division: req.user.division || '' }, { division: '' }] }), status: 'published' })
     if (!item) return res.status(404).json({ success: false, message: 'Homework not found for your class.' })
     const text = String(req.body.text || '').trim()
     if (!text) return res.status(400).json({ success: false, message: 'Write a submission before sending.' })

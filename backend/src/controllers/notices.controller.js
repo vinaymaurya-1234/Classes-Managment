@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import Notice from '../models/Notice.js'
 import User from '../models/User.js'
+import ClassDivision from '../models/ClassDivision.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
 
@@ -11,6 +12,8 @@ const publicNotice = notice => ({
   audienceType: notice.audienceType,
   audienceRole: notice.audienceRole || null,
   recipientIds: (notice.recipientIds || []).map(id => id.toString()),
+  classDivisionIds: (notice.classDivisionIds || []).map(item => item?._id?.toString() || item.toString()),
+  classDivisionNames: (notice.classDivisionIds || []).map(item => item?.displayName || ''),
   createdBy: notice.createdBy?._id ? {
     id: notice.createdBy._id.toString(),
     name: notice.createdBy.name,
@@ -23,6 +26,11 @@ const requirePrincipal = req => req.user?.role === 'principal'
 export const listNotices = async (req, res, next) => {
   try {
     const user = req.user
+    let classDivisionIds = user.role === 'student' && user.classDivision ? [user.classDivision] : user.role === 'teacher' ? (user.teachingClassDivisions || []) : []
+    if (user.role === 'parent') {
+      const children = await User.find({ _id: { $in: user.children || [] }, role: 'student' }).select('classDivision').lean()
+      classDivisionIds = children.map(child => child.classDivision).filter(Boolean)
+    }
     const query = user.role === 'principal'
       ? { createdBy: user._id }
       : {
@@ -30,11 +38,13 @@ export const listNotices = async (req, res, next) => {
             { audienceType: 'all' },
             { audienceType: 'role', audienceRole: user.role },
             { audienceType: 'users', recipientIds: user._id },
+            { audienceType: 'classes', classDivisionIds: { $in: classDivisionIds } },
           ],
         }
 
     const notices = await Notice.find(query)
       .populate('createdBy', 'name')
+      .populate('classDivisionIds', 'displayName')
       .sort({ createdAt: -1 })
 
     return res.json({
@@ -57,6 +67,7 @@ export const createNotice = async (req, res, next) => {
     const audienceType = String(req.body.audienceType || '').trim().toLowerCase()
     const audienceRole = String(req.body.audienceRole || '').trim().toLowerCase()
     const rawRecipientIds = Array.isArray(req.body.recipientIds) ? req.body.recipientIds : []
+    const rawClassDivisionIds = Array.isArray(req.body.classDivisionIds) ? req.body.classDivisionIds : []
 
     if (!title || !message || !audienceType) {
       return res.status(400).json({
@@ -72,7 +83,7 @@ export const createNotice = async (req, res, next) => {
       })
     }
 
-    if (!['all', 'role', 'users'].includes(audienceType)) {
+    if (!['all', 'role', 'users', 'classes'].includes(audienceType)) {
       return res.status(400).json({ success: false, message: 'Invalid notice audience' })
     }
 
@@ -102,16 +113,25 @@ export const createNotice = async (req, res, next) => {
       }
     }
 
+    let classDivisionIds = []
+    if (audienceType === 'classes') {
+      classDivisionIds = [...new Set(rawClassDivisionIds.map(id => String(id).trim()).filter(Boolean))]
+      if (!classDivisionIds.length || classDivisionIds.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ success: false, message: 'Select at least one configured class division.' })
+      const divisions = await ClassDivision.find({ _id: { $in: classDivisionIds }, active: true }).select('_id')
+      if (divisions.length !== classDivisionIds.length) return res.status(400).json({ success: false, message: 'One or more selected class divisions are inactive or invalid.' })
+    }
+
     const notice = await Notice.create({
       title,
       message,
       audienceType,
       audienceRole: audienceType === 'role' ? audienceRole : null,
       recipientIds,
+      classDivisionIds,
       createdBy: req.user._id,
     })
 
-    await notice.populate('createdBy', 'name')
+    await notice.populate('createdBy', 'name').populate('classDivisionIds', 'displayName')
 
     return res.status(201).json({
       success: true,

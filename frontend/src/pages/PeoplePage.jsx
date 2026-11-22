@@ -16,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { createUserApi, listUsersApi, updateUserApi } from "../api/users.api";
 import { api } from "../api/client";
 import { students, teachers } from "../data/mockData";
+import { listClassDivisionsApi } from "../api/classes.api";
 
 const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
 const descriptions = {
@@ -28,18 +29,10 @@ const emptyForm = () => ({
   email: "",
   password: "",
   phone: "",
-  std: "",
-  division: "",
-  teachingClasses: [],
+  classDivisionId: "",
+  teachingClassDivisionIds: [],
   childIds: [],
 });
-const teacherClassOptions = [11, 12].flatMap((std) => [
-  { value: `Class ${std}`, label: `Class ${std} · Any division` },
-  ...["A", "B", "C"].map((division) => ({
-    value: `Class ${std} - ${division}`,
-    label: `Class ${std} · Division ${division}`,
-  })),
-]);
 
 export default function PeoplePage({ type, title }) {
   const { search = "", role } = useOutletContext();
@@ -60,8 +53,13 @@ export default function PeoplePage({ type, title }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
+  const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
+  const [placementValue, setPlacementValue] = useState("");
+  const [assignmentValues, setAssignmentValues] = useState([]);
+  const [editingPlacement, setEditingPlacement] = useState(false);
+  const [editingAssignments, setEditingAssignments] = useState(false);
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -81,6 +79,10 @@ export default function PeoplePage({ type, title }) {
     if (canManage && token) loadUsers();
   }, [canManage, token, loadUsers]);
 
+  useEffect(() => {
+    if (!token) return;
+    listClassDivisionsApi(token).then(result => setClassDivisions(result.classes || [])).catch(err => setError(err.message || "Unable to load class structure."));
+  }, [token]);
   const visibleData = useMemo(() => {
     const query = String(search).toLowerCase().trim();
     const source = canManage ? data : type === "student" ? students : teachers;
@@ -103,6 +105,10 @@ export default function PeoplePage({ type, title }) {
 
   const openPerson = async (person) => {
     setSelectedPerson(person);
+    setPlacementValue(person.classDivisionId || "");
+    setAssignmentValues(person.teachingClassDivisionIds || []);
+    setEditingPlacement(false);
+    setEditingAssignments(false);
     setSelectedAttempt(null);
     setAttempts([]);
     setFeeRecords([]);
@@ -167,12 +173,7 @@ export default function PeoplePage({ type, title }) {
   };
 
   const toggleClass = (value) => {
-    setForm((current) => ({
-      ...current,
-      teachingClasses: current.teachingClasses.includes(value)
-        ? current.teachingClasses.filter((item) => item !== value)
-        : [...current.teachingClasses, value],
-    }));
+    setForm(current => ({ ...current, teachingClassDivisionIds: current.teachingClassDivisionIds.includes(value) ? current.teachingClassDivisionIds.filter(item=>item!==value) : [...current.teachingClassDivisionIds,value] }))
   };
 
   const submit = async (event) => {
@@ -188,10 +189,10 @@ export default function PeoplePage({ type, title }) {
         phone: form.phone.trim(),
         role: type,
         ...(type === "student"
-          ? { std: Number(form.std), division: form.division }
+          ? { classDivisionId: form.classDivisionId }
           : {}),
         ...(type === "teacher"
-          ? { teachingClasses: form.teachingClasses }
+          ? { teachingClassDivisionIds: form.teachingClassDivisionIds }
           : {}),
         ...(type === "parent" ? { childIds: form.childIds } : {}),
       };
@@ -206,51 +207,28 @@ export default function PeoplePage({ type, title }) {
     }
   };
 
-  const updateTeacherClasses = async (person) => {
-    const current = (person.teachingClasses || []).join(", ");
-    const input = window.prompt(
-      "Enter assigned classes separated by commas. Example: Class 11 - A, Class 12 - B",
-      current,
-    );
-    if (input === null) return;
-    const teachingClasses = [
-      ...new Set(
-        input
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
-      ),
-    ];
+  const saveTeacherClasses = async () => {
+    if (!assignmentValues.length) { setError('Select at least one configured class division.'); return }
     try {
-      await updateUserApi(token, person.id, { teachingClasses });
-      await loadUsers();
-    } catch (err) {
-      setError(err.message || "Unable to update teacher assignments.");
-    }
-  };
+      await updateUserApi(token, selectedPerson.id, { teachingClassDivisionIds: assignmentValues })
+      setEditingAssignments(false)
+      await loadUsers()
+      const updated = (await listUsersApi(token, type)).users?.find(item=>item.id===selectedPerson.id)
+      if (updated) setSelectedPerson(updated)
+    } catch (err) { setError(err.message || 'Unable to update teacher assignments.') }
+  }
 
-  const updatePlacement = async (person) => {
-    const stdInput = window.prompt(
-      "Student standard (10, 11 or 12)",
-      String(person.std || 10),
-    );
-    if (stdInput === null) return;
-    const divisionInput = window.prompt(
-      "Student division (A, B or C, or leave blank)",
-      person.division || "",
-    );
-    if (divisionInput === null) return;
+  const savePlacement = async () => {
+    if (!placementValue) { setError('Select a configured class division.'); return }
     try {
-      await api.put(
-        `/api/users/${encodeURIComponent(person.id)}/class-placement`,
-        { std: Number(stdInput), division: divisionInput.trim().toUpperCase() },
-        token,
-      );
-      await loadUsers();
-    } catch (err) {
-      setError(err.message || "Unable to update student class.");
-    }
-  };
+      const response = await api.put(`/api/users/${encodeURIComponent(selectedPerson.id)}/class-placement`, { classDivisionId: placementValue }, token)
+      setSelectedPerson(current => ({ ...current, ...(response.user || {}), classDivisionId: placementValue }))
+      setEditingPlacement(false)
+      await loadUsers()
+    } catch (err) { setError(err.message || 'Unable to update student class.') }
+  }
+
+  const toggleAssignment = id => setAssignmentValues(current => current.includes(id) ? current.filter(value=>value!==id) : [...current,id])
 
   return (
     <>
@@ -314,25 +292,18 @@ export default function PeoplePage({ type, title }) {
             ) : (
               <>
                 <div className="person-detail-actions">
-                  {type === "student" && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => updatePlacement(selectedPerson)}
-                    >
-                      Edit class and division
-                    </button>
-                  )}
-                  {type === "teacher" && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => updateTeacherClasses(selectedPerson)}
-                    >
-                      Edit teaching assignments
-                    </button>
-                  )}
+                  {type === "student" && <button type="button" className="secondary" onClick={() => setEditingPlacement(value=>!value)}>Edit class and division</button>}
+                  {type === "teacher" && <button type="button" className="secondary" onClick={() => setEditingAssignments(value=>!value)}>Edit teaching assignments</button>}
                 </div>
+                {type === "student" && editingPlacement && <div className="teacher-assignment-field">
+                  <label>Class / Division<select value={placementValue} onChange={event=>setPlacementValue(event.target.value)}><option value="">Choose class division</option>{classDivisions.filter(item=>item.active).map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label>
+                  <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setEditingPlacement(false)}>Cancel</button><button type="button" className="primary" onClick={savePlacement}>Save class</button></div>
+                </div>}
+                {type === "teacher" && editingAssignments && <fieldset className="teacher-assignment-field">
+                  <legend>Teaching class divisions</legend>
+                  <div className="teacher-assignment-options">{classDivisions.filter(item=>item.active).map(item=><label key={item.id}><input type="checkbox" checked={assignmentValues.includes(item.id)} onChange={()=>toggleAssignment(item.id)}/>{item.displayName}</label>)}</div>
+                  <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setEditingAssignments(false)}>Cancel</button><button type="button" className="primary" onClick={saveTeacherClasses} disabled={!assignmentValues.length}>Save assignments</button></div>
+                </fieldset>}
                 <div className="person-detail-grid">
                   <div>
                     <span>Email</span>
@@ -821,41 +792,14 @@ export default function PeoplePage({ type, title }) {
               </label>
 
               {type === "student" && (
-                <div className="people-form-grid">
-                  <label>
-                    Class / STD
-                    <select
-                      value={form.std}
-                      onChange={(event) =>
-                        setForm({ ...form, std: event.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Choose class</option>
-                      {[10, 11, 12].map((std) => (
-                        <option key={std} value={std}>
-                          Class {std}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Division
-                    <select
-                      value={form.division}
-                      onChange={(event) =>
-                        setForm({ ...form, division: event.target.value })
-                      }
-                    >
-                      <option value="">No division (optional)</option>
-                      {["A", "B", "C"].map((division) => (
-                        <option key={division} value={division}>
-                          Division {division}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                <label>
+                  Class and division
+                  <select value={form.classDivisionId} onChange={event=>setForm({...form,classDivisionId:event.target.value})} required>
+                    <option value="">Choose class / division</option>
+                    {classDivisions.filter(item=>item.active).map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}
+                  </select>
+                  {!classDivisions.length&&<small>Set up classes first from the Class Structure tab.</small>}
+                </label>
               )}
 
               {type === "parent" && (
@@ -895,19 +839,15 @@ export default function PeoplePage({ type, title }) {
                   <legend>Assign teaching classes</legend>
                   <p>Select every class this teacher will teach.</p>
                   <div className="teacher-assignment-options">
-                    {teacherClassOptions.map((option) => (
-                      <label key={option.value}>
-                        <input
-                          type="checkbox"
-                          checked={form.teachingClasses.includes(option.value)}
-                          onChange={() => toggleClass(option.value)}
-                        />
-                        {option.label}
+                    {classDivisions.filter(item=>item.active).map(option => (
+                      <label key={option.id}>
+                        <input type="checkbox" checked={form.teachingClassDivisionIds.includes(option.id)} onChange={() => toggleClass(option.id)} />
+                        {option.displayName}
                       </label>
                     ))}
                   </div>
-                  {!form.teachingClasses.length && (
-                    <small>Choose a class, with or without a division.</small>
+                  {!form.teachingClassDivisionIds.length && (
+                    <small>Choose one or more configured class divisions.</small>
                   )}
                 </fieldset>
               )}
@@ -929,7 +869,7 @@ export default function PeoplePage({ type, title }) {
                   className="primary"
                   disabled={
                     saving ||
-                    (type === "teacher" && !form.teachingClasses.length)
+                    (type === "teacher" && !form.teachingClassDivisionIds.length)
                   }
                 >
                   {saving && <LoaderCircle size={15} className="spin" />}

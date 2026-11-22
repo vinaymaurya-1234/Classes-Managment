@@ -32,7 +32,8 @@ const serializeFee = (fee, student) => {
       email: student.email,
       phone: student.phone || '',
       avatarUrl: student.avatarUrl || '',
-      className: student.className || '',
+      className: student.classDivision?.displayName || student.className || '',
+      classDivisionId: student.classDivision?._id?.toString() || student.classDivision?.toString() || '',
     },
     academicYear: fee?.academicYear || CURRENT_ACADEMIC_YEAR,
     totalFee,
@@ -52,7 +53,7 @@ export const listStudentFees = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Only the principal can manage student fees' })
     }
 
-    const students = await User.find({ role: 'student' }).sort({ name: 1 })
+    const students = await User.find({ role: 'student' }).populate('classDivision').sort({ name: 1 })
     const feeRecords = await StudentFee.find({
       student: { $in: students.map(student => student._id) },
       academicYear: String(req.query.academicYear || CURRENT_ACADEMIC_YEAR).trim(),

@@ -7,20 +7,20 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
 import { getTeacherClasses } from '../api/teacher.api'
 
-const empty = { className: '', division: '', subject: '', title: '', instructions: '', dueDate: '', status: 'published' }
+const empty = { className: '', division: '', classDivisionId: '', subject: '', title: '', instructions: '', dueDate: '', status: 'published' }
 export default function HomeworkPage() {
  const { role } = useOutletContext(); const { token } = useAuth()
  const [items,setItems]=useState([]),[classes,setClasses]=useState([]),[form,setForm]=useState(empty),[show,setShow]=useState(false),[answers,setAnswers]=useState({}),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const load=async()=>{try{setLoading(true);setError('');const r=await api.get('/api/homework',token);setItems(r.data||[]);if(r.message)setNotice(r.message)}catch(e){setError(e.message)}finally{setLoading(false)}}
  useEffect(()=>{if(token)load()},[token])
- useEffect(()=>{if(token&&role==='teacher')getTeacherClasses(token).then(r=>{const assigned=(r.classes||[]).map(item=>({className:item.className,division:item.division||'',label:item.label||item.className}));setClasses(assigned);setForm(f=>f.className?f:{...empty,...(assigned[0]||{})})}).catch(e=>setError(e.message))},[token,role])
+ useEffect(()=>{if(token&&role==='teacher')getTeacherClasses(token).then(r=>{const assigned=(r.classes||[]).map(item=>({className:item.className,division:item.division||'',classDivisionId:item.classDivisionId||'',label:item.label||item.className}));setClasses(assigned);setForm(f=>f.className?f:{...empty,...(assigned[0]||{})})}).catch(e=>setError(e.message))},[token,role])
  const create=async e=>{e.preventDefault();try{setSaving(true);setError('');await api.post('/api/homework',form,token);setShow(false);setForm({...empty,...(classes[0]||{})});setNotice('Homework saved.');await load()}catch(e){setError(e.message)}finally{setSaving(false)}}
  const submit=async id=>{try{setSaving(true);setError('');await api.post('/api/homework/'+id+'/submit',{text:answers[id]||''},token);setNotice('Homework submitted successfully.');await load()}catch(e){setError(e.message)}finally{setSaving(false)}}
- const chooseClass=label=>{const selected=classes.find(item=>item.label===label);if(selected)setForm(f=>({...f,className:selected.className,division:selected.division}))}
+ const chooseClass=id=>{const selected=classes.find(item=>item.classDivisionId===id);if(selected)setForm(f=>({...f,className:selected.className,division:selected.division,classDivisionId:selected.classDivisionId}))}
  return <><SectionIntro eyebrow="TEACHING · HOMEWORK" title={role==='teacher'?'Homework & assignments':role==='parent'?'Child homework':'Your homework'} text={role==='teacher'?'Create assignments for a class, optionally targeting a division.':'Only homework assigned to your class and division appears here.'}>{role==='teacher'?<button className="primary" onClick={()=>setShow(!show)}><Plus size={16}/>{show?'Cancel':'Create homework'}</button>:<button className="secondary" onClick={load}>Refresh</button>}</SectionIntro>
  {error&&<p role="alert" className="workflow-alert">{error}</p>}{notice&&<p className="workflow-notice">{notice}</p>}
  {show&&<Card title="New assignment"><form className="workflow-form" onSubmit={create}>
- <label>Class & division (division optional)<select value={classes.find(item=>item.className===form.className&&item.division===form.division)?.label||''} onChange={e=>chooseClass(e.target.value)}><option value="">Choose assigned class</option>{classes.map(c=><option key={c.label} value={c.label}>{c.label}</option>)}</select></label>
+ <label>Class & division (division optional)<select value={form.classDivisionId||''} onChange={e=>chooseClass(e.target.value)}><option value="">Choose assigned class</option>{classes.filter(item=>item.classDivisionId).map(c=><option key={c.classDivisionId} value={c.classDivisionId}>{c.label}</option>)}</select></label>
  <label>Subject<input required value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} placeholder="Physics"/></label>
  <label>Title<input required value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Chapter practice"/></label>
  <label>Due date<input type="date" value={form.dueDate} onChange={e=>setForm({...form,dueDate:e.target.value})}/></label>

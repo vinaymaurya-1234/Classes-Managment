@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 const homeworkSchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   className: { type: String, required: true, trim: true, index: true },
+  classDivision: { type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision', default: null, index: true },
   division: { type: String, trim: true, uppercase: true, default: '', index: true },
   subject: { type: String, required: true, trim: true },
   title: { type: String, required: true, trim: true },

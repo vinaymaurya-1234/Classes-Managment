@@ -6,11 +6,13 @@ import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/client'
 import './exam-management.css'
+import { listClassDivisionsApi } from '../api/classes.api'
+import { getTeacherClasses } from '../api/teacher.api'
 
 const divisions = ['A', 'B', 'C']
 const stds = [10, 11, 12]
-const emptyQuestion = { std: '10', division: '', subject: '', chapter: '', type: 'mcq', text: '', optionA: '', optionB: '', optionC: '', optionD: '', correctAnswer: 'A', explanation: '', marks: '1', difficulty: 'medium' }
-const emptyPaper = { title: '', std: '10', division: '', subject: '', instructions: '', questionCount: '10', durationMinutes: '60', difficulty: '' }
+const emptyQuestion = { std: '', division: '', classDivisionId: '', subject: '', chapter: '', type: 'mcq', text: '', optionA: '', optionB: '', optionC: '', optionD: '', correctAnswer: 'A', explanation: '', marks: '1', difficulty: 'medium' }
+const emptyPaper = { title: '', std: '', division: '', classDivisionId: '', subject: '', instructions: '', questionCount: '10', durationMinutes: '60', difficulty: '' }
 const emptyExam = { paperId: '', title: '', type: 'unit', startsAt: '', durationMinutes: '60', instructions: '', answerReviewEnabled: false }
 const formatDate = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled'
 const getRows = workbook => {
@@ -29,11 +31,12 @@ export default function ExamManagementPage() {
   const isParent = role === 'parent'
   const [tab, setTab] = useState(isTeacher ? 'questions' : isPrincipal ? 'schedule' : 'exams')
   const [questions, setQuestions] = useState([])
+  const [classDivisionOptions, setClassDivisionOptions] = useState([])
   const [papers, setPapers] = useState([])
   const [exams, setExams] = useState([])
   const [results, setResults] = useState([])
   const [attempts, setAttempts] = useState([])
-  const [filters, setFilters] = useState({ std: '10', division: '', subject: '', chapter: '', difficulty: '', search: '' })
+  const [filters, setFilters] = useState({ std: '', division: '', classDivisionId: '', subject: '', chapter: '', difficulty: '', search: '' })
   const [questionForm, setQuestionForm] = useState(emptyQuestion)
   const [paperForm, setPaperForm] = useState(emptyPaper)
   const [examForm, setExamForm] = useState(emptyExam)
@@ -44,9 +47,10 @@ export default function ExamManagementPage() {
   const [columnMap, setColumnMap] = useState({})
   const [importName, setImportName] = useState('')
   const [standardMode, setStandardMode] = useState('excel')
-  const [manualStandard, setManualStandard] = useState('10')
+  const [manualStandard, setManualStandard] = useState('')
+  const [manualClassDivisionId, setManualClassDivisionId] = useState('')
   const [divisionMode, setDivisionMode] = useState('excel')
-  const [manualDivision, setManualDivision] = useState('A')
+  const [manualDivision, setManualDivision] = useState('')
   const [activeAttempt, setActiveAttempt] = useState(null)
   const [answerReview, setAnswerReview] = useState(null)
   const [printTarget, setPrintTarget] = useState(null)
@@ -58,6 +62,33 @@ export default function ExamManagementPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    const loadClassOptions = async () => {
+      try {
+        const result = await listClassDivisionsApi(token)
+        let options = result.classes || []
+        if (isTeacher) {
+          const assigned = await getTeacherClasses(token)
+          const assignedIds = new Set((assigned.classes || []).map(item => item.classDivisionId).filter(Boolean))
+          options = options.filter(item => assignedIds.has(item.id))
+        }
+        options = options.filter(item => item.active)
+        if (cancelled) return
+        setClassDivisionOptions(options)
+        if (options.length) {
+          setManualClassDivisionId(current => current || options[0].id)
+          setManualStandard(current => current || String(options[0].standard))
+          setManualDivision(current => current || options[0].division)
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Unable to load class structure for exams.')
+      }
+    }
+    loadClassOptions()
+    return () => { cancelled = true }
+  }, [token, isTeacher])
   const loadQuestions = useCallback(async () => {
     if (!isTeacher && !isPrincipal) return
     const query = new URLSearchParams()
@@ -134,7 +165,7 @@ export default function ExamManagementPage() {
   const saveQuestion = async event => {
     event.preventDefault(); setSaving(true); setError(''); setNotice('')
     try {
-      const body = { std: Number(questionForm.std), division: questionForm.division, subject: questionForm.subject, chapter: questionForm.chapter, type: questionForm.type, text: questionForm.text, options: ['A','B','C','D'].map(key => ({ key, text: questionForm['option' + key] })).filter(o => o.text.trim()), correctAnswer: questionForm.correctAnswer, explanation: questionForm.explanation, marks: Number(questionForm.marks), difficulty: questionForm.difficulty }
+      const body = { std: Number(questionForm.std), division: questionForm.division, classDivisionId: questionForm.classDivisionId, subject: questionForm.subject, chapter: questionForm.chapter, type: questionForm.type, text: questionForm.text, options: ['A','B','C','D'].map(key => ({ key, text: questionForm['option' + key] })).filter(o => o.text.trim()), correctAnswer: questionForm.correctAnswer, explanation: questionForm.explanation, marks: Number(questionForm.marks), difficulty: questionForm.difficulty }
       if (editingQuestion) await api.put('/api/exams/questions/' + editingQuestion, body, token)
       else await api.post('/api/exams/questions', body, token)
       setQuestionForm(emptyQuestion); setEditingQuestion(null); setNotice(editingQuestion ? 'Question updated.' : 'Question added to the bank.'); await loadQuestions()
@@ -144,7 +175,7 @@ export default function ExamManagementPage() {
 
   const editQuestion = question => {
     setEditingQuestion(question._id)
-    setQuestionForm({ ...emptyQuestion, std: String(question.className.match(/\d+/)?.[0] || 10), division: question.division || '', subject: question.subject, chapter: question.chapter || '', type: question.type, text: question.text, optionA: question.options?.find(o => o.key === 'A')?.text || '', optionB: question.options?.find(o => o.key === 'B')?.text || '', optionC: question.options?.find(o => o.key === 'C')?.text || '', optionD: question.options?.find(o => o.key === 'D')?.text || '', correctAnswer: question.correctAnswer || 'A', explanation: question.explanation || '', marks: String(question.marks || 1), difficulty: question.difficulty || 'medium' })
+    setQuestionForm({ ...emptyQuestion, std: String(question.className.match(/\d+/)?.[0] || 10), division: question.division || '', classDivisionId: question.classDivisionId || '', subject: question.subject, chapter: question.chapter || '', type: question.type, text: question.text, optionA: question.options?.find(o => o.key === 'A')?.text || '', optionB: question.options?.find(o => o.key === 'B')?.text || '', optionC: question.options?.find(o => o.key === 'C')?.text || '', optionD: question.options?.find(o => o.key === 'D')?.text || '', correctAnswer: question.correctAnswer || 'A', explanation: question.explanation || '', marks: String(question.marks || 1), difficulty: question.difficulty || 'medium' })
     setTab('questions')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -198,7 +229,7 @@ export default function ExamManagementPage() {
       setError('Choose the Division column in Excel, or select “Set once” and choose a division.')
       return
     }
-    if (divisionMode === 'manual' && !divisions.includes(manualDivision)) {
+    if (divisionMode === 'manual' && !classDivisionOptions.some(item=>item.division===manualDivision)) {
       setError('Choose a valid division for the whole spreadsheet.')
       return
     }
@@ -209,12 +240,12 @@ export default function ExamManagementPage() {
         const value = key => columnMap[key] ? row[columnMap[key]] : ''
         const classValue = String(value('std') || '').trim()
         const detectedStandard = classValue.match(/\d+/)?.[0] || ''
-        const stdValue = standardMode === 'manual' ? manualStandard.trim() : detectedStandard
+        const stdValue = standardMode === 'manual' ? classDivisionOptions.find(item=>item.id===manualClassDivisionId)?.standard : detectedStandard
         const detectedDivision = String(value('division') || classValue.match(/([ABC])$/i)?.[1] || '').trim().toUpperCase()
         const divisionValue = divisionMode === 'manual' ? manualDivision : detectedDivision
         return { std: Number(stdValue), division: divisionValue, subject: String(value('subject') || filters.subject).trim(), chapter: String(value('chapter') || '').trim(), text: String(value('text') || '').trim(), optionA: String(value('optionA') || '').trim(), optionB: String(value('optionB') || '').trim(), optionC: String(value('optionC') || '').trim(), optionD: String(value('optionD') || '').trim(), correctAnswer: String(value('correctAnswer') || '').trim(), type: String(value('type') || 'mcq').toLowerCase(), marks: Number(value('marks') || 1), difficulty: String(value('difficulty') || 'medium').toLowerCase(), explanation: String(value('explanation') || '').trim() }
       })
-      const invalidRow = mapped.findIndex(row => !Number.isInteger(row.std) || row.std < 1 || !divisions.includes(row.division))
+      const invalidRow = mapped.findIndex(row => !Number.isInteger(row.std) || row.std < 1 || !row.classDivisionId)
       if (invalidRow !== -1) {
         throw new Error(`Row ${invalidRow + 2} is missing a valid Standard or Division. Check the mapped Excel columns or use the “Set once” options.`)
       }
@@ -260,7 +291,12 @@ export default function ExamManagementPage() {
   }
 
   const startExam = async exam => {
-    if (!window.confirm(`${exam.title}\n\n${exam.instructions || 'Read every question carefully.'}\n\nDuration: ${exam.durationMinutes} minutes · Total marks: ${exam.totalMarks}\nThe timer starts when the exam opens. Continue?`)) return
+    if (!window.confirm(`${exam.title}
+
+${exam.instructions || 'Read every question carefully.'}
+
+Duration: ${exam.durationMinutes} minutes · Total marks: ${exam.totalMarks}
+The timer starts when the exam opens. Continue?`)) return
     setSaving(true); setError(''); setNotice('')
     try {
       const response = await api.post('/api/exams/exams/' + exam._id + '/start', {}, token)
@@ -300,7 +336,9 @@ export default function ExamManagementPage() {
 
   const gradeAttempt = async attempt => {
     const answers = attempt.answers.filter(a => a.question && !['mcq','true_false'].includes(a.question.type)).map(a => {
-      const raw = window.prompt(`Marks for: ${a.question.text}\nMaximum: ${a.question.marks}\nStudent answer: ${a.answer || '(blank)'}`, String(a.marksAwarded || 0))
+      const raw = window.prompt(`Marks for: ${a.question.text}
+Maximum: ${a.question.marks}
+Student answer: ${a.answer || '(blank)'}`, String(a.marksAwarded || 0))
       return raw === null ? null : { questionId: a.questionId, marksAwarded: Number(raw) }
     }).filter(Boolean)
     if (!answers.length) return
@@ -360,8 +398,7 @@ export default function ExamManagementPage() {
     {isTeacher && tab === 'questions' && <>
       <Card title={editingQuestion ? 'Edit question' : 'Add a question'}>
         <form className="exam-form" onSubmit={saveQuestion}>
-          <label>Class<select value={questionForm.std} onChange={e => setQuestionForm({ ...questionForm, std: e.target.value })}>{stds.map(std => <option key={std} value={std}>Class {std}</option>)}</select></label>
-          <label>Division (optional)<select value={questionForm.division} onChange={e => setQuestionForm({ ...questionForm, division: e.target.value })}><option value="">Any / no division</option>{divisions.map(d => <option key={d}>{d}</option>)}</select></label>
+          <label className="exam-full">Class / Division<select required value={questionForm.classDivisionId} onChange={e=>{const selected=classDivisionOptions.find(item=>item.id===e.target.value);setQuestionForm({...questionForm,classDivisionId:e.target.value,std:String(selected?.standard||''),division:selected?.division||''})}}><option value="">Select configured class</option>{classDivisionOptions.map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label>
           <label>Subject<input required value={questionForm.subject} onChange={e => setQuestionForm({ ...questionForm, subject: e.target.value })} placeholder="Mathematics"/></label>
           <label>Chapter / topic<input value={questionForm.chapter} onChange={e => setQuestionForm({ ...questionForm, chapter: e.target.value })} placeholder="Chapter 1"/></label>
           <label>Question type<select value={questionForm.type} onChange={e => setQuestionForm({ ...questionForm, type: e.target.value })}><option value="mcq">Multiple choice</option><option value="true_false">True / false</option><option value="short">Short answer</option><option value="long">Long answer</option></select></label>
@@ -374,11 +411,11 @@ export default function ExamManagementPage() {
           <div className="exam-form-actions exam-full"><button className="primary" disabled={saving}>{saving ? 'Saving...' : editingQuestion ? 'Update question' : <><Plus size={15}/>Add question</>}</button>{editingQuestion && <button type="button" className="secondary" onClick={() => { setEditingQuestion(null); setQuestionForm(emptyQuestion) }}>Cancel edit</button>}</div>
         </form>
       </Card>
-      <Card title="Import questions from Excel"><div className="exam-import-intro"><FileSpreadsheet size={24}/><div><strong>Upload .xlsx, .xls or .csv</strong><p>Choose a file, map its column names to question fields, review errors and import valid rows.</p></div></div><label className="exam-upload"><Upload size={16}/>Choose spreadsheet<input type="file" accept=".xlsx,.xls,.csv" onChange={e => parseFile(e.target.files?.[0])}/></label>{importName && <><p className="exam-muted">Selected: {importName} · {importRows.length} rows</p><div className="exam-import-assignment"><section className="exam-import-assignment-card"><div><strong>Standard for imported questions</strong><p>Choose whether each row supplies its own standard or use one standard for every question.</p></div><div className="exam-import-mode"><label><input type="radio" name="standardMode" checked={standardMode === 'excel'} onChange={() => setStandardMode('excel')}/> Find Standard in Excel</label><label><input type="radio" name="standardMode" checked={standardMode === 'manual'} onChange={() => setStandardMode('manual')}/> Set Standard once for the whole file</label></div>{standardMode === 'manual' ? <label className="exam-import-manual">Standard number<input type="number" min="1" step="1" value={manualStandard} onChange={e => setManualStandard(e.target.value)} placeholder="e.g. 5"/></label> : <p className="exam-import-help">Select the Standard column below.</p>}</section><section className="exam-import-assignment-card"><div><strong>Division for imported questions</strong><p>Read a division from each row or apply one division to the entire spreadsheet.</p></div><div className="exam-import-mode"><label><input type="radio" name="divisionMode" checked={divisionMode === 'excel'} onChange={() => setDivisionMode('excel')}/> Find Division in Excel</label><label><input type="radio" name="divisionMode" checked={divisionMode === 'manual'} onChange={() => setDivisionMode('manual')}/> Set Division once for the whole file</label></div>{divisionMode === 'manual' ? <label className="exam-import-manual">Division<select value={manualDivision} onChange={e => setManualDivision(e.target.value)}>{divisions.map(division => <option key={division} value={division}>Division {division}</option>)}</select></label> : <p className="exam-import-help">Select the Division column below.</p>}</section></div><div className="exam-column-map">{['std','division','subject','chapter','text','optionA','optionB','optionC','optionD','correctAnswer','type','marks','difficulty','explanation'].map(key => <label key={key}>{({std:'Class / standard',division:'Division',subject:'Subject',chapter:'Chapter',text:'Question text',optionA:'Option A',optionB:'Option B',optionC:'Option C',optionD:'Option D',correctAnswer:'Correct answer',type:'Question type',marks:'Marks',difficulty:'Difficulty',explanation:'Explanation'})[key]}<select value={columnMap[key] || ''} onChange={e => setColumnMap({ ...columnMap, [key]: e.target.value })}><option value="">Do not map this column</option>{importHeaders.map(header => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><button className="primary" disabled={saving || !columnMap.text || !columnMap.subject} onClick={importQuestions}><Upload size={15}/>{saving ? 'Importing...' : 'Validate and import'}</button></>}</Card>
-      <Card title="Question bank"><div className="exam-filter-grid"><label>Class<select value={filters.std} onChange={e => { setFilters({ ...filters, std: e.target.value }); setSelectedQuestions([]) }}>{stds.map(std => <option key={std}>{std}</option>)}</select></label><label>Division filter<select value={filters.division} onChange={e => { setFilters({ ...filters, division: e.target.value }); setSelectedQuestions([]) }}><option value="">All divisions</option>{divisions.map(d => <option key={d}>{d}</option>)}</select></label><label>Subject<select value={filters.subject} onChange={e => setFilters({ ...filters, subject: e.target.value })}><option value="">All subjects</option>{subjects.map(s => <option key={s}>{s}</option>)}</select></label><label>Chapter<select value={filters.chapter} onChange={e => setFilters({ ...filters, chapter: e.target.value })}><option value="">All chapters</option>{chapters.map(c => <option key={c}>{c}</option>)}</select></label><label>Difficulty<select value={filters.difficulty} onChange={e => setFilters({ ...filters, difficulty: e.target.value })}><option value="">All levels</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label><label>Search<input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} placeholder="Find a question"/></label></div><div className="exam-list-head"><span>{filteredQuestions.length} questions</span><button className="secondary" onClick={() => setTab('generator')}><FileText size={15}/>Use selected in paper</button></div>{filteredQuestions.length ? <div className="exam-question-list">{filteredQuestions.map(q => <article key={q._id} className="exam-bank-item"><label className="exam-select-question"><input type="checkbox" checked={selectedQuestions.includes(q._id)} onChange={e => setSelectedQuestions(current => e.target.checked ? [...current, q._id] : current.filter(id => id !== q._id))}/></label><div className="exam-bank-body"><div className="exam-badges"><span>{q.subject}</span><span>{q.chapter || 'No chapter'}</span><span>{q.difficulty}</span><span>{q.marks} marks</span></div><p>{q.text}</p><small>{q.type.replace('_',' ')} · {q.className}{q.division ? ' - ' + q.division : ''}</small></div><div className="exam-bank-actions"><button className="secondary" onClick={() => editQuestion(q)}>Edit</button><button className="danger-quiet" onClick={() => deleteQuestion(q._id)}>Delete</button></div></article>)}</div> : <div className="exam-state">No questions match the selected filters. Add a question or import a spreadsheet.</div>}</Card>
+      <Card title="Import questions from Excel"><div className="exam-import-intro"><FileSpreadsheet size={24}/><div><strong>Upload .xlsx, .xls or .csv</strong><p>Choose a file, map its column names to question fields, review errors and import valid rows.</p></div></div><label className="exam-upload"><Upload size={16}/>Choose spreadsheet<input type="file" accept=".xlsx,.xls,.csv" onChange={e => parseFile(e.target.files?.[0])}/></label>{importName && <><p className="exam-muted">Selected: {importName} · {importRows.length} rows</p><div className="exam-import-assignment"><section className="exam-import-assignment-card"><div><strong>Standard for imported questions</strong><p>Choose whether each row supplies its own standard or use one standard for every question.</p></div><div className="exam-import-mode"><label><input type="radio" name="standardMode" checked={standardMode === 'excel'} onChange={() => setStandardMode('excel')}/> Find Standard in Excel</label><label><input type="radio" name="standardMode" checked={standardMode === 'manual'} onChange={() => setStandardMode('manual')}/> Set Standard once for the whole file</label></div>{standardMode === 'manual' ? <label className="exam-import-manual">Class / Division<select value={manualClassDivisionId} onChange={e=>{const selected=classDivisionOptions.find(item=>item.id===e.target.value);setManualClassDivisionId(e.target.value);if(selected){setManualStandard(String(selected.standard));setManualDivision(selected.division);setDivisionMode('manual')}}}><option value="">Select configured class</option>{classDivisionOptions.map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label> : <p className="exam-import-help">Select the Standard column below. Each row must match a class configured by the principal.</p>}</section><section className="exam-import-assignment-card"><div><strong>Division for imported questions</strong><p>Read a division from each row or apply one division to the entire spreadsheet.</p></div><div className="exam-import-mode"><label><input type="radio" name="divisionMode" checked={divisionMode === 'excel'} onChange={() => setDivisionMode('excel')}/> Find Division in Excel</label><label><input type="radio" name="divisionMode" checked={divisionMode === 'manual'} onChange={() => setDivisionMode('manual')}/> Set Division once for the whole file</label></div>{divisionMode === 'manual' ? <label className="exam-import-manual">Division<select value={manualDivision} onChange={e=>setManualDivision(e.target.value)}>{[...new Set(classDivisionOptions.map(item=>item.division))].map(division=><option key={division} value={division}>{division}</option>)}</select></label> : <p className="exam-import-help">Select the Division column below. Each row must match a configured class division.</p>}</section></div><div className="exam-column-map">{['std','division','subject','chapter','text','optionA','optionB','optionC','optionD','correctAnswer','type','marks','difficulty','explanation'].map(key => <label key={key}>{({std:'Class / standard',division:'Division',subject:'Subject',chapter:'Chapter',text:'Question text',optionA:'Option A',optionB:'Option B',optionC:'Option C',optionD:'Option D',correctAnswer:'Correct answer',type:'Question type',marks:'Marks',difficulty:'Difficulty',explanation:'Explanation'})[key]}<select value={columnMap[key] || ''} onChange={e => setColumnMap({ ...columnMap, [key]: e.target.value })}><option value="">Do not map this column</option>{importHeaders.map(header => <option key={header} value={header}>{header}</option>)}</select></label>)}</div><button className="primary" disabled={saving || !columnMap.text || !columnMap.subject} onClick={importQuestions}><Upload size={15}/>{saving ? 'Importing...' : 'Validate and import'}</button></>}</Card>
+      <Card title="Question bank"><div className="exam-filter-grid"><label>Class / Division<select value={filters.classDivisionId} onChange={e=>{setFilters({...filters,classDivisionId:e.target.value,std:'',division:''});setSelectedQuestions([])}}><option value="">All configured classes</option>{classDivisionOptions.map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label><label>Subject<select value={filters.subject} onChange={e => setFilters({ ...filters, subject: e.target.value })}><option value="">All subjects</option>{subjects.map(s => <option key={s}>{s}</option>)}</select></label><label>Chapter<select value={filters.chapter} onChange={e => setFilters({ ...filters, chapter: e.target.value })}><option value="">All chapters</option>{chapters.map(c => <option key={c}>{c}</option>)}</select></label><label>Difficulty<select value={filters.difficulty} onChange={e => setFilters({ ...filters, difficulty: e.target.value })}><option value="">All levels</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label><label>Search<input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} placeholder="Find a question"/></label></div><div className="exam-list-head"><span>{filteredQuestions.length} questions</span><button className="secondary" onClick={() => setTab('generator')}><FileText size={15}/>Use selected in paper</button></div>{filteredQuestions.length ? <div className="exam-question-list">{filteredQuestions.map(q => <article key={q._id} className="exam-bank-item"><label className="exam-select-question"><input type="checkbox" checked={selectedQuestions.includes(q._id)} onChange={e => setSelectedQuestions(current => e.target.checked ? [...current, q._id] : current.filter(id => id !== q._id))}/></label><div className="exam-bank-body"><div className="exam-badges"><span>{q.subject}</span><span>{q.chapter || 'No chapter'}</span><span>{q.difficulty}</span><span>{q.marks} marks</span></div><p>{q.text}</p><small>{q.type.replace('_',' ')} · {q.className}{q.division ? ' - ' + q.division : ''}</small></div><div className="exam-bank-actions"><button className="secondary" onClick={() => editQuestion(q)}>Edit</button><button className="danger-quiet" onClick={() => deleteQuestion(q._id)}>Delete</button></div></article>)}</div> : <div className="exam-state">No questions match the selected filters. Add a question or import a spreadsheet.</div>}</Card>
     </>}
 
-    {isTeacher && tab === 'generator' && <Card title="Question paper generator"><form className="exam-form" onSubmit={createPaper}><label>Paper title<input required value={paperForm.title} onChange={e => setPaperForm({ ...paperForm, title: e.target.value })} placeholder="Unit Test 1"/></label><label>Class<select value={paperForm.std} onChange={e => setPaperForm({ ...paperForm, std: e.target.value })}>{stds.map(std => <option key={std}>{std}</option>)}</select></label><label>Division (optional)<select value={paperForm.division} onChange={e => setPaperForm({ ...paperForm, division: e.target.value })}><option value="">Any / no division</option>{divisions.map(d => <option key={d}>{d}</option>)}</select></label><label>Subject<input required value={paperForm.subject} onChange={e => setPaperForm({ ...paperForm, subject: e.target.value })} placeholder="Science"/></label><label>Duration (minutes)<input type="number" min="1" required value={paperForm.durationMinutes} onChange={e => setPaperForm({ ...paperForm, durationMinutes: e.target.value })}/></label><label>Random question count<input type="number" min="1" max="100" value={paperForm.questionCount} onChange={e => setPaperForm({ ...paperForm, questionCount: e.target.value })}/></label><label>Random difficulty<select value={paperForm.difficulty} onChange={e => setPaperForm({ ...paperForm, difficulty: e.target.value })}><option value="">Any difficulty</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label><label className="exam-full">Instructions<textarea rows={2} value={paperForm.instructions} onChange={e => setPaperForm({ ...paperForm, instructions: e.target.value })}/></label><div className="exam-full exam-generator-summary"><BookOpen size={18}/><div><strong>{selectedQuestions.length ? `${selectedQuestions.length} selected questions` : `Random selection: ${paperForm.questionCount} questions`}</strong><p>{selectedQuestions.length ? 'The selected questions will be used in the same order.' : 'Questions are randomly selected from your question bank for this class, division and subject.'}</p></div><button type="button" className="secondary" onClick={() => setTab('questions')}>Choose questions</button></div><button className="primary" disabled={saving}>{saving ? 'Generating...' : 'Generate question paper'}</button></form></Card>}
+    {isTeacher && tab === 'generator' && <Card title="Question paper generator"><form className="exam-form" onSubmit={createPaper}><label>Paper title<input required value={paperForm.title} onChange={e => setPaperForm({ ...paperForm, title: e.target.value })} placeholder="Unit Test 1"/></label><label>Class / Division<select required value={paperForm.classDivisionId} onChange={e=>{const selected=classDivisionOptions.find(item=>item.id===e.target.value);setPaperForm({...paperForm,classDivisionId:e.target.value,std:String(selected?.standard||''),division:selected?.division||''})}}><option value="">Select configured class</option>{classDivisionOptions.map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label><label>Subject<input required value={paperForm.subject} onChange={e => setPaperForm({ ...paperForm, subject: e.target.value })} placeholder="Science"/></label><label>Duration (minutes)<input type="number" min="1" required value={paperForm.durationMinutes} onChange={e => setPaperForm({ ...paperForm, durationMinutes: e.target.value })}/></label><label>Random question count<input type="number" min="1" max="100" value={paperForm.questionCount} onChange={e => setPaperForm({ ...paperForm, questionCount: e.target.value })}/></label><label>Random difficulty<select value={paperForm.difficulty} onChange={e => setPaperForm({ ...paperForm, difficulty: e.target.value })}><option value="">Any difficulty</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label><label className="exam-full">Instructions<textarea rows={2} value={paperForm.instructions} onChange={e => setPaperForm({ ...paperForm, instructions: e.target.value })}/></label><div className="exam-full exam-generator-summary"><BookOpen size={18}/><div><strong>{selectedQuestions.length ? `${selectedQuestions.length} selected questions` : `Random selection: ${paperForm.questionCount} questions`}</strong><p>{selectedQuestions.length ? 'The selected questions will be used in the same order.' : 'Questions are randomly selected from your question bank for this class, division and subject.'}</p></div><button type="button" className="secondary" onClick={() => setTab('questions')}>Choose questions</button></div><button className="primary" disabled={saving}>{saving ? 'Generating...' : 'Generate question paper'}</button></form></Card>}
 
     {isTeacher && tab === 'papers' && <Card title="Your question papers"><div className="exam-paper-grid">{papers.map(paper => <article className={'exam-paper-card ' + (printTarget === paper._id ? 'print-selected ' + (printAnswers ? 'print-answer-key' : 'print-question-paper') : '')} data-paper-id={paper._id} key={paper._id}><div className="exam-paper-top"><FileText size={20}/><span className={'exam-status ' + paper.status}>{paper.status}</span></div><h3>{paper.title}</h3><p>{paper.subject} · {paper.className}{paper.division ? ' - ' + paper.division : ''}</p><div className="exam-paper-stats"><span>{paper.questions?.length || 0} questions</span><span>{paper.totalMarks} marks</span><span>{paper.durationMinutes} min</span></div><div className="exam-paper-actions"><button className="secondary" onClick={() => printPaper(paper, false)}><Printer size={14}/>Print paper PDF</button><button className="secondary" onClick={() => printPaper(paper, true)}><FileText size={14}/>Answer key PDF</button>{paper.status !== 'approved' && <button className="primary" disabled={saving || paper.status === 'review'} onClick={() => paperAction(paper, 'submit')}><Send size={14}/>{paper.status === 'review' ? 'In review' : 'Submit for approval'}</button>}</div>{paper.reviewNote && <p className="exam-muted">Principal note: {paper.reviewNote}</p>}<details className="exam-paper-preview"><summary>Preview paper & answer key</summary><div className="exam-print-area"><h2>{paper.title}</h2><p>{paper.subject} · {paper.className}{paper.division ? ' - ' + paper.division : ''} · {paper.totalMarks} marks</p><ol>{(paper.questions || []).map(q => <li key={q._id}><p>{q.text} ({q.marks})</p>{q.options?.map(o => <div key={o.key}>{o.key}. {o.text}</div>)}<small className="exam-answer-key">Answer: {q.correctAnswer || 'Manual evaluation'}</small></li>)}</ol></div></details></article>)}</div>{!papers.length && <div className="exam-state">No papers yet. Generate one from the Question Bank.</div>}</Card>}
 

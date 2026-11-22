@@ -1,5 +1,7 @@
 import express from 'express'
 import Chapter from '../models/Chapter.js'
+import ClassDivision from '../models/ClassDivision.js'
+import User from '../models/User.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = express.Router()
@@ -58,37 +60,17 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const payload = normalisePayload(req.body)
-
-    if (
-      !payload.subject ||
-      !payload.className ||
-      !payload.chapterNumber ||
-      !payload.title
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subject, class, chapter number and title are required.',
-      })
-    }
-
-    const chapter = await Chapter.create({
-      ...payload,
-      teacher: req.user._id,
-    })
-
-    res.status(201).json({
-      success: true,
-      data: chapter,
-    })
+    const classDivisionId = String(req.body.classDivisionId || '').trim()
+    const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+    if (!classDivision) return res.status(400).json({ success: false, message: 'Choose an active class division from Class Structure.' })
+    payload.className = classDivision.displayName
+    const teacher = await User.findById(req.user._id).populate('teachingClassDivisions')
+    if (!teacher?.teachingClassDivisions?.some(item => String(item._id) === String(classDivision._id))) return res.status(403).json({ success: false, message: 'You are not assigned to this class division.' })
+    if (!payload.subject || !payload.chapterNumber || !payload.title) return res.status(400).json({ success: false, message: 'Subject, chapter number and title are required.' })
+    const chapter = await Chapter.create({ ...payload, classDivision: classDivision._id, teacher: req.user._id })
+    res.status(201).json({ success: true, data: chapter })
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message:
-          'This chapter number already exists for this subject and class in your chapters.',
-      })
-    }
-
+    if (error.code === 11000) return res.status(409).json({ success: false, message: 'This chapter number already exists for this subject and class in your chapters.' })
     next(error)
   }
 })
