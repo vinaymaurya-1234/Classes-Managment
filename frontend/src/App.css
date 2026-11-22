@@ -1204,3 +1204,16 @@
 .timetable-class-empty{padding:22px;text-align:center;color:var(--muted);font-size:10px}
 @media(max-width:800px){.timetable-all-classes{padding:12px}.timetable-all-classes>header{flex-direction:column}.timetable-class-count{align-self:flex-start}.timetable-class-overview-days{overflow:visible}.timetable-class-overview{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}.timetable-class-overview-days{min-width:805px}}
 @media(max-width:560px){.timetable-class-overview-title{align-items:flex-start;flex-direction:column;gap:4px}.timetable-all-classes>header h3{font-size:15px}.timetable-all-classes>header p{font-size:9px}}
+
+
+/* Today's timetable grouped by class */
+.timetable-today-by-class{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start;gap:12px;overflow:visible;padding:14px 2px 4px}
+.timetable-today-class{min-width:0;border:1px solid var(--line);border-radius:12px;background:#fbfefc;overflow:hidden}
+.timetable-today-class>header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;background:#f0f8f3;border-bottom:1px solid var(--line)}
+.timetable-today-class>header strong{font-size:13px;color:var(--dark)}
+.timetable-today-class>header span{font-size:9px;color:var(--muted);font-weight:750}
+.timetable-today-class-lectures{display:grid;gap:8px;padding:10px}
+.timetable-today-class .timetable-today-lecture{width:100%;min-width:0;min-height:unset;flex:none;padding:12px;margin:0}
+.timetable-today-class .timetable-today-lecture h4{margin:8px 0 5px}
+.timetable-today-class .timetable-today-lecture p{margin:0 0 4px}
+@media(max-width:560px){.timetable-today-by-class{grid-template-columns:minmax(0,1fr);gap:10px}.timetable-today-class-lectures{gap:7px;padding:8px}.timetable-today-class>header{padding:10px 11px}}
