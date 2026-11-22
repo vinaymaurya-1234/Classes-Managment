@@ -11,7 +11,6 @@ const principalOnly = req => req.user?.role === 'principal'
 const labelFor = standard => `Class ${standard}`
 
 async function seedFromLegacyData() {
-  if (await ClassDivision.exists({})) return
   const standards = new Map()
   const students = await User.find({ role: 'student' }).select('std division className classDivision').lean()
   students.forEach(student => {
@@ -55,17 +54,18 @@ async function seedFromLegacyData() {
       docs.push({ standard, standardLabel, division, displayName: `${standardLabel} - ${division}`, active: true })
     }
   }
-  await ClassDivision.insertMany(docs, { ordered: false })
+  if (!(await ClassDivision.exists({}))) await ClassDivision.insertMany(docs, { ordered: false })
   const created = await ClassDivision.find({ active: true }).lean()
   const byKey = new Map(created.map(item => [`${item.standard}:${item.division}`, item]))
   const studentOps = students.flatMap(student => {
+    if (student.classDivision) return []
     const standard = Number(student.std || String(student.className || '').match(/\d+/)?.[0])
     const division = String(student.division || 'A').toUpperCase()
     const doc = byKey.get(`${standard}:${division}`)
     return doc ? [{ updateOne: { filter: { _id: student._id }, update: { $set: { classDivision: doc._id, std: doc.standard, division: doc.division, className: `Class ${doc.standard}` } } }] : []
   })
   if (studentOps.length) await User.bulkWrite(studentOps)
-  const teacherOps = teachers.map(teacher => {
+  const teacherOps = teachers.filter(teacher => !(teacher.teachingClassDivisions || []).length).map(teacher => {
     const ids = (teacher.teachingClasses || []).flatMap(value => {
       const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*(?:division\s*)?([a-z0-9_-]{1,8}))?/i)
       if (!match) return []
@@ -78,6 +78,7 @@ async function seedFromLegacyData() {
   })
   if (teacherOps.length) await User.bulkWrite(teacherOps)
   const timetableOps = timetable.flatMap(entry => {
+    if (entry.classDivision) return []
     const standard = Number(entry.standard || String(entry.className || '').match(/\d+/)?.[0])
     const division = String(entry.division || 'A').toUpperCase()
     const doc = byKey.get(`${standard}:${division}`)
