@@ -13,6 +13,14 @@ const nav = {
 }
 const icons = { overview:LayoutDashboard, students:Users, teachers:Users, parents:Users, 'class-structure':Layers3, timetable:CalendarDays, attendance:CheckCircle2, fees:CreditCard, results:Trophy, exams:ClipboardList, notices:MessageSquare, classes:BookOpen, chapters:BookOpen, homework:ClipboardList, children:Users, chat:MessageSquare }
 
+const getIndiaDateTime = () => {
+  const now = new Date()
+  const hour = Number(new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', hourCycle: 'h23' }).format(now))
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const date = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)
+  return { greeting, date }
+}
+
 const Avatar = ({ user, className = 'avatar' }) => user?.avatarUrl ? <img className={className + ' avatar-image'} src={user.avatarUrl} alt={user.name || 'Profile'} /> : <span className={className}>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
 
 export default function AppLayout({ children }) {
@@ -31,6 +39,8 @@ export default function AppLayout({ children }) {
   const profileMenuRef = useRef(null)
   const sidebarProfileRef = useRef(null)
   const info = roles[role]
+  const { greeting, date } = getIndiaDateTime()
+  const firstName = user?.name?.trim().split(/\\s+/)[0] || info.label
   const currentKey = location.pathname.split('/')[2] || 'overview'
   const pageLabel = nav[role].find(x => x[1] === currentKey)?.[0] || 'Overview'
   const filtered = useMemo(() => search, [search])
@@ -99,7 +109,7 @@ export default function AppLayout({ children }) {
     </div>
   </div>}
 </div><div className="profile-menu" ref={profileMenuRef}><button className="top-avatar-button" onClick={()=>setProfileOpen(v=>!v)} aria-label="Open profile menu"><Avatar user={user} className="top-avatar"/></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><Avatar user={user}/><div><strong>{user?.name || info.label}</strong><span>{user?.email || info.label}</span></div></div><div className="profile-dropdown-divider"/><Link to="/profile" onClick={()=>setProfileOpen(false)}>Edit your profile</Link><button onClick={signOut}>Logout</button></div>}</div></div></header>
-      <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{({principal:'Good morning, Principal.',teacher:'Ready for today’s lessons?',student:'Good morning, Aarav.',parent:'Welcome back.'})[role]}</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>Friday, 2 October 2026</span></div></div>{children || <Outlet context={{role,search,setSearch,go}}/>}</div>
+      <div className="content"><div className="role-banner"><div><span className="eyebrow">{role==='principal'?'ADMINISTRATION':role.toUpperCase()}</span><h1>{greeting}, {firstName}.</h1><p>{({principal:'Everything happening across your tuition centre, in one calm view.',teacher:'Manage your chapters, lectures, attendance and student work.',student:'Your lectures, attendance, homework and results are all here.',parent:'Stay connected with your child’s learning and school updates.'})[role]}</p></div><div className="date-chip"><CalendarDays size={16}/><span>{date}</span></div></div>{children || <Outlet context={{role,search,setSearch,go}}/>}</div>
     </main>
   </div>
 }

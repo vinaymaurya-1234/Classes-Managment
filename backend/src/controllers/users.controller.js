@@ -18,6 +18,7 @@ const publicUser = user => {
     teachingClasses: teachingDocs.length ? teachingDocs.map(item => item.displayName || item.toString()) : (user.teachingClasses || []),
     teachingClassDivisionIds: teachingDocs.map(item => item?._id?.toString()).filter(Boolean),
     children: (user.children || []).map(child => child?._id ? ({ id: child._id.toString(), name: child.name, email: child.email, std: child.std ?? null, division: child.division || '', className: child.classDivision?.displayName || child.className || '', classDivisionId: child.classDivision?._id?.toString() || '' }) : ({ id: child.toString() })),
+    mustChangePassword: Boolean(user.mustChangePassword),
     createdAt: user.createdAt,
   }
 }
@@ -39,6 +40,7 @@ export const createUser = async (req,res,next) => {
     if(!requirePrincipal(req)) return res.status(403).json({success:false,message:'Only the principal can create users'})
     const name=String(req.body.name||'').trim(), email=String(req.body.email||'').trim().toLowerCase(), password=String(req.body.password||''), role=String(req.body.role||'').trim().toLowerCase()
     const phone=String(req.body.phone||'').trim(), avatarUrl=String(req.body.avatarUrl||'').trim()
+    const parentName=String(req.body.parentName||'').trim(), parentEmail=String(req.body.parentEmail||'').trim().toLowerCase(), parentPassword=String(req.body.parentPassword||''), parentPhone=String(req.body.parentPhone||'').trim()
     const classDivisionId=String(req.body.classDivisionId||'').trim()
     const teachingClassDivisionIds=Array.isArray(req.body.teachingClassDivisionIds)?[...new Set(req.body.teachingClassDivisionIds.map(String))]:[]
     const childIds=Array.isArray(req.body.childIds)?[...new Set(req.body.childIds.map(String))]:[]
@@ -46,6 +48,8 @@ export const createUser = async (req,res,next) => {
     if(!MANAGED_ROLES.includes(role)) return res.status(400).json({success:false,message:'Only teacher, student or parent accounts can be created here'})
     if(password.length<8) return res.status(400).json({success:false,message:'Password must be at least 8 characters'})
     if(role==='student'&&!classDivisionId) return res.status(400).json({success:false,message:'Select a class and division from the school class structure.'})
+    if(role==='student'&&(!parentName||!parentEmail)) return res.status(400).json({success:false,message:'Parent name and parent Gmail are required.'})
+    if(role==='student'&&parentEmail===email) return res.status(400).json({success:false,message:'Student and parent accounts must use different email addresses.'})
     if(role==='teacher'&&!teachingClassDivisionIds.length) return res.status(400).json({success:false,message:'Assign at least one configured class/division to the teacher.'})
     const allClassIds=[...(role==='student'?[classDivisionId]:[]),...(role==='teacher'?teachingClassDivisionIds:[])]
     if(allClassIds.some(id=>!mongoose.isValidObjectId(id))) return res.status(400).json({success:false,message:'Invalid class/division selection.'})
@@ -55,6 +59,16 @@ export const createUser = async (req,res,next) => {
     if(role!=='parent'&&childIds.length) return res.status(400).json({success:false,message:'Only parent accounts can be linked to children.'})
     if(role==='parent'&&childIds.length){const students=await User.find({_id:{$in:childIds},role:'student'}).select('_id');if(students.length!==childIds.length)return res.status(400).json({success:false,message:'Choose valid student accounts only.'})}
     if(await User.exists({email})) return res.status(409).json({success:false,message:'A user with this email already exists'})
+    let parentAccount = null
+    let createParentAccount = false
+    if(role==='student'){
+      parentAccount = await User.findOne({email:parentEmail})
+      if(parentAccount && parentAccount.role!=='parent') return res.status(409).json({success:false,message:'This Gmail is already used by a non-parent account.'})
+      if(!parentAccount){
+        if(parentPassword.length<8) return res.status(400).json({success:false,message:'For a new parent account, temporary password must be at least 8 characters.'})
+        createParentAccount = true
+      }
+    }
     const teacherDocs=role==='teacher'?classDocs:[]
     const user=await User.create({
       name,email,password:await bcrypt.hash(password,12),role,phone,avatarUrl,
@@ -62,6 +76,21 @@ export const createUser = async (req,res,next) => {
       ...(role==='teacher'?{teachingClassDivisions:teacherDocs.map(doc=>doc._id),teachingClasses:teacherDocs.map(doc=>doc.displayName)}:{}),
       ...(role==='parent'?{children:childIds}:{})
     })
+    if(role==='student'){
+      if(createParentAccount){
+        try {
+          parentAccount = await User.create({name:parentName,email:parentEmail,password:await bcrypt.hash(parentPassword,12),role:'parent',phone:parentPhone,children:[user._id],mustChangePassword:true})
+        } catch(parentError) {
+          await User.deleteOne({_id:user._id})
+          throw parentError
+        }
+      } else {
+        parentAccount.name = parentName || parentAccount.name
+        if(parentPhone) parentAccount.phone = parentPhone
+        if(!parentAccount.children.some(id=>id.toString()===user._id.toString())) parentAccount.children.push(user._id)
+        await parentAccount.save()
+      }
+    }
     const populated=await populateUser(User.findById(user._id))
     res.status(201).json({success:true,message:`${role.charAt(0).toUpperCase()+role.slice(1)} account created successfully`,user:publicUser(populated)})
   }catch(error){if(error?.code===11000)return res.status(409).json({success:false,message:'A user with this email already exists'});next(error)}

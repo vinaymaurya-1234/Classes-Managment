@@ -17,6 +17,7 @@ import PeoplePage from '../pages/PeoplePage'
 import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
 import ClassStructurePage from '../pages/ClassStructurePage'
+import ParentPasswordSetupPage from '../pages/ParentPasswordSetupPage'
 import ChatPage from '../pages/ChatPage'
 import { useAuth } from '../context/AuthContext'
 
@@ -26,6 +27,7 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={'/' + user.role + '/overview'} replace /> : <LoginPage />} />
+      <Route path="/parent/change-password" element={<ProtectedRoute><ParentPasswordSetupPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/" element={<Navigate to={user ? '/' + user.role + '/overview' : '/login'} replace />} />
