@@ -64,6 +64,7 @@ export default function PeoplePage({ type, title }) {
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
   const [selectedChildIds, setSelectedChildIds] = useState([]);
+  const [showParentPassword, setShowParentPassword] = useState(false);
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -155,6 +156,7 @@ export default function PeoplePage({ type, title }) {
 
   const openModal = async () => {
     setForm(emptyForm());
+    setShowParentPassword(false);
     setError("");
     setModalOpen(true);
     if (type === "parent" && token && !availableStudents.length) {
@@ -217,6 +219,7 @@ export default function PeoplePage({ type, title }) {
     window.crypto.getRandomValues(bytes);
     const password = Array.from(bytes, value => chars[value % chars.length]).join("");
     setForm(current => ({ ...current, password }));
+    setShowParentPassword(true);
   };
 
   const linkStudentsToParent = async () => {
@@ -844,8 +847,8 @@ export default function PeoplePage({ type, title }) {
               </label>
               <label>
                 Temporary password
-                <input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required />
-                {type === "parent" && <button type="button" className="secondary" onClick={generateParentPassword}>Generate secure password</button>}
+                <input type={type === "parent" && showParentPassword ? "text" : "password"} minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required />
+                {type === "parent" && <div className="parent-password-actions"><button type="button" className="secondary" onClick={generateParentPassword}>Generate secure password</button><button type="button" className="secondary" onClick={() => setShowParentPassword(value => !value)}>{showParentPassword ? "Hide password" : "Show password"}</button></div>}
               </label>
               <label>
                 Phone
