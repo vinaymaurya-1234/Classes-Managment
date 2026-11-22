@@ -1,5 +1,6 @@
 import TimetableEntry from '../models/TimetableEntry.js'
-import User from '../models/User.js'\nimport ClassDivision from '../models/ClassDivision.js'
+import User from '../models/User.js'
+import ClassDivision from '../models/ClassDivision.js'
 
 const requirePrincipal = req => req.user?.role === 'principal'
 const isValidDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -36,7 +37,8 @@ const publicEntry = entry => ({
   startTime: entry.startTime,
   endTime: entry.endTime,
   subject: entry.subject,
-  className: entry.classDivision?.displayName || entry.className,\n  classDivisionId: entry.classDivision?._id?.toString() || entry.classDivision?.toString() || '',
+  className: entry.classDivision?.displayName || entry.className,
+  classDivisionId: entry.classDivision?._id?.toString() || entry.classDivision?.toString() || '',
   standard: entry.standard ?? parseClassPlacement(entry.className).standard,
   division: entry.division || parseClassPlacement(entry.className).division,
   room: entry.room || '',
@@ -122,7 +124,8 @@ export const updateTimetableEntry = async (req, res, next) => {
     const entry = await TimetableEntry.findById(req.params.id)
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
-    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']\n    if (req.body.classDivisionId !== undefined) { const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true }); if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' }); entry.classDivision = selected._id; entry.className = selected.displayName; entry.standard = selected.standard; entry.division = selected.division }
+    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
+    if (req.body.classDivisionId !== undefined) { const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true }); if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' }); entry.classDivision = selected._id; entry.className = selected.displayName; entry.standard = selected.standard; entry.division = selected.division }
     if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
     if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
     if (req.body.className !== undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(entry.className).standard
