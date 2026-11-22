@@ -1309,11 +1309,29 @@
 
 
 /* Student admission modal: parent login section */
-.user-modal{
-  width:min(560px,100%);
-  max-height:calc(100vh - 36px);
+.user-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow-y:auto;
   overscroll-behavior:contain;
+  padding:20px;
+  background:rgba(22,45,33,.48);
+  backdrop-filter:blur(6px);
+  -webkit-overflow-scrolling:touch;
+}
+.user-modal{
+  width:min(560px,100%);
+  max-height:calc(100dvh - 40px);
+  margin:auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  flex:0 0 auto;
 }
 .user-modal>form{display:grid;gap:2px}
 .user-modal label{display:grid;gap:6px;margin-top:13px;line-height:1.35}
@@ -1374,7 +1392,7 @@
   overflow-wrap:anywhere;
 }
 @media(max-width:600px){
-  .user-modal-backdrop{padding:10px}
-  .user-modal{max-height:calc(100dvh - 20px);padding:18px}
+  .user-modal-backdrop{align-items:flex-start;padding:10px}
+  .user-modal{max-height:calc(100dvh - 20px);margin:0 auto;padding:18px}
   .parent-login-section{padding:12px}
 }
