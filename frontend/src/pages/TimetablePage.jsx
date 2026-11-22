@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Edit3, LoaderCircle, Plus, Trash2, UserRound, X } from 'lucide-react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { createTimetableEntryApi, deleteTimetableEntryApi, getTimetableRangeApi, getTimetableTeachersApi, updateTimetableEntryApi } from '../api/timetable.api'\nimport { listClassDivisionsApi } from '../api/classes.api'
+import { createTimetableEntryApi, deleteTimetableEntryApi, getTimetableRangeApi, getTimetableTeachersApi, updateTimetableEntryApi } from '../api/timetable.api'
+import { listClassDivisionsApi } from '../api/classes.api'
 
 const todayIndia=()=>{const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(p.map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day}
 const d=v=>new Date(v+'T00:00:00Z')
