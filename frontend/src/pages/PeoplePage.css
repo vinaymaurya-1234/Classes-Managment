@@ -57,3 +57,11 @@
 .parent-child-edit-row>small{overflow-wrap:anywhere}
 .parent-child-edit-row>button{margin-left:auto}
 @media(max-width:700px){.parent-child-edit-row{align-items:flex-start}.parent-child-edit-row>button{margin-left:0}}
+
+
+/* Parent actions on student detail */
+.linked-parent-actions-card{display:flex;align-items:center;gap:12px}
+.linked-parent-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.linked-parent-actions .linked-parent-link{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--green-700,#176b45);font-weight:700;cursor:pointer;padding:8px}
+.linked-parent-edit{padding:8px 12px!important;min-height:34px}
+@media(max-width:700px){.linked-parent-actions-card{flex-wrap:wrap}.linked-parent-actions{width:100%;margin-left:0;justify-content:flex-end}}
