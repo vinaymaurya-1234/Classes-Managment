@@ -62,6 +62,8 @@ export default function PeoplePage({ type, title }) {
   const [availableStudents, setAvailableStudents] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
+  const [studentClassFilter, setStudentClassFilter] = useState("all");
+  const [studentDivisionFilter, setStudentDivisionFilter] = useState("all");
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -84,8 +86,8 @@ export default function PeoplePage({ type, title }) {
   const visibleData = useMemo(() => {
     const query = String(search).toLowerCase().trim();
     const source = canManage ? data : type === "student" ? students : teachers;
-    return source.filter((item) =>
-      [
+    return source.filter((item) => {
+      const matchesSearch = [
         item.name,
         item.email,
         item.phone,
@@ -97,9 +99,16 @@ export default function PeoplePage({ type, title }) {
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(query),
-    );
-  }, [canManage, data, search, type]);
+        .includes(query);
+      const matchesClass =
+        studentClassFilter === "all" ||
+        String(item.std ?? "").trim() === studentClassFilter;
+      const matchesDivision =
+        studentDivisionFilter === "all" ||
+        String(item.division || "").trim().toUpperCase() === studentDivisionFilter;
+      return matchesSearch && (type !== "student" || (matchesClass && matchesDivision));
+    });
+  }, [canManage, data, search, type, studentClassFilter, studentDivisionFilter]);
 
   const openPerson = async (person) => {
     setSelectedPerson(person);
@@ -675,6 +684,42 @@ export default function PeoplePage({ type, title }) {
         </Card>
       ) : (
         <Card title={`${heading} directory`}>
+          {canManage && type === "student" && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "end", marginBottom: 20 }}>
+              <label style={{ display: "grid", gap: 6, minWidth: 170, color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
+                Class / Standard
+                <select
+                  value={studentClassFilter}
+                  onChange={(event) => setStudentClassFilter(event.target.value)}
+                  style={{ minHeight: 42, padding: "0 12px", border: "1px solid var(--border, #dbe2e8)", borderRadius: 10, background: "var(--surface, #fff)", color: "var(--text-primary, #17212b)" }}
+                >
+                  <option value="all">All classes</option>
+                  {[10, 11, 12].map((std) => <option key={std} value={String(std)}>Class {std}</option>)}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6, minWidth: 170, color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
+                Division
+                <select
+                  value={studentDivisionFilter}
+                  onChange={(event) => setStudentDivisionFilter(event.target.value)}
+                  style={{ minHeight: 42, padding: "0 12px", border: "1px solid var(--border, #dbe2e8)", borderRadius: 10, background: "var(--surface, #fff)", color: "var(--text-primary, #17212b)" }}
+                >
+                  <option value="all">All divisions</option>
+                  {["A", "B", "C"].map((division) => <option key={division} value={division}>Division {division}</option>)}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => { setStudentClassFilter("all"); setStudentDivisionFilter("all"); }}
+              >
+                Clear filters
+              </button>
+              <span style={{ marginLeft: "auto", color: "var(--text-secondary, #64748b)", fontSize: 13 }}>
+                Showing {visibleData.length} of {data.length} students
+              </span>
+            </div>
+          )}
           {loading ? (
             <div className="people-state">
               <LoaderCircle size={18} className="spin" />
