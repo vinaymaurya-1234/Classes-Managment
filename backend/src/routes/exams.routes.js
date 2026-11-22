@@ -159,11 +159,13 @@ router.put('/questions/:id', async (req, res, next) => {
     if (!isTeacher(req.user) || !validId(req.params.id)) return forbidden(res)
     const question = await Question.findOne({ _id: req.params.id, teacher: req.user._id })
     if (!question) return fail(res, 404, 'Question not found.')
-    const std = req.body.std === undefined ? Number(String(question.className).match(/\d+/)?.[0]) : Number(req.body.std)
-    const division = req.body.division === undefined ? question.division : String(req.body.division).toUpperCase()
-    if (!stds.includes(std) || (division && !divisions.includes(division))) return fail(res, 400, 'Choose a valid class and optionally division A, B or C.')
-    if (!await canTeach(req.user, std, division)) return forbidden(res)
-    question.className = `Class ${std}`; question.division = division
+    const classDivisionId = String(req.body.classDivisionId || question.classDivision || '')
+    const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+    const std = classDivision?.standard || (req.body.std === undefined ? Number(String(question.className).match(/\\d+/)?.[0]) : Number(req.body.std))
+    const division = classDivision?.division || (req.body.division === undefined ? question.division : String(req.body.division).toUpperCase())
+    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (classDivisionId && !classDivision)) return fail(res, 400, 'Choose a configured class and division.')
+    if (!await canTeach(req.user, std, division, classDivisionId)) return forbidden(res)
+    question.className = `Class ${std}`; question.division = division; question.classDivision = classDivision?._id || null
     const allowed = ['subject','chapter','topic','type','text','options','correctAnswer','explanation','marks','difficulty','tags']
     for (const key of allowed) if (req.body[key] !== undefined) question[key] = req.body[key]
     await question.save()
