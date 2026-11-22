@@ -52,7 +52,7 @@ export default function WeeklyTimetablePage(){
     if (!window.confirm('Permanently clear all timetable entries for ' + label + '? This affects all dates and cannot be undone.')) return
     setSaving(true); setError(''); setSuccess('')
     try {
-      const result = await clearClassTimetableApi(token, standard, division)
+      const result = await clearClassTimetableApi(token, standard, division, classDivisionId)
       setSlots([])
       setAllLoadedSlots(current => current.filter(slot => !(String(slot.classNumber) === String(standard) && (slot.division || 'A') === division)))
       setSuccess(result.message || 'Cleared timetable for ' + label + '.')
