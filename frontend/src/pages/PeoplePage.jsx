@@ -202,12 +202,7 @@ export default function PeoplePage({ type, title }) {
   };
 
   const toggleClass = (value) => {
-    setForm((current) => ({
-      ...current,
-      teachingClasses: current.teachingClasses.includes(value)
-        ? current.teachingClasses.filter((item) => item !== value)
-        : [...current.teachingClasses, value],
-    }));
+    setForm(current => ({ ...current, teachingClassDivisionIds: current.teachingClassDivisionIds.includes(value) ? current.teachingClassDivisionIds.filter(item=>item!==value) : [...current.teachingClassDivisionIds,value] }))
   };
 
   const submit = async (event) => {
@@ -242,49 +237,29 @@ export default function PeoplePage({ type, title }) {
   };
 
   const updateTeacherClasses = async (person) => {
-    const current = (person.teachingClassDivisionIds || []).join(", ");
-    const input = window.prompt(
-      "Enter assigned classes separated by commas. Example: Class 11 - A, Class 12 - B",
-      current,
-    );
-    if (input === null) return;
-    const teachingClasses = [
-      ...new Set(
-        input
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
-      ),
-    ];
-    try {
-      await updateUserApi(token, person.id, { teachingClassDivisionIds: teachingClasses });
-      await loadUsers();
-    } catch (err) {
-      setError(err.message || "Unable to update teacher assignments.");
-    }
+    const options = classDivisions.filter(item=>item.active)
+    if (!options.length) { setError('Configure classes first in Class Structure.'); return }
+    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\\n')
+    const current = (person.teachingClassDivisionIds || []).map(id=>options.find(item=>item.id===id)?.displayName).filter(Boolean).join(', ')
+    const input = window.prompt(`Enter class option numbers separated by commas:\\n\\n${choices}\\n\\nCurrently assigned: ${current}`, '')
+    if (input === null) return
+    const selected = [...new Set(input.split(',').map(value=>Number(value.trim())).filter(value=>Number.isInteger(value)&&value>=1&&value<=options.length))]
+    if (!selected.length) { setError('Select at least one valid class division.'); return }
+    try { await updateUserApi(token,person.id,{teachingClassDivisionIds:selected.map(index=>options[index-1].id)}); await loadUsers() }
+    catch(err) { setError(err.message || 'Unable to update teacher assignments.') }
   };
 
   const updatePlacement = async (person) => {
-    const stdInput = window.prompt(
-      "Student standard (10, 11 or 12)",
-      String(person.std || 10),
-    );
-    if (stdInput === null) return;
-    const divisionInput = window.prompt(
-      "Student division (A, B or C, or leave blank)",
-      person.division || "",
-    );
-    if (divisionInput === null) return;
-    try {
-      await api.put(
-        `/api/users/${encodeURIComponent(person.id)}/class-placement`,
-        { std: Number(stdInput), division: divisionInput.trim().toUpperCase() },
-        token,
-      );
-      await loadUsers();
-    } catch (err) {
-      setError(err.message || "Unable to update student class.");
-    }
+    const options = classDivisions.filter(item=>item.active)
+    if (!options.length) { setError('Configure classes first in Class Structure.'); return }
+    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\\n')
+    const current = options.findIndex(item=>item.id===person.classDivisionId)
+    const selected = window.prompt(`Choose class/division number:\\n\\n${choices}`,current>=0?String(current+1):'')
+    if (selected === null) return
+    const index = Number(selected.trim())
+    if (!Number.isInteger(index)||index<1||index>options.length) { setError('Enter a valid class option number.'); return }
+    try { await api.put(`/api/users/${encodeURIComponent(person.id)}/class-placement`,{classDivisionId:options[index-1].id},token); await loadUsers() }
+    catch(err) { setError(err.message || 'Unable to update student class.') }
   };
 
   return (
