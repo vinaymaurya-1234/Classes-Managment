@@ -19,6 +19,32 @@ router.get('/parent-lookup', async (req, res, next) => {
     return res.json({ success: true, parent: parent ? { id: parent._id.toString(), name: parent.name, email: parent.email } : null })
   } catch (error) { next(error) }
 })
+router.put('/:id/profile', async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'principal') return res.status(403).json({ success: false, message: 'Only the principal can edit profiles.' })
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid user ID.' })
+    const user = await User.findOne({ _id: req.params.id, role: { $in: ['student', 'parent'] } })
+    if (!user) return res.status(404).json({ success: false, message: 'Student or parent not found.' })
+    const name = String(req.body.name || '').trim()
+    const email = String(req.body.email || '').trim().toLowerCase()
+    const phone = String(req.body.phone || '').trim()
+    if (!name || !email) return res.status(400).json({ success: false, message: 'Name and email are required.' })
+    const duplicate = await User.findOne({ email, _id: { $ne: user._id } }).select('_id')
+    if (duplicate) return res.status(409).json({ success: false, message: 'This email is already used by another account.' })
+    user.name = name
+    user.email = email
+    user.phone = phone
+    await user.save()
+    const populated = await User.findById(user._id).populate('classDivision').populate({ path: 'children', select: 'name email std division className classDivision', populate: { path: 'classDivision' } })
+    res.json({ success: true, user: {
+      id: user._id.toString(), name: user.name, email: user.email, phone: user.phone || '', role: user.role,
+      className: populated.classDivision?.displayName || user.className || '', std: user.std ?? null, division: user.division || '',
+      classDivisionId: user.classDivision?.toString() || '',
+      children: (populated.children || []).map(child => ({ id: child._id.toString(), name: child.name, email: child.email, std: child.std ?? null, division: child.division || '', className: child.classDivision?.displayName || child.className || '', classDivisionId: child.classDivision?._id?.toString() || '' }))
+    } })
+  } catch (error) { if (error?.code === 11000) return res.status(409).json({ success: false, message: 'This email is already used by another account.' }); next(error) }
+})
+
 router.put('/:id/teaching-classes', updateTeacherAssignments)
 
 router.put('/:id/class-placement', async (req, res, next) => {
