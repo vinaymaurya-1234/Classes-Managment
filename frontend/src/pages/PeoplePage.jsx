@@ -56,6 +56,10 @@ export default function PeoplePage({ type, title }) {
   const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
+  const [placementValue, setPlacementValue] = useState("");
+  const [assignmentValues, setAssignmentValues] = useState([]);
+  const [editingPlacement, setEditingPlacement] = useState(false);
+  const [editingAssignments, setEditingAssignments] = useState(false);
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -101,6 +105,10 @@ export default function PeoplePage({ type, title }) {
 
   const openPerson = async (person) => {
     setSelectedPerson(person);
+    setPlacementValue(person.classDivisionId || "");
+    setAssignmentValues(person.teachingClassDivisionIds || []);
+    setEditingPlacement(false);
+    setEditingAssignments(false);
     setSelectedAttempt(null);
     setAttempts([]);
     setFeeRecords([]);
@@ -199,39 +207,28 @@ export default function PeoplePage({ type, title }) {
     }
   };
 
-  const updateTeacherClasses = async (person) => {
-    const options = classDivisions.filter(item=>item.active)
-    if (!options.length) { setError('Configure classes first in Class Structure.'); return }
-    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\
-')
-    const current = (person.teachingClassDivisionIds || []).map(id=>options.find(item=>item.id===id)?.displayName).filter(Boolean).join(', ')
-    const input = window.prompt(`Enter class option numbers separated by commas:\
-\
-${choices}\
-\
-Currently assigned: ${current}`, '')
-    if (input === null) return
-    const selected = [...new Set(input.split(',').map(value=>Number(value.trim())).filter(value=>Number.isInteger(value)&&value>=1&&value<=options.length))]
-    if (!selected.length) { setError('Select at least one valid class division.'); return }
-    try { await updateUserApi(token,person.id,{teachingClassDivisionIds:selected.map(index=>options[index-1].id)}); await loadUsers() }
-    catch(err) { setError(err.message || 'Unable to update teacher assignments.') }
-  };
+  const saveTeacherClasses = async () => {
+    if (!assignmentValues.length) { setError('Select at least one configured class division.'); return }
+    try {
+      await updateUserApi(token, selectedPerson.id, { teachingClassDivisionIds: assignmentValues })
+      setEditingAssignments(false)
+      await loadUsers()
+      const updated = (await listUsersApi(token, type)).users?.find(item=>item.id===selectedPerson.id)
+      if (updated) setSelectedPerson(updated)
+    } catch (err) { setError(err.message || 'Unable to update teacher assignments.') }
+  }
 
-  const updatePlacement = async (person) => {
-    const options = classDivisions.filter(item=>item.active)
-    if (!options.length) { setError('Configure classes first in Class Structure.'); return }
-    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\
-')
-    const current = options.findIndex(item=>item.id===person.classDivisionId)
-    const selected = window.prompt(`Choose class/division number:\
-\
-${choices}`,current>=0?String(current+1):'')
-    if (selected === null) return
-    const index = Number(selected.trim())
-    if (!Number.isInteger(index)||index<1||index>options.length) { setError('Enter a valid class option number.'); return }
-    try { await api.put(`/api/users/${encodeURIComponent(person.id)}/class-placement`,{classDivisionId:options[index-1].id},token); await loadUsers() }
-    catch(err) { setError(err.message || 'Unable to update student class.') }
-  };
+  const savePlacement = async () => {
+    if (!placementValue) { setError('Select a configured class division.'); return }
+    try {
+      const response = await api.put(`/api/users/${encodeURIComponent(selectedPerson.id)}/class-placement`, { classDivisionId: placementValue }, token)
+      setSelectedPerson(current => ({ ...current, ...(response.user || {}), classDivisionId: placementValue }))
+      setEditingPlacement(false)
+      await loadUsers()
+    } catch (err) { setError(err.message || 'Unable to update student class.') }
+  }
+
+  const toggleAssignment = id => setAssignmentValues(current => current.includes(id) ? current.filter(value=>value!==id) : [...current,id])
 
   return (
     <>
@@ -295,25 +292,18 @@ ${choices}`,current>=0?String(current+1):'')
             ) : (
               <>
                 <div className="person-detail-actions">
-                  {type === "student" && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => updatePlacement(selectedPerson)}
-                    >
-                      Edit class and division
-                    </button>
-                  )}
-                  {type === "teacher" && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => updateTeacherClasses(selectedPerson)}
-                    >
-                      Edit teaching assignments
-                    </button>
-                  )}
+                  {type === "student" && <button type="button" className="secondary" onClick={() => setEditingPlacement(value=>!value)}>Edit class and division</button>}
+                  {type === "teacher" && <button type="button" className="secondary" onClick={() => setEditingAssignments(value=>!value)}>Edit teaching assignments</button>}
                 </div>
+                {type === "student" && editingPlacement && <div className="teacher-assignment-field">
+                  <label>Class / Division<select value={placementValue} onChange={event=>setPlacementValue(event.target.value)}><option value="">Choose class division</option>{classDivisions.filter(item=>item.active).map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label>
+                  <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setEditingPlacement(false)}>Cancel</button><button type="button" className="primary" onClick={savePlacement}>Save class</button></div>
+                </div>}
+                {type === "teacher" && editingAssignments && <fieldset className="teacher-assignment-field">
+                  <legend>Teaching class divisions</legend>
+                  <div className="teacher-assignment-options">{classDivisions.filter(item=>item.active).map(item=><label key={item.id}><input type="checkbox" checked={assignmentValues.includes(item.id)} onChange={()=>toggleAssignment(item.id)}/>{item.displayName}</label>)}</div>
+                  <div className="user-modal-actions"><button type="button" className="secondary" onClick={()=>setEditingAssignments(false)}>Cancel</button><button type="button" className="primary" onClick={saveTeacherClasses} disabled={!assignmentValues.length}>Save assignments</button></div>
+                </fieldset>}
                 <div className="person-detail-grid">
                   <div>
                     <span>Email</span>
