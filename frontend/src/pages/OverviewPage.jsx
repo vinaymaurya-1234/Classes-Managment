@@ -4,7 +4,7 @@ import { getTimetableApi } from '../api/timetable.api'
 import { getStudentAttendanceSummaryApi } from '../api/attendance.api'
 import { BookOpen, CalendarDays, CheckCircle2, ClipboardList, CreditCard, MessageSquare, PlayCircle, QrCode, Trophy, UserPlus, Users, LoaderCircle } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
-import { Card, Child, Quick, ScheduleRow, Stat, Attention } from '../components/common/UI'
+import { Card, Quick, ScheduleRow, Stat, Attention } from '../components/common/UI'
 import { todayLectures } from '../data/mockData'
 import { api } from '../api/client'
 import { listNoticesApi } from '../api/notices.api'
@@ -52,7 +52,7 @@ function Student({go}){
   return()=>{active=false}
  },[token,today])
  const pendingHomework=homework.filter(item=>item.status==='published')
- const average=results.length?Math.round(results.reduce((sum,item)=>sum+Number(item.percentage??item.scorePercentage??0),0)/results.length):null
+ const average=results.length?Math.round(results.reduce((sum,item)=>sum+(Number(item.totalMarks)>0?(Number(item.score||0)/Number(item.totalMarks))*100:0),0)/results.length):null
  return <>
   {error&&<p className="workflow-alert" role="status">{error}</p>}
   <div className="stats">
@@ -81,15 +81,17 @@ function Parent({go}){
  const children=user?.children||[]
  const [homework,setHomework]=useState([])
  const [notices,setNotices]=useState([])
+ const [results,setResults]=useState([])
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState('')
  useEffect(()=>{
   if(!token)return
   let active=true
-  Promise.allSettled([api.get('/api/homework',token),listNoticesApi(token)]).then(values=>{
+  Promise.allSettled([api.get('/api/homework',token),listNoticesApi(token),api.get('/api/exams/results',token)]).then(values=>{
    if(!active)return
    if(values[0].status==='fulfilled')setHomework(values[0].value.data||[])
    if(values[1].status==='fulfilled')setNotices(values[1].value.notices||[])
+   if(values[2].status==='fulfilled')setResults(values[2].value.data||[])
    if(values.some(v=>v.status==='rejected'))setError('Some family updates could not be loaded. Open the relevant page to retry.')
   }).finally(()=>{if(active)setLoading(false)})
   return()=>{active=false}
@@ -100,7 +102,7 @@ function Parent({go}){
    <Stat icon={Users} label="Linked children" value={String(children.length)} detail="Students linked to your parent account"/>
    <Stat icon={ClipboardList} label="Published homework" value={loading?'…':String(homework.length)} detail="Across linked children"/>
    <Stat icon={MessageSquare} label="Notices" value={loading?'…':String(notices.length)} detail="Messages addressed to your account"/>
-   <Stat icon={CreditCard} label="Fee details" value="—" detail="No parent fee summary is available yet"/>
+   <Stat icon={Trophy} label="Published results" value={loading?'…':String(results.length)} detail="Results shared with your account"/>
   </div>
   <div className="grid-main">
    <Card title="Children overview" action="View children" onAction={()=>go('children')}>
