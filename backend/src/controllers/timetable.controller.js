@@ -1,5 +1,6 @@
 import TimetableEntry from '../models/TimetableEntry.js'
 import User from '../models/User.js'
+import ClassDivision from '../models/ClassDivision.js'
 
 const requirePrincipal = req => req.user?.role === 'principal'
 const isValidDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -23,11 +24,41 @@ const studentPlacement = user => {
 const placementQuery = user => {
   const placement = studentPlacement(user)
   if (!placement.standard) return { _id: null }
+  if (user?.classDivision) return { classDivision: user.classDivision }
   const className = 'Class ' + placement.standard + ' - Division ' + placement.division
   return { $or: [
     { standard: placement.standard, division: placement.division },
     { standard: { $exists: false }, className }
   ] }
+}
+
+const timetableAccessFilter = async user => {
+  if (user?.role === 'student') return placementQuery(user)
+  if (user?.role !== 'parent') return {}
+
+  const parent = await User.findById(user._id).select('children').lean()
+  const childIds = parent?.children || []
+  if (!childIds.length) return { _id: null }
+
+  const children = await User.find({ _id: { $in: childIds }, role: 'student' })
+    .select('classDivision std division className')
+    .lean()
+  const allowed = []
+  for (const child of children) {
+    const placement = studentPlacement(child)
+    if (child.classDivision) {
+      allowed.push({ classDivision: child.classDivision })
+      continue
+    }
+    if (placement.standard) {
+      allowed.push({ standard: placement.standard, division: placement.division })
+      allowed.push({
+        standard: { $exists: false },
+        className: 'Class ' + placement.standard + ' - Division ' + placement.division,
+      })
+    }
+  }
+  return allowed.length ? { $or: allowed } : { _id: null }
 }
 
 const publicEntry = entry => ({
@@ -36,11 +67,13 @@ const publicEntry = entry => ({
   startTime: entry.startTime,
   endTime: entry.endTime,
   subject: entry.subject,
-  className: entry.className,
+  className: entry.classDivision?.displayName || entry.className,
+  classDivisionId: entry.classDivision?._id?.toString() || entry.classDivision?.toString() || '',
   standard: entry.standard ?? parseClassPlacement(entry.className).standard,
   division: entry.division || parseClassPlacement(entry.className).division,
   room: entry.room || '',
   notes: entry.notes || '',
+  temporary: Boolean(entry.temporary),
   teacher: entry.teacher ? {
     id: entry.teacher._id.toString(),
     name: entry.teacher.name,
@@ -54,10 +87,9 @@ export const listTimetable = async (req, res, next) => {
     const date = String(req.query.date || '')
     if (!isValidDate(date)) return res.status(400).json({ success: false, message: 'A valid date is required.' })
 
-    const filter = { date }
-    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const filter = { date, ...(await timetableAccessFilter(req.user)) }
     const entries = await TimetableEntry.find(filter)
-      .populate('teacher', 'name email avatarUrl')
+      .populate('teacher', 'name email avatarUrl').populate('classDivision')
       .sort({ startTime: 1, endTime: 1 })
 
     return res.json({ success: true, date, entries: entries.map(publicEntry) })
@@ -72,8 +104,7 @@ export const listTimetableRange = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid from and to dates are required.' })
     }
 
-    const filter = { date: { $gte: from, $lte: to } }
-    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const filter = { date: { $gte: from, $lte: to }, ...(await timetableAccessFilter(req.user)) }
     const entries = await TimetableEntry.find(filter)
       .populate('teacher', 'name email avatarUrl')
       .sort({ date: 1, startTime: 1 })
@@ -90,14 +121,21 @@ export const createTimetableEntry = async (req, res, next) => {
     const startTime = String(req.body.startTime || '').trim()
     const endTime = String(req.body.endTime || '').trim()
     const subject = String(req.body.subject || '').trim()
-    const className = String(req.body.className || '').trim()
-    const placement = { standard: Number(req.body.standard) || parseClassPlacement(className).standard, division: String(req.body.division || parseClassPlacement(className).division || 'A').toUpperCase() }
+    let className = String(req.body.className || '').trim()
+    const classDivisionId = String(req.body.classDivisionId || '').trim()
+    let classDivision = null
+    if (classDivisionId) {
+      classDivision = await ClassDivision.findOne({ _id: classDivisionId, active: true })
+      if (!classDivision) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' })
+      className = classDivision.displayName
+    }
+    const placement = { standard: classDivision?.standard || Number(req.body.standard) || parseClassPlacement(className).standard, division: classDivision?.division || String(req.body.division || parseClassPlacement(className).division || 'A').toUpperCase() }
     const room = String(req.body.room || '').trim()
     const notes = String(req.body.notes || '').trim()
     const teacherId = String(req.body.teacherId || '').trim()
     const teacherName = String(req.body.teacherName || '').trim()
 
-    if (!isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !subject || !className) {
+    if (!classDivision || !isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !subject || !className) {
       return res.status(400).json({ success: false, message: 'Date, time, subject and class are required.' })
     }
     if (startTime >= endTime) return res.status(400).json({ success: false, message: 'End time must be after start time.' })
@@ -108,8 +146,9 @@ export const createTimetableEntry = async (req, res, next) => {
       if (!teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
     }
 
-    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
-    await entry.populate('teacher', 'name email avatarUrl')
+    const temporary = Boolean(req.body.temporary)
+    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard: placement.standard, division: placement.division, room, notes, temporary, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
+    await entry.populate('teacher', 'name email avatarUrl'); await entry.populate('classDivision')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
   } catch (error) { next(error) }
@@ -123,11 +162,21 @@ export const updateTimetableEntry = async (req, res, next) => {
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
     const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined) return res.status(400).json({ success: false, message: 'Choose a class division from Class Structure.' })
+    if (req.body.classDivisionId !== undefined) {
+      const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true })
+      if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' })
+      entry.classDivision = selected._id
+      entry.className = selected.displayName
+      entry.standard = selected.standard
+      entry.division = selected.division
+    }
+    if (req.body.temporary !== undefined) entry.temporary = Boolean(req.body.temporary)
     if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
     if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
-    if (req.body.className !== undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(entry.className).standard
-    if (req.body.className !== undefined && req.body.division === undefined) entry.division = parseClassPlacement(entry.className).division
-    for (const field of fields) if (req.body[field] !== undefined) entry[field] = String(req.body[field]).trim()
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(req.body.className).standard
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined && req.body.division === undefined) entry.division = parseClassPlacement(req.body.className).division
+    for (const field of fields) if (req.body[field] !== undefined && !(field === 'className' && req.body.classDivisionId !== undefined)) entry[field] = String(req.body[field]).trim()
 
     if (!isValidDate(entry.date) || !isValidTime(entry.startTime) || !isValidTime(entry.endTime) || !entry.subject || !entry.className) {
       return res.status(400).json({ success: false, message: 'Date, time, subject and class are required.' })
@@ -144,7 +193,7 @@ export const updateTimetableEntry = async (req, res, next) => {
     }
 
     await entry.save()
-    await entry.populate('teacher', 'name email avatarUrl')
+    await entry.populate('teacher', 'name email avatarUrl'); await entry.populate('classDivision')
     return res.json({ success: true, message: 'Lecture updated.', entry: publicEntry(entry) })
   } catch (error) { next(error) }
 }
@@ -152,9 +201,16 @@ export const updateTimetableEntry = async (req, res, next) => {
 export const clearClassTimetable = async (req, res, next) => {
   try {
     if (!requirePrincipal(req)) return res.status(403).json({ success: false, message: 'Only the principal can manage the timetable.' })
+    const classDivisionId = String(req.query.classDivisionId || '').trim()
+    if (classDivisionId) {
+      const divisionDoc = await ClassDivision.findOne({ _id: classDivisionId, active: true })
+      if (!divisionDoc) return res.status(400).json({ success: false, message: 'Select a valid class division.' })
+      const result = await TimetableEntry.deleteMany({ classDivision: divisionDoc._id })
+      return res.json({ success: true, message: `Cleared ${result.deletedCount} timetable entries for ${divisionDoc.displayName}.`, deletedCount: result.deletedCount })
+    }
     const standard = String(req.query.standard || '').trim()
     const division = String(req.query.division || '').trim().toUpperCase()
-    if (!/^([1-9]|1[0-2])$/.test(standard) || !['A', 'B', 'C'].includes(division)) return res.status(400).json({ success: false, message: 'Select a valid standard and division before clearing the timetable.' })
+    if (!/^([1-9]|1[0-2])$/.test(standard) || !division) return res.status(400).json({ success: false, message: 'Select a valid standard and division before clearing the timetable.' })
     const className = 'Class ' + standard + ' - Division ' + division
     const result = await TimetableEntry.deleteMany({ $or: [{ standard: Number(standard), division }, { standard: { $exists: false }, className }] })
     return res.json({ success: true, message: 'Cleared ' + result.deletedCount + ' timetable entries for Class ' + standard + ', Division ' + division + '.', deletedCount: result.deletedCount })
@@ -194,26 +250,30 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const startTime = String(slot.startTime || '').trim()
       const endTime = String(slot.endTime || '').trim()
       const subject = String(slot.subject || '').trim()
-      const className = String(slot.className || '').trim()
-      const parsedPlacement = parseClassPlacement(className)
-      const standard = Number(slot.standard) || parsedPlacement.standard
-      const division = String(slot.division || parsedPlacement.division || 'A').toUpperCase()
-      if (!Number.isInteger(standard) || standard < 1 || standard > 12 || !['A', 'B', 'C'].includes(division)) {
-        return res.status(400).json({ success: false, message: `Select a valid standard and division for weekly lecture ${index + 1}.` })
+      let className = String(slot.className || '').trim()
+      const classDivisionId = String(slot.classDivisionId || '').trim()
+      let classDivision = null
+      if (classDivisionId) {
+        classDivision = await ClassDivision.findOne({ _id: classDivisionId, active: true })
+        if (!classDivision) return res.status(400).json({ success: false, message: `Class division for weekly lecture ${index + 1} is not active.` })
+        className = classDivision.displayName
       }
+      const parsedPlacement = parseClassPlacement(className)
+      const standard = classDivision?.standard || Number(slot.standard) || parsedPlacement.standard
+      const division = classDivision?.division || String(slot.division || parsedPlacement.division || 'A').toUpperCase()
       const room = String(slot.room || '').trim()
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
       const teacherName = String(slot.teacherName || '').trim()
-      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !className) {
-        return res.status(400).json({ success: false, message: `Check the day, time, subject and class for weekly lecture ${index + 1}.` })
+      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !classDivision || !className) {
+        return res.status(400).json({ success: false, message: `Check the day, time, subject and configured class division for weekly lecture ${index + 1}.` })
       }
       let teacher = null
       if (teacherId) {
         teacher = await User.findOne({ _id: teacherId, role: 'teacher' }).select('_id').lean()
         if (!teacher) return res.status(400).json({ success: false, message: `Teacher for weekly lecture ${index + 1} was not found.` })
       }
-      prepared.push({ dayOfWeek, startTime, endTime, subject, className, standard, division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
+      prepared.push({ dayOfWeek, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard, division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
     }
 
     const start = new Date(startDate + 'T00:00:00.000Z')
@@ -231,8 +291,8 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         if (dateString < startDate || dateString > endDate) continue
         occurrences.push({
           date: dateString, startTime: slot.startTime, endTime: slot.endTime,
-          subject: slot.subject, className: slot.className, standard: slot.standard, division: slot.division, room: slot.room,
-          notes: slot.notes, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
+          subject: slot.subject, className: slot.className, classDivision: slot.classDivision, standard: slot.standard, division: slot.division, room: slot.room,
+          notes: slot.notes, temporary: false, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
         })
       }
     }
