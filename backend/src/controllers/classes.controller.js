@@ -48,6 +48,33 @@ async function seedFromLegacyData() {
     }
   }
   await ClassDivision.insertMany(docs, { ordered: false })
+  const created = await ClassDivision.find({ active: true }).lean()
+  const byKey = new Map(created.map(item => [`${item.standard}:${item.division}`, item]))
+  const studentOps = students.flatMap(student => {
+    const standard = Number(student.std || String(student.className || '').match(/\\d+/)?.[0])
+    const division = String(student.division || 'A').toUpperCase()
+    const doc = byKey.get(`${standard}:${division}`)
+    return doc ? [{ updateOne: { filter: { _id: student._id }, update: { $set: { classDivision: doc._id, std: doc.standard, division: doc.division, className: `Class ${doc.standard}` } } }] : []
+  })
+  if (studentOps.length) await User.bulkWrite(studentOps)
+  const teacherOps = teachers.map(teacher => {
+    const ids = (teacher.teachingClasses || []).flatMap(value => {
+      const match = String(value).match(/(1[0-2]|[1-9])(?:\\s*[-/]\\s*([a-z0-9_-]{1,8}))?/i)
+      if (!match) return []
+      const doc = byKey.get(`${Number(match[1])}:${(match[2] || 'A').toUpperCase()}`)
+      return doc ? [doc] : []
+    })
+    return { updateOne: { filter: { role: 'teacher', teachingClasses: { $exists: true }, _id: teacher._id }, update: { $set: { teachingClassDivisions: ids.map(item => item._id), teachingClasses: ids.map(item => item.displayName) } } }
+  })
+  if (teacherOps.length) await User.bulkWrite(teacherOps)
+  const timetableOps = timetable.flatMap(entry => {
+    const standard = Number(entry.standard || String(entry.className || '').match(/\\d+/)?.[0])
+    const division = String(entry.division || 'A').toUpperCase()
+    const doc = byKey.get(`${standard}:${division}`)
+    return doc ? [{ updateOne: { filter: { _id: entry._id }, update: { $set: { classDivision: doc._id, className: doc.displayName, standard: doc.standard, division: doc.division } } }] : []
+  })
+  if (timetableOps.length) await TimetableEntry.bulkWrite(timetableOps)
+
 }
 
 export const listClassDivisions = async (req, res, next) => {
