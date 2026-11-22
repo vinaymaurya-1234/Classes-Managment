@@ -22,6 +22,8 @@ export default function ChatPage() {
   const [openMessageMenuId, setOpenMessageMenuId] = useState(null)
   const [editingMessageId, setEditingMessageId] = useState(null)
   const [editingText, setEditingText] = useState('')
+  const [selectedMessageIds, setSelectedMessageIds] = useState([])
+  const longPressTimer = useRef(null)
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
 
@@ -92,7 +94,13 @@ export default function ChatPage() {
     } catch (err) { setError(err.message) }
     finally { setSending(false) }
   }
+  const toggleMessageSelection = message => {
+    if (message.senderId !== String(user?.id || user?._id || '') || message.deleted) return
+    setSelectedMessageIds(current => current.includes(message.id) ? current.filter(id => id !== message.id) : [...current, message.id])
+    setOpenMessageMenuId(null)
+  }
   const startEdit = message => {
+    setSelectedMessageIds([])
     setEditingMessageId(message.id)
     setEditingText(message.text)
     setOpenMessageMenuId(null)
@@ -106,6 +114,16 @@ export default function ChatPage() {
       setEditingMessageId(null)
       setEditingText('')
     } catch (err) { setError(err.message) }
+  }
+  const removeSelectedMessages = async () => {
+    const targets = messages.filter(message => selectedMessageIds.includes(message.id))
+    for (const message of targets) {
+      try {
+        const result = await deleteDirectMessageApi(token, message.id)
+        setMessages(current => current.map(item => item.id === message.id ? result.message : item))
+      } catch (err) { setError(err.message); break }
+    }
+    setSelectedMessageIds([])
   }
   const removeMessage = async message => {
     setOpenMessageMenuId(null)
@@ -133,7 +151,7 @@ export default function ChatPage() {
       </aside>
       <section className="chat-conversation">
         {selected ? <>
-          <header className="chat-conversation-head"><span className="chat-avatar">{selected.avatarUrl ? <img src={selected.avatarUrl} alt=""/> : initials(selected.name)}</span><div><strong>{selected.name}</strong><small>{roleLabel(selected.role)}{selected.std ? ` · Standard ${selected.std}` : ''}</small></div></header>
+          <header className="chat-conversation-head">{selectedMessageIds.length ? <><strong>{selectedMessageIds.length} selected</strong><div className="chat-selection-actions">{selectedMessageIds.length === 1 && messages.some(message => message.id === selectedMessageIds[0] && message.text && message.senderId === String(user?.id || user?._id || '') && !message.deleted) && <button type="button" title="Edit" onClick={() => { const message = messages.find(item => item.id === selectedMessageIds[0]); if (message) startEdit(message) }}><Pencil size={18}/></button>}<button type="button" title="Delete" onClick={removeSelectedMessages}><Trash2 size={18}/></button><button type="button" title="Cancel selection" onClick={() => setSelectedMessageIds([])}><X size={18}/></button></div></> : <><span className="chat-avatar">{selected.avatarUrl ? <img src={selected.avatarUrl} alt=""/> : initials(selected.name)}</span><div><strong>{selected.name}</strong><small>{roleLabel(selected.role)}{selected.std ? ` · Standard ${selected.std}` : ''}</small></div></header>
           <div className="chat-messages">
             {!messages.length && <div className="chat-start"><MessageCircle size={28}/><strong>Start a conversation</strong><span>Send a message to {selected.name}.</span></div>}
             {messages.map((message, index) => {
@@ -141,7 +159,7 @@ export default function ChatPage() {
               const previous = messages[index - 1]
               const showDate = !previous || dateLabel(previous.createdAt) !== dateLabel(message.createdAt)
               return <div key={message.id}>{showDate && <div className="chat-date"><span>{dateLabel(message.createdAt)}</span></div>}
-                <div className={'chat-message-row ' + (mine ? 'mine' : '')}><article className="chat-bubble">
+                <div className={'chat-message-row ' + (mine ? 'mine' : '') + (selectedMessageIds.includes(message.id) ? ' selected' : '')} onPointerDown={event => { if (event.pointerType !== 'touch' || !mine) return; longPressTimer.current = window.setTimeout(() => toggleMessageSelection(message), 500) }} onPointerUp={() => window.clearTimeout(longPressTimer.current)} onPointerLeave={() => window.clearTimeout(longPressTimer.current)} onContextMenu={event => { if (mine) { event.preventDefault(); toggleMessageSelection(message) } }} onClick={() => { if (selectedMessageIds.length && mine) toggleMessageSelection(message) }}><article className="chat-bubble">
                   {message.deleted ? <em>This message was deleted</em> : <>
                     {editingMessageId === message.id ? <div className="chat-edit-form"><input autoFocus value={editingText} maxLength={5000} onChange={event => setEditingText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); saveEdit(message) } if (event.key === 'Escape') setEditingMessageId(null) }}/><div><button type="button" onClick={() => setEditingMessageId(null)}>Cancel</button><button type="button" onClick={() => saveEdit(message)} disabled={!editingText.trim()}>Save</button></div></div> : message.text && <div className="chat-bubble-text-row"><p>{message.text}</p><small className="chat-inline-time">{timeLabel(message.createdAt)}{message.edited ? ' · edited' : ''}</small></div>}
                     {message.attachment && (message.attachment.mimeType.startsWith('image/') ? <a href={message.attachment.dataUrl} target="_blank" rel="noreferrer" className="chat-image-link"><img src={message.attachment.dataUrl} alt={message.attachment.name}/></a> : <a className="chat-file" href={message.attachment.dataUrl} download={message.attachment.name}><FileText size={20}/><span>{message.attachment.name}<small>PDF attachment</small></span></a>)}
