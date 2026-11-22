@@ -14,6 +14,7 @@ import homeworkRoutes from './routes/homework.routes.js'
 import assessmentRoutes from './routes/assessment.routes.js'
 import examRoutes from './routes/exams.routes.js'
 import classRoutes from './routes/classes.routes.js'
+import chatRoutes from './routes/chat.routes.js'
 
 const app = express()
 
@@ -57,6 +58,7 @@ app.use('/api/homework', homeworkRoutes)
 app.use('/api/assessments', assessmentRoutes)
 app.use('/api/exams', examRoutes)
 app.use('/api/classes', classRoutes)
+app.use('/api/chat', chatRoutes)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' })
