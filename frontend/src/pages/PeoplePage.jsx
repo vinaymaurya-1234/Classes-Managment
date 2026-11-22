@@ -70,7 +70,7 @@ export default function PeoplePage({ type, title }) {
   const [assignmentValues, setAssignmentValues] = useState([]);
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
-  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);\n  const [profileTarget, setProfileTarget] = useState(null);
   const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
@@ -259,10 +259,10 @@ export default function PeoplePage({ type, title }) {
 
   const saveProfile = async event => {
     event.preventDefault();
-    if (!selectedPerson || saving) return;
+    if (!profileTarget || saving) return;
     setSaving(true); setError("");
     try {
-      const response = await api.put(`/api/users/${encodeURIComponent(selectedPerson.id)}/profile`, profileForm, token);
+      const response = await api.put(`/api/users/${encodeURIComponent(profileTarget.id)}/profile`, profileForm, token);
       const updated = response.user || {};
       setSelectedPerson(current => ({ ...current, ...updated }));
       setData(current => current.map(item => item.id === selectedPerson.id ? { ...item, ...updated } : item));
@@ -520,12 +520,14 @@ export default function PeoplePage({ type, title }) {
                       <span>{linkedParents.length} linked</span>
                     </div>
                     {linkedParents.length ? linkedParents.map(parent => (
-                      <button type="button" className="linked-parent-card" key={parent.id}
-                        onClick={() => navigate(`/${role || "principal"}/parents`, { state: { openPersonId: parent.id } })}>
+                      <div className="linked-parent-card linked-parent-actions-card" key={parent.id}>
                         <span className="linked-parent-avatar">{(parent.name || "P").slice(0,1).toUpperCase()}</span>
                         <span className="linked-parent-info"><strong>{parent.name}</strong><small>{parent.email || "No email"} · {parent.phone || "No phone"}</small></span>
-                        <span className="linked-parent-link">View profile <ChevronRight size={16}/></span>
-                      </button>
+                        <div className="linked-parent-actions">
+                          <button type="button" className="linked-parent-link" onClick={() => navigate(`/${role || "principal"}/parents`, { state: { openPersonId: parent.id } })}>View profile <ChevronRight size={16}/></button>
+                          {role === "principal" && <button type="button" className="secondary linked-parent-edit" onClick={() => startProfileEdit(parent)}>Edit parent</button>}
+                        </div>
+                      </div>
                     )) : <p className="person-detail-empty">No parent or guardian is linked to this student.</p>}
                   </div>
                 )}
