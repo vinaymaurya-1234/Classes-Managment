@@ -36,7 +36,7 @@ export default function ExamManagementPage() {
   const [exams, setExams] = useState([])
   const [results, setResults] = useState([])
   const [attempts, setAttempts] = useState([])
-  const [filters, setFilters] = useState({ std: '10', division: '', classDivisionId: '', subject: '', chapter: '', difficulty: '', search: '' })
+  const [filters, setFilters] = useState({ std: '', division: '', classDivisionId: '', subject: '', chapter: '', difficulty: '', search: '' })
   const [questionForm, setQuestionForm] = useState(emptyQuestion)
   const [paperForm, setPaperForm] = useState(emptyPaper)
   const [examForm, setExamForm] = useState(emptyExam)
