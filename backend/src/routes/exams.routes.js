@@ -202,7 +202,7 @@ router.post('/papers', async (req, res, next) => {
     const classDivisionId = String(body.classDivisionId || '')
     const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
     const std = classDivision?.standard || Number(body.std), division = classDivision?.division || String(body.division || '').toUpperCase()
-    const subject = String(body.subject || '').trim(), title = String(body.title || '').trim()
+    const requestedSubject = String(body.subject || '').trim(), subject = requestedSubject || 'All Subjects', title = String(body.title || '').trim()
     const className = `Class ${std}`
     if (!stds.includes(std) || !title) return fail(res, 400, 'Paper title and standard are required.')
     if (!await canTeach(req.user, std, '', '')) return forbidden(res)
@@ -218,7 +218,7 @@ router.post('/papers', async (req, res, next) => {
     } else {
       const count = Math.min(100, Math.max(1, Number(body.questionCount || 10)))
       const filter = { teacher: req.user._id, ...standardQuestionFilter }
-      if (subject) filter.subject = subject
+      if (requestedSubject) filter.subject = requestedSubject
       questions = await Question.aggregate([{ $match: { ...filter, teacher: new mongoose.Types.ObjectId(String(req.user._id)) } }, { $sample: { size: count } }])
     }
     if (!questions.length) return fail(res, 400, 'No matching questions found. Add questions or change your filters.')
