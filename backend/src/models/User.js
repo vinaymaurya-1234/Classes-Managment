@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
   className: { type: String, trim: true, default: '' },
   classDivision: { type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision', default: null, index: true },
   std: { type: Number, enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
-  division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
+  division: { type: String, trim: true, default: '' },
   teachingClasses: { type: [String], default: [] },
   teachingClassDivisions: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision' }], default: [] },
   children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
