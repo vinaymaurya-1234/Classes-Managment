@@ -12,7 +12,7 @@ router.use(requireAuth)
 const validId = value => mongoose.isValidObjectId(value)
 
 const parseClass = value => {
-  const match = String(value || '').match(/(?:class\\s*)?(1[0-2]|[1-9])(?:\\s*[-/]\\s*([a-z]))?/i)
+  const match = String(value || '').match(/(?:class\s*)?(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z]))?/i)
   return match ? { std: Number(match[1]), division: (match[2] || '').toUpperCase() } : null
 }
 
