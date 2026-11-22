@@ -1,6 +1,11 @@
 import ClassDivision from '../models/ClassDivision.js'
 import User from '../models/User.js'
 import TimetableEntry from '../models/TimetableEntry.js'
+import Homework from '../models/Homework.js'
+import Chapter from '../models/Chapter.js'
+import Exam from '../models/Exam.js'
+import QuestionPaper from '../models/QuestionPaper.js'
+import Question from '../models/Question.js'
 
 const principalOnly = req => req.user?.role === 'principal'
 const labelFor = standard => `Class ${standard}`
@@ -81,7 +86,7 @@ export const saveClassStructure = async (req, res, next) => {
       if (!desiredKeys.has(key) && doc.active) {
         const assignedStudents = await User.countDocuments({ role: 'student', classDivision: doc._id })
         const assignedTeachers = await User.countDocuments({ teachingClassDivisions: doc._id })
-        if (assignedStudents || assignedTeachers) return res.status(409).json({ success: false, message: `${doc.displayName} is assigned to users. Reassign them before removing it.` })
+        if (assignedStudents || assignedTeachers) return res.status(409).json({ success: false, message: `${doc.displayName} is referenced by users or academic records. Reassign or remove those records before removing it.` })
         doc.active = false
         await doc.save()
       }
