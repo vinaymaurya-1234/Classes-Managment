@@ -247,6 +247,32 @@ export const listClassDivisions = async (req, res, next) => {
     const classes = await ClassDivision.find(filter)
       .sort({ standard: 1, division: 1 })
       .lean();
+    const usageById = new Map();
+    if (req.user?.role === "principal") {
+      await Promise.all(
+        classes.map(async (item) => {
+          const [students, teachers, records] = await Promise.all([
+            User.countDocuments({ role: "student", classDivision: item._id }),
+            User.countDocuments({ teachingClassDivisions: item._id }),
+            Promise.all([
+              TimetableEntry.countDocuments({ classDivision: item._id }),
+              Homework.countDocuments({ classDivision: item._id }),
+              Chapter.countDocuments({ classDivision: item._id }),
+              Exam.countDocuments({ classDivision: item._id }),
+              QuestionPaper.countDocuments({ classDivision: item._id }),
+              Question.countDocuments({ classDivision: item._id }),
+              Notice.countDocuments({ classDivisionIds: item._id }),
+            ]),
+          ]);
+          usageById.set(item._id.toString(), {
+            students,
+            teachers,
+            records: records.reduce((total, count) => total + count, 0),
+            inUse: students > 0 || teachers > 0 || records.some((count) => count > 0),
+          });
+        }),
+      );
+    }
     res.json({
       success: true,
       classes: classes.map((item) => ({
@@ -256,6 +282,7 @@ export const listClassDivisions = async (req, res, next) => {
         division: item.division,
         displayName: item.displayName,
         active: item.active,
+        usage: usageById.get(item._id.toString()) || null,
       })),
     });
   } catch (error) {
