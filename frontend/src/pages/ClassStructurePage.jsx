@@ -5,7 +5,7 @@ import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 import { listClassDivisionsApi, saveClassStructureApi } from '../api/classes.api'
 
-const makeStandard = () => ({ id: crypto.randomUUID(), standard: '', label: '', divisions: ['A'] })
+const makeStandard = standard => ({ id: crypto.randomUUID(), standard: String(standard), label: 'Class ' + standard, divisions: ['A'] })
 
 export default function ClassStructurePage() {
   const { role } = useOutletContext()
@@ -36,7 +36,18 @@ export default function ClassStructurePage() {
     return ()=>{active=false}
   }, [token])
   const updateStandard = (id, patch) => setStandards(current=>current.map(item=>item.id===id?{...item,...patch}:item))
-  const addStandard = () => setStandards(current=>[...current,makeStandard()])
+  const addStandard = () => {
+    setError('')
+    setStandards(current => {
+      const used = new Set(current.map(item => Number(item.standard)).filter(Number.isInteger))
+      const next = Array.from({ length: 12 }, (_, index) => index + 1).find(number => !used.has(number))
+      if (!next) {
+        setError('All classes from 1 to 12 are already configured.')
+        return current
+      }
+      return [...current, makeStandard(next)].sort((a, b) => Number(a.standard) - Number(b.standard))
+    })
+  }
   const removeStandard = id => {
     const item = standards.find(standard => standard.id === id)
     const usedDivision = item?.divisions.find(division => item.usageByDivision?.[division]?.inUse)
