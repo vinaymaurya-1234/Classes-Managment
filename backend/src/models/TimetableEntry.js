@@ -13,6 +13,7 @@ const timetableEntrySchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   teacherName: { type: String, trim: true, default: '' },
   notes: { type: String, trim: true, default: '' },
+  temporary: { type: Boolean, default: false, index: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
