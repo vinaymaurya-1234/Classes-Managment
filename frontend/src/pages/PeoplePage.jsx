@@ -32,6 +32,10 @@ const emptyForm = () => ({
   classDivisionId: "",
   teachingClassDivisionIds: [],
   childIds: [],
+  parentName: "",
+  parentEmail: "",
+  parentPassword: "",
+  parentPhone: "",
 });
 
 export default function PeoplePage({ type, title }) {
@@ -189,7 +193,7 @@ export default function PeoplePage({ type, title }) {
         phone: form.phone.trim(),
         role: type,
         ...(type === "student"
-          ? { classDivisionId: form.classDivisionId }
+          ? { classDivisionId: form.classDivisionId, parentName: form.parentName.trim(), parentEmail: form.parentEmail.trim(), parentPassword: form.parentPassword, parentPhone: form.parentPhone.trim() }
           : {}),
         ...(type === "teacher"
           ? { teachingClassDivisionIds: form.teachingClassDivisionIds }
@@ -802,6 +806,26 @@ export default function PeoplePage({ type, title }) {
                 </label>
               )}
 
+              {type === "student" && (
+                <fieldset className="teacher-assignment-field">
+                  <legend>Parent / Guardian login</legend>
+                  <p>Enter the parent Gmail. If this parent already has an account for another child, use the same Gmail; the existing account will be linked automatically.</p>
+                  <label>Parent full name
+                    <input value={form.parentName} onChange={event=>setForm({...form,parentName:event.target.value})} placeholder="Parent name" required />
+                  </label>
+                  <label>Parent Gmail
+                    <input type="email" value={form.parentEmail} onChange={event=>setForm({...form,parentEmail:event.target.value})} placeholder="parent@gmail.com" required />
+                  </label>
+                  <label>Temporary parent password
+                    <input type="password" minLength={8} value={form.parentPassword} onChange={event=>setForm({...form,parentPassword:event.target.value})} placeholder="Required only for a new parent account" />
+                  </label>
+                  <label>Parent phone
+                    <input value={form.parentPhone} onChange={event=>setForm({...form,parentPhone:event.target.value})} placeholder="Optional" />
+                  </label>
+                  <small>If the Gmail already belongs to a parent, leave the temporary password empty. The existing password will remain unchanged.</small>
+                </fieldset>
+              )}
+
               {type === "parent" && (
                 <fieldset className="teacher-assignment-field">
                   <legend>Link children (optional)</legend>
@@ -869,7 +893,8 @@ export default function PeoplePage({ type, title }) {
                   className="primary"
                   disabled={
                     saving ||
-                    (type === "teacher" && !form.teachingClassDivisionIds.length)
+                    (type === "teacher" && !form.teachingClassDivisionIds.length) ||
+                    (type === "student" && (!form.parentName.trim() || !form.parentEmail.trim()))
                   }
                 >
                   {saving && <LoaderCircle size={15} className="spin" />}
