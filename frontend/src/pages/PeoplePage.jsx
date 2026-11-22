@@ -70,7 +70,11 @@ export default function PeoplePage({ type, title }) {
   const [assignmentValues, setAssignmentValues] = useState([]);
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
-  const [profileEditing, setProfileEditing] = useState(false);\n  const [profileTarget, setProfileTarget] = useState(null);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileTarget, setProfileTarget] = useState(null);
+  const [parentLinkOpen, setParentLinkOpen] = useState(false);
+  const [parentChoices, setParentChoices] = useState([]);
+  const [parentLinkValue, setParentLinkValue] = useState("");
   const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
