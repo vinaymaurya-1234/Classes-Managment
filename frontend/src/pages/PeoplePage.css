@@ -49,3 +49,11 @@
  .person-fee-row{grid-template-columns:1fr;gap:6px}
  .person-fee-row small{grid-column:auto}
 }
+
+
+/* Principal edit controls for linked parent/student profiles */
+.parent-child-edit-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.parent-child-edit-row>span{flex:1;min-width:180px}
+.parent-child-edit-row>small{overflow-wrap:anywhere}
+.parent-child-edit-row>button{margin-left:auto}
+@media(max-width:700px){.parent-child-edit-row{align-items:flex-start}.parent-child-edit-row>button{margin-left:0}}
