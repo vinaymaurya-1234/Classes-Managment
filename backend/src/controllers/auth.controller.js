@@ -7,6 +7,7 @@ const publicUser = user => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  mustChangePassword: Boolean(user.mustChangePassword),
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
   className: user.classDivision?.displayName || user.className || '',
@@ -146,13 +147,13 @@ export const changePassword = async (req, res, next) => {
     }
 
     const user = await User.findById(req.user._id).select('+password')
-    const matches = await bcrypt.compare(currentPassword, user.password)
-
-    if (!matches) {
-      return res.status(400).json({ success: false, message: 'Current password is incorrect' })
+    if (!(user.role === 'parent' && user.mustChangePassword)) {
+      const matches = await bcrypt.compare(currentPassword, user.password)
+      if (!matches) return res.status(400).json({ success: false, message: 'Current password is incorrect' })
     }
 
     user.password = await bcrypt.hash(newPassword, 12)
+    user.mustChangePassword = false
     await user.save()
 
     return res.json({ success: true, message: 'Password updated successfully' })
