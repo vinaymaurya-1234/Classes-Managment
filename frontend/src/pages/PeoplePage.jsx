@@ -825,7 +825,7 @@ export default function PeoplePage({ type, title }) {
               )}
 
               {type === "student" && (
-                <fieldset className="teacher-assignment-field">
+                <fieldset className="parent-login-section">
                   <legend>Parent / Guardian login</legend>
                   <p>Enter the parent Gmail. If this parent already has an account for another child, use the same Gmail; the existing account will be linked automatically.</p>
                   <label>Parent full name
