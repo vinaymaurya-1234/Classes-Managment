@@ -52,7 +52,8 @@ export default function PeoplePage({ type, title }) {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
-  const [availableStudents, setAvailableStudents] = useState([]);\n  const [classDivisions, setClassDivisions] = useState([]);
+  const [availableStudents, setAvailableStudents] = useState([]);
+  const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
 
@@ -74,7 +75,11 @@ export default function PeoplePage({ type, title }) {
     if (canManage && token) loadUsers();
   }, [canManage, token, loadUsers]);
 
-  useEffect(() => {\n    if (!token) return;\n    listClassDivisionsApi(token).then(result => setClassDivisions(result.classes || [])).catch(err => setError(err.message || "Unable to load class structure."));\n  }, [token]);\n  const visibleData = useMemo(() => {
+  useEffect(() => {
+    if (!token) return;
+    listClassDivisionsApi(token).then(result => setClassDivisions(result.classes || [])).catch(err => setError(err.message || "Unable to load class structure."));
+  }, [token]);
+  const visibleData = useMemo(() => {
     const query = String(search).toLowerCase().trim();
     const source = canManage ? data : type === "student" ? students : teachers;
     return source.filter((item) =>
@@ -197,9 +202,14 @@ export default function PeoplePage({ type, title }) {
   const updateTeacherClasses = async (person) => {
     const options = classDivisions.filter(item=>item.active)
     if (!options.length) { setError('Configure classes first in Class Structure.'); return }
-    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\\n')
+    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\
+')
     const current = (person.teachingClassDivisionIds || []).map(id=>options.find(item=>item.id===id)?.displayName).filter(Boolean).join(', ')
-    const input = window.prompt(`Enter class option numbers separated by commas:\\n\\n${choices}\\n\\nCurrently assigned: ${current}`, '')
+    const input = window.prompt(`Enter class option numbers separated by commas:\
+\
+${choices}\
+\
+Currently assigned: ${current}`, '')
     if (input === null) return
     const selected = [...new Set(input.split(',').map(value=>Number(value.trim())).filter(value=>Number.isInteger(value)&&value>=1&&value<=options.length))]
     if (!selected.length) { setError('Select at least one valid class division.'); return }
@@ -210,9 +220,12 @@ export default function PeoplePage({ type, title }) {
   const updatePlacement = async (person) => {
     const options = classDivisions.filter(item=>item.active)
     if (!options.length) { setError('Configure classes first in Class Structure.'); return }
-    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\\n')
+    const choices = options.map((item,index)=>`${index+1}. ${item.displayName}`).join('\
+')
     const current = options.findIndex(item=>item.id===person.classDivisionId)
-    const selected = window.prompt(`Choose class/division number:\\n\\n${choices}`,current>=0?String(current+1):'')
+    const selected = window.prompt(`Choose class/division number:\
+\
+${choices}`,current>=0?String(current+1):'')
     if (selected === null) return
     const index = Number(selected.trim())
     if (!Number.isInteger(index)||index<1||index>options.length) { setError('Enter a valid class option number.'); return }
