@@ -57,6 +57,8 @@ export default function PeoplePage({ type, title }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
+  const [parentMatch, setParentMatch] = useState(null);
+  const [parentLookupLoading, setParentLookupLoading] = useState(false);
   const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
@@ -160,6 +162,7 @@ export default function PeoplePage({ type, title }) {
 
   const openModal = async () => {
     setForm(emptyForm());
+    setParentMatch(null);
     setError("");
     setModalOpen(true);
     if (type === "parent" && token && !availableStudents.length) {
@@ -174,6 +177,21 @@ export default function PeoplePage({ type, title }) {
 
   const closeModal = () => {
     if (!saving) setModalOpen(false);
+  };
+
+  const lookupParent = async () => {
+    const email = form.parentEmail.trim().toLowerCase();
+    setParentMatch(null);
+    if (!email || !email.includes('@') || type !== 'student' || !token) return;
+    setParentLookupLoading(true);
+    try {
+      const result = await api.get(`/api/users/parent-lookup?email=${encodeURIComponent(email)}`, token);
+      setParentMatch(result.parent || null);
+    } catch (err) {
+      setError(err.message || 'Unable to check parent account.');
+    } finally {
+      setParentLookupLoading(false);
+    }
   };
 
   const toggleClass = (value) => {
@@ -814,15 +832,17 @@ export default function PeoplePage({ type, title }) {
                     <input value={form.parentName} onChange={event=>setForm({...form,parentName:event.target.value})} placeholder="Parent name" required />
                   </label>
                   <label>Parent Gmail
-                    <input type="email" value={form.parentEmail} onChange={event=>setForm({...form,parentEmail:event.target.value})} placeholder="parent@gmail.com" required />
+                    <input type="email" value={form.parentEmail} onChange={event=>{setForm({...form,parentEmail:event.target.value});setParentMatch(null)}} onBlur={lookupParent} placeholder="parent@gmail.com" required />
                   </label>
-                  <label>Temporary parent password
-                    <input type="password" minLength={8} value={form.parentPassword} onChange={event=>setForm({...form,parentPassword:event.target.value})} placeholder="Required only for a new parent account" />
-                  </label>
+                  {parentLookupLoading && <small>Checking for an existing parent account...</small>}
+                  {parentMatch && <div className="profile-message success">Existing parent found: {parentMatch.name} ({parentMatch.email}). This student will be linked to this account; no new password is needed.</div>}
+                  {!parentMatch && <label>Temporary parent password
+                    <input type="password" minLength={8} value={form.parentPassword} onChange={event=>setForm({...form,parentPassword:event.target.value})} placeholder="Required for a new parent account" />
+                  </label>}
                   <label>Parent phone
                     <input value={form.parentPhone} onChange={event=>setForm({...form,parentPhone:event.target.value})} placeholder="Optional" />
                   </label>
-                  <small>If the Gmail already belongs to a parent, leave the temporary password empty. The existing password will remain unchanged.</small>
+                  {!parentMatch && <small>If the Gmail already belongs to a parent, the system will reuse that account and preserve its password. If no account exists, enter a temporary password.</small>}
                 </fieldset>
               )}
 
