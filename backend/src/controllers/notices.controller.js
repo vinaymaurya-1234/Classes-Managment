@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import Notice from '../models/Notice.js'
 import User from '../models/User.js'
+import ClassDivision from '../models/ClassDivision.js'
 
 const MANAGED_ROLES = ['teacher', 'student', 'parent']
 
@@ -11,6 +12,8 @@ const publicNotice = notice => ({
   audienceType: notice.audienceType,
   audienceRole: notice.audienceRole || null,
   recipientIds: (notice.recipientIds || []).map(id => id.toString()),
+  classDivisionIds: (notice.classDivisionIds || []).map(item => item?._id?.toString() || item.toString()),
+  classDivisionNames: (notice.classDivisionIds || []).map(item => item?.displayName || ''),
   createdBy: notice.createdBy?._id ? {
     id: notice.createdBy._id.toString(),
     name: notice.createdBy.name,
