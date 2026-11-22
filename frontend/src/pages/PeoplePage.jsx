@@ -33,6 +33,10 @@ const emptyForm = () => ({
   classDivisionId: "",
   teachingClassDivisionIds: [],
   childIds: [],
+  parentName: "",
+  parentEmail: "",
+  parentPassword: "",
+  parentPhone: "",
 });
 
 export default function PeoplePage({ type, title }) {
@@ -57,6 +61,8 @@ export default function PeoplePage({ type, title }) {
   const [feeRecords, setFeeRecords] = useState([]);
   const [linkedParents, setLinkedParents] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
+  const [parentMatch, setParentMatch] = useState(null);
+  const [parentLookupLoading, setParentLookupLoading] = useState(false);
   const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
@@ -64,6 +70,19 @@ export default function PeoplePage({ type, title }) {
   const [assignmentValues, setAssignmentValues] = useState([]);
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
+
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [modalOpen]);
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -163,6 +182,7 @@ export default function PeoplePage({ type, title }) {
 
   const openModal = async () => {
     setForm(emptyForm());
+    setParentMatch(null);
     setError("");
     setModalOpen(true);
     if (type === "parent" && token && !availableStudents.length) {
@@ -177,6 +197,21 @@ export default function PeoplePage({ type, title }) {
 
   const closeModal = () => {
     if (!saving) setModalOpen(false);
+  };
+
+  const lookupParent = async () => {
+    const email = form.parentEmail.trim().toLowerCase();
+    setParentMatch(null);
+    if (!email || !email.includes('@') || type !== 'student' || !token) return;
+    setParentLookupLoading(true);
+    try {
+      const result = await api.get(`/api/users/parent-lookup?email=${encodeURIComponent(email)}`, token);
+      setParentMatch(result.parent || null);
+    } catch (err) {
+      setError(err.message || 'Unable to check parent account.');
+    } finally {
+      setParentLookupLoading(false);
+    }
   };
 
   const toggleClass = (value) => {
@@ -196,7 +231,7 @@ export default function PeoplePage({ type, title }) {
         phone: form.phone.trim(),
         role: type,
         ...(type === "student"
-          ? { classDivisionId: form.classDivisionId }
+          ? { classDivisionId: form.classDivisionId, parentName: form.parentName.trim(), parentEmail: form.parentEmail.trim(), parentPassword: form.parentPassword, parentPhone: form.parentPhone.trim() }
           : {}),
         ...(type === "teacher"
           ? { teachingClassDivisionIds: form.teachingClassDivisionIds }
@@ -834,6 +869,26 @@ export default function PeoplePage({ type, title }) {
                 </label>
               )}
 
+              {type === "student" && (
+                <fieldset className="parent-login-section">
+                  <legend>Parent / Guardian login</legend>
+                  <label>Parent full name
+                    <input value={form.parentName} onChange={event=>setForm({...form,parentName:event.target.value})} placeholder="Parent name" required />
+                  </label>
+                  <label>Parent Gmail
+                    <input type="email" value={form.parentEmail} onChange={event=>{setForm({...form,parentEmail:event.target.value});setParentMatch(null)}} onBlur={lookupParent} placeholder="parent@gmail.com" required />
+                  </label>
+                  {parentLookupLoading && <small>Checking for an existing parent account...</small>}
+                  {parentMatch && <div className="profile-message success">Existing parent found: {parentMatch.name} ({parentMatch.email}). This student will be linked to this account; no new password is needed.</div>}
+                  {!parentMatch && <label>Temporary parent password
+                    <input type="password" minLength={8} value={form.parentPassword} onChange={event=>setForm({...form,parentPassword:event.target.value})} placeholder="Required for a new parent account" />
+                  </label>}
+                  <label>Parent phone
+                    <input value={form.parentPhone} onChange={event=>setForm({...form,parentPhone:event.target.value})} placeholder="Optional" />
+                  </label>
+                </fieldset>
+              )}
+
               {type === "parent" && (
                 <fieldset className="teacher-assignment-field">
                   <legend>Link children (optional)</legend>
@@ -901,7 +956,8 @@ export default function PeoplePage({ type, title }) {
                   className="primary"
                   disabled={
                     saving ||
-                    (type === "teacher" && !form.teachingClassDivisionIds.length)
+                    (type === "teacher" && !form.teachingClassDivisionIds.length) ||
+                    (type === "student" && (!form.parentName.trim() || !form.parentEmail.trim()))
                   }
                 >
                   {saving && <LoaderCircle size={15} className="spin" />}

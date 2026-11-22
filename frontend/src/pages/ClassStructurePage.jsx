@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Trash2, Save, LoaderCircle, School, Layers3 } from 'lucide-react'
+import { Plus, Trash2, Save, LoaderCircle, School, Layers3, X } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Card, SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 import { listClassDivisionsApi, saveClassStructureApi } from '../api/classes.api'
 
-const makeStandard = () => ({ id: crypto.randomUUID(), standard: '', label: '', divisions: ['A'] })
+const makeStandard = standard => ({ id: crypto.randomUUID(), standard: String(standard), label: 'Class ' + standard, divisions: ['A'] })
 
 export default function ClassStructurePage() {
   const { role } = useOutletContext()
@@ -36,12 +36,23 @@ export default function ClassStructurePage() {
     return ()=>{active=false}
   }, [token])
   const updateStandard = (id, patch) => setStandards(current=>current.map(item=>item.id===id?{...item,...patch}:item))
-  const addStandard = () => setStandards(current=>[...current,makeStandard()])
+  const addStandard = () => {
+    setError('')
+    setStandards(current => {
+      const used = new Set(current.map(item => Number(item.standard)).filter(Number.isInteger))
+      const next = Array.from({ length: 12 }, (_, index) => index + 1).find(number => !used.has(number))
+      if (!next) {
+        setError('All classes from 1 to 12 are already configured.')
+        return current
+      }
+      return [...current, makeStandard(next)].sort((a, b) => Number(a.standard) - Number(b.standard))
+    })
+  }
   const removeStandard = id => {
     const item = standards.find(standard => standard.id === id)
     const usedDivision = item?.divisions.find(division => item.usageByDivision?.[division]?.inUse)
     if (usedDivision) {
-      setDeleteNotice(`${item.label || `Class ${item.standard}`} - ${usedDivision} is already in use and cannot be deleted.`)
+      setDeleteNotice(`Class ${item.standard} - ${usedDivision} is already in use and cannot be deleted.`)
       return
     }
     setStandards(current=>current.filter(standard=>standard.id!==id))
@@ -52,7 +63,7 @@ export default function ClassStructurePage() {
     const item = standards.find(standard => standard.id === id)
     const division = item?.divisions[index]
     if (item?.usageByDivision?.[division]?.inUse) {
-      setDeleteNotice(`${item.label || `Class ${item.standard}`} - ${division} is already in use and cannot be deleted.`)
+      setDeleteNotice(`Class ${item.standard} - ${division} is already in use and cannot be deleted.`)
       return
     }
     updateStandard(id,{divisions:(item?.divisions||[]).filter((_,i)=>i!==index)})
@@ -61,7 +72,7 @@ export default function ClassStructurePage() {
   const save = async event => {
     event.preventDefault(); setSaving(true); setError(''); setSuccess('')
     try {
-      const normalized=standards.map(item=>({standard:Number(item.standard),label:item.label.trim()||`Class ${item.standard}`,divisions:item.divisions.map(v=>v.trim().toUpperCase()).filter(Boolean)}))
+      const normalized=standards.map(item=>({standard:Number(item.standard),label:`Class ${item.standard}`,divisions:item.divisions.map(v=>v.trim().toUpperCase()).filter(Boolean)}))
       const result=await saveClassStructureApi(token,normalized)
       const grouped=new Map()
       result.classes.forEach(item=>{if(!grouped.has(item.standard))grouped.set(item.standard,{id:String(item.standard),standard:String(item.standard),label:item.standardLabel,divisions:[],usageByDivision:{}});grouped.get(item.standard).divisions.push(item.division);grouped.get(item.standard).usageByDivision[item.division]=item.usage})
@@ -71,19 +82,35 @@ export default function ClassStructurePage() {
   }
   if(role!=='principal') return <Card title="Class Structure"><p>Only the principal can manage the school class structure.</p></Card>
   return <>
-    <SectionIntro eyebrow="SCHOOL SETUP" title="Class Structure" text="Set up the classes and divisions available throughout your school. This becomes the central list used when assigning students and teachers."/>
-    <div className="class-structure-summary"><div><School size={18}/><strong>{standards.length}</strong><span>Classes</span></div><div><Layers3 size={18}/><strong>{totalDivisions}</strong><span>Divisions</span></div></div>
-    {deleteNotice&&<div role="alert" style={{position:'fixed',top:24,right:24,zIndex:9999,maxWidth:360,padding:'12px 16px',borderRadius:10,background:'#fff1f2',border:'1px solid #fecdd3',color:'#9f1239',boxShadow:'0 8px 24px rgba(15,23,42,.15)',fontSize:14,fontWeight:500}}>{deleteNotice}</div>}
-    {error&&<div className="profile-message error">{error}</div>}{success&&<div className="profile-message success">{success}</div>}
-    <Card title="Configure classes">
-      {loading?<div className="people-state"><LoaderCircle className="spin" size={18}/>Loading class structure…</div>:<form className="class-structure-form" onSubmit={save}>
-        {standards.map(item=><section className="class-structure-row" key={item.id}>
-          <div className="class-structure-row-head"><div className="class-structure-label"><label>Class number<input type="number" min="1" max="12" required value={item.standard} onChange={e=>updateStandard(item.id,{standard:e.target.value,label:item.label.replace(/\d+/,e.target.value)})}/></label><label>Class display name<input value={item.label} onChange={e=>updateStandard(item.id,{label:e.target.value})} placeholder="Class 9"/></label></div><button type="button" className="danger-ghost" onClick={()=>removeStandard(item.id)} title="Remove class"><Trash2 size={16}/></button></div>
-          <div className="class-structure-divisions"><span>Divisions</span><div>{item.divisions.map((division,index)=><label className="division-input" key={index}><input value={division} maxLength={8} onChange={e=>updateDivision(item.id,index,e.target.value)} placeholder="A" required/><button type="button" onClick={()=>removeDivision(item.id,index)} aria-label="Remove division" title="Remove division"><Trash2 size={12}/></button></label>)}<button type="button" className="secondary small" onClick={()=>addDivision(item.id)}><Plus size={13}/> Division</button></div></div>
-        </section>)}
-        <button type="button" className="secondary" onClick={addStandard}><Plus size={15}/> Add class</button>
-        <div className="class-structure-save"><button type="submit" className="primary" disabled={saving||!standards.length}>{saving?<LoaderCircle size={15} className="spin"/>:<Save size={15}/>} {saving?'Saving…':'Save class structure'}</button></div>
-      </form>}
-    </Card>
+    <main className="class-structure-v2">
+      <header className="class-structure-v2-head">
+        <div><span>SETTINGS / ACADEMICS</span><h1>Classes & divisions</h1><p>Manage the standards and sections available in your school.</p></div>
+        <button type="button" className="class-structure-v2-add" onClick={addStandard}><Plus size={16}/> Add class</button>
+      </header>
+      <section className="class-structure-v2-overview">
+        <div><span>CLASSES</span><strong>{standards.length.toString().padStart(2,"0")}</strong></div>
+        <i/>
+        <div><span>DIVISIONS</span><strong>{totalDivisions.toString().padStart(2,"0")}</strong></div>
+        <p>Changes apply to admission and class assignment throughout the system.</p>
+      </section>
+      {deleteNotice&&<div className="class-structure-v2-alert error" role="alert">{deleteNotice}</div>}
+      {error&&<div className="class-structure-v2-alert error" role="alert">{error}</div>}
+      {success&&<div className="class-structure-v2-alert success" role="status">{success}</div>}
+      <section className="class-structure-v2-panel">
+        <div className="class-structure-v2-panel-head"><div><h2>School structure</h2><p>{standards.length? "Select a class to edit its divisions.": "Add your first class to get started."}</p></div><span>{standards.length} configured</span></div>
+        {loading?<div className="class-structure-v2-loading"><LoaderCircle className="spin" size={19}/> Loading school structure</div>:standards.length===0?<div className="class-structure-v2-empty"><School size={30}/><strong>No classes configured</strong><p>Start by adding a class and its divisions.</p><button type="button" className="class-structure-v2-add" onClick={addStandard}><Plus size={15}/> Add first class</button></div>:<form onSubmit={save}>
+          <div className="class-structure-v2-list">
+            {standards.map((item,index)=><article className="class-structure-v2-row" key={item.id}>
+              <div className="class-structure-v2-number"><small>CLASS</small><strong>{item.standard||"—"}</strong></div>
+              <div className="class-structure-v2-main">
+                <div className="class-structure-v2-divisions"><div><strong>Divisions</strong><small>{item.divisions.filter(v=>v.trim()).length} sections</small></div><div className="class-structure-v2-chips">{item.divisions.map((division,divisionIndex)=><label className="class-structure-v2-chip" key={divisionIndex}><input aria-label={"Division "+(divisionIndex+1)+" for class "+item.standard} value={division} maxLength={8} placeholder="A" required onChange={e=>updateDivision(item.id,divisionIndex,e.target.value)}/><button type="button" onClick={()=>removeDivision(item.id,divisionIndex)} aria-label="Remove division" title="Remove division"><X size={13}/></button></label>)}<button type="button" className="class-structure-v2-add-division" onClick={()=>addDivision(item.id)}><Plus size={14}/> Add division</button></div></div>
+              </div>
+              <button type="button" className="class-structure-v2-remove" onClick={()=>removeStandard(item.id)} aria-label={"Remove class "+item.standard} title="Remove class"><Trash2 size={16}/></button>
+            </article>)}
+          </div>
+          <footer className="class-structure-v2-footer"><div><strong>Ready to update?</strong><span>Save to apply your changes across the school.</span></div><button type="submit" disabled={saving||!standards.length}>{saving?<LoaderCircle size={16} className="spin"/>:<Save size={16}/>} {saving?"Saving…":"Save changes"}</button></footer>
+        </form>}
+      </section>
+    </main>
   </>
 }

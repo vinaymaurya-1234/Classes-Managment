@@ -9,6 +9,8 @@ export default function ProtectedRoute({ children }) {
   if (loading) return <div className="auth-loading">Checking your session...</div>
   if (!user) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   if (role && role !== user.role) return <Navigate to={`/${user.role}/overview`} replace />
+  if (user.role === 'parent' && user.mustChangePassword && location.pathname !== '/parent/change-password') return <Navigate to="/parent/change-password" replace />
+  if (user.role === 'parent' && !user.mustChangePassword && location.pathname === '/parent/change-password') return <Navigate to="/parent/overview" replace />
 
   return children
 }

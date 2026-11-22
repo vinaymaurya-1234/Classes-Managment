@@ -24,12 +24,41 @@ const studentPlacement = user => {
 const placementQuery = user => {
   const placement = studentPlacement(user)
   if (!placement.standard) return { _id: null }
-  if (user?.classDivision) return { $or: [{ classDivision: user.classDivision }, { standard: placement.standard, division: placement.division }] }
+  if (user?.classDivision) return { classDivision: user.classDivision }
   const className = 'Class ' + placement.standard + ' - Division ' + placement.division
   return { $or: [
     { standard: placement.standard, division: placement.division },
     { standard: { $exists: false }, className }
   ] }
+}
+
+const timetableAccessFilter = async user => {
+  if (user?.role === 'student') return placementQuery(user)
+  if (user?.role !== 'parent') return {}
+
+  const parent = await User.findById(user._id).select('children').lean()
+  const childIds = parent?.children || []
+  if (!childIds.length) return { _id: null }
+
+  const children = await User.find({ _id: { $in: childIds }, role: 'student' })
+    .select('classDivision std division className')
+    .lean()
+  const allowed = []
+  for (const child of children) {
+    const placement = studentPlacement(child)
+    if (child.classDivision) {
+      allowed.push({ classDivision: child.classDivision })
+      continue
+    }
+    if (placement.standard) {
+      allowed.push({ standard: placement.standard, division: placement.division })
+      allowed.push({
+        standard: { $exists: false },
+        className: 'Class ' + placement.standard + ' - Division ' + placement.division,
+      })
+    }
+  }
+  return allowed.length ? { $or: allowed } : { _id: null }
 }
 
 const publicEntry = entry => ({
@@ -58,8 +87,7 @@ export const listTimetable = async (req, res, next) => {
     const date = String(req.query.date || '')
     if (!isValidDate(date)) return res.status(400).json({ success: false, message: 'A valid date is required.' })
 
-    const filter = { date }
-    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const filter = { date, ...(await timetableAccessFilter(req.user)) }
     const entries = await TimetableEntry.find(filter)
       .populate('teacher', 'name email avatarUrl').populate('classDivision')
       .sort({ startTime: 1, endTime: 1 })
@@ -76,8 +104,7 @@ export const listTimetableRange = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid from and to dates are required.' })
     }
 
-    const filter = { date: { $gte: from, $lte: to } }
-    if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
+    const filter = { date: { $gte: from, $lte: to }, ...(await timetableAccessFilter(req.user)) }
     const entries = await TimetableEntry.find(filter)
       .populate('teacher', 'name email avatarUrl')
       .sort({ date: 1, startTime: 1 })

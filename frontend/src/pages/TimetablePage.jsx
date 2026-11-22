@@ -15,8 +15,6 @@ const full=v=>new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'long',year:'
 const weekday=v=>new Intl.DateTimeFormat('en-IN',{weekday:'short'}).format(d(v))
 const month=v=>new Intl.DateTimeFormat('en-IN',{month:'long',year:'numeric'}).format(d(v))
 const blank=(date,temporary=false)=>({date,startTime:'08:00',endTime:'09:00',subject:'',className:'',classDivisionId:'',room:'',teacherId:'',notes:'',temporary})
-const classDetails=value=>{const text=String(value||'').trim();const standardMatch=text.match(/(?:class\s*)?(\d{1,2})/i);const divisionMatch=text.match(/division\s+([A-Z])/i);return {standard:standardMatch?Number(standardMatch[1]):null,division:divisionMatch?divisionMatch[1].toUpperCase():'A'}}
-const belongsToStudent=(entry,user)=>{const own=classDetails(user?.className);const standard=Number(user?.std)||own.standard;const division=String(user?.division||own.division||'A').toUpperCase();const item=classDetails(entry.className);const entryStandard=Number(entry.standard)||item.standard;const entryDivision=String(entry.division||item.division||'A').toUpperCase();if(standard&&entryStandard&&standard!==entryStandard)return false;if(division&&entryDivision&&division!==entryDivision)return false;if(user?.classDivisionId&&entry.classDivisionId&&user.classDivisionId!==entry.classDivisionId)return false;return true}
 
 export default function TimetablePage(){
   const {role}=useOutletContext(); const {token,user}=useAuth(); const navigate=useNavigate(); const principal=role==='principal'||user?.role==='principal'; const today=useMemo(todayIndia,[])
@@ -25,7 +23,9 @@ export default function TimetablePage(){
   const load=useCallback(async()=>{setLoading(true);setError('');try{const r=await getTimetableRangeApi(token,from,to);setEntries(r.entries||[])}catch(e){setError(e.message||'Unable to load timetable.')}finally{setLoading(false)}},[token,from,to])
   useEffect(()=>{load()},[load])
   useEffect(()=>{if(!principal)return;Promise.all([getTimetableTeachersApi(token),listClassDivisionsApi(token)]).then(([teacherResult,classResult])=>{setTeachers(teacherResult.teachers||[]);setClassDivisions(classResult.classes||[])}).catch(e=>setError(e.message||'Unable to load teachers or class structure.'))},[principal,token])
-  const visibleEntries=useMemo(()=>user?.role==='student'?entries.filter(entry=>belongsToStudent(entry,user)):entries,[entries,user]);
+  // The API already applies role-based class visibility. Do not re-filter by display labels here:
+  // class names can vary (e.g. "11 B" vs "Class 11 - Division B") and hide valid lectures.
+  const visibleEntries=entries;
   const grouped=useMemo(()=>{const m=Object.fromEntries(days.map(x=>[x,[]]));visibleEntries.filter(x=>!x.temporary).forEach(x=>m[x.date]?.push(x));Object.values(m).forEach(x=>x.sort((a,b)=>a.startTime.localeCompare(b.startTime)));return m},[days,visibleEntries])
   const classesGrouped=useMemo(()=>{const classes={};visibleEntries.filter(entry=>!entry.temporary).forEach(entry=>{const name=String(entry.className||'Unassigned class').trim();(classes[name]||(classes[name]=[])).push(entry)});return Object.entries(classes).sort(([a],[b])=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).map(([className,classEntries])=>({className,entries:classEntries.sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime))}))},[visibleEntries])
   // Today's panel must include temporary lectures too. The weekly timetable intentionally excludes them.

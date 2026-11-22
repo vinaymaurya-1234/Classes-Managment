@@ -10,6 +10,15 @@ const router = Router()
 router.use(requireAuth)
 router.get('/', listUsers)
 router.post('/', createUser)
+router.get('/parent-lookup', async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'principal') return res.status(403).json({ success: false, message: 'Only the principal can look up parent accounts.' })
+    const email = String(req.query.email || '').trim().toLowerCase()
+    if (!email) return res.status(400).json({ success: false, message: 'Enter a parent Gmail address.' })
+    const parent = await User.findOne({ email, role: 'parent' }).select('name email')
+    return res.json({ success: true, parent: parent ? { id: parent._id.toString(), name: parent.name, email: parent.email } : null })
+  } catch (error) { next(error) }
+})
 router.put('/:id/teaching-classes', updateTeacherAssignments)
 
 router.put('/:id/class-placement', async (req, res, next) => {
