@@ -1222,3 +1222,87 @@
 .class-structure-summary{display:flex;gap:12px;margin:0 0 16px}.class-structure-summary>div{display:flex;align-items:center;gap:9px;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;padding:12px 16px;color:var(--green,#26734d)}.class-structure-summary strong{font-size:18px;color:var(--dark)}.class-structure-summary span{font-size:12px;color:var(--muted)}
 .class-structure-form{display:grid;gap:14px}.class-structure-row{border:1px solid var(--line);border-radius:14px;padding:15px;background:#fbfefc}.class-structure-row-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.class-structure-label{display:grid;grid-template-columns:120px minmax(180px,1fr);gap:12px;flex:1}.class-structure-label label,.class-structure-divisions>span{display:grid;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}.class-structure-label input,.division-input input{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--dark)}.class-structure-divisions{display:grid;gap:8px;margin-top:14px}.class-structure-divisions>div{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.division-input{display:flex;align-items:center;width:92px;border:1px solid var(--line);border-radius:9px;background:white;overflow:hidden}.division-input input{border:0;text-align:center;font-weight:700}.division-input button{border:0;background:transparent;color:var(--muted);padding:5px}.class-structure-save{display:flex;justify-content:flex-end;padding-top:8px}.danger-ghost{border:0;background:transparent;color:#b74d4d;padding:8px}.small{padding:7px 10px;font-size:12px}
 @media(max-width:600px){.class-structure-summary{gap:8px}.class-structure-summary>div{flex:1;padding:10px}.class-structure-label{grid-template-columns:90px minmax(0,1fr);gap:8px}.class-structure-row{padding:11px}}
+
+
+/* Class Structure page spacing and alignment polish */
+.class-structure-form{
+  gap:18px;
+  padding:16px 18px 18px;
+}
+.class-structure-row{
+  padding:20px;
+  border-radius:15px;
+  background:#fcfefd;
+}
+.class-structure-row-head{
+  align-items:center;
+  gap:16px;
+}
+.class-structure-label{
+  grid-template-columns:minmax(120px,150px) minmax(0,1fr);
+  gap:16px;
+}
+.class-structure-label label,
+.class-structure-divisions>span{
+  gap:8px;
+  font-size:12px;
+  line-height:1.4;
+}
+.class-structure-label input,
+.division-input input{
+  min-height:42px;
+  padding:10px 12px;
+}
+.class-structure-divisions{
+  margin-top:18px;
+  gap:10px;
+}
+.class-structure-divisions>div{
+  gap:10px;
+}
+.division-input{
+  width:112px;
+  min-height:42px;
+}
+.division-input button{
+  padding:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.class-structure-row-head>.danger-ghost{
+  flex:0 0 36px;
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+}
+.class-structure-row-head>.danger-ghost:hover,
+.division-input button:hover{
+  background:#fff1f2;
+  color:#b42332;
+}
+.class-structure-form>.secondary{
+  justify-self:start;
+  min-height:40px;
+}
+.class-structure-save{
+  border-top:1px solid var(--line);
+  margin-top:2px;
+  padding-top:16px;
+}
+@media(max-width:700px){
+  .class-structure-form{padding:12px;gap:12px}
+  .class-structure-row{padding:14px}
+  .class-structure-label{grid-template-columns:minmax(90px,120px) minmax(0,1fr);gap:10px}
+  .class-structure-label input,.division-input input{min-height:40px;padding:9px}
+  .class-structure-divisions{margin-top:14px}
+  .division-input{width:100px;min-height:40px}
+}
+@media(max-width:420px){
+  .class-structure-row-head{gap:8px}
+  .class-structure-label{grid-template-columns:1fr}
+  .class-structure-row-head>.danger-ghost{align-self:flex-start}
+}
