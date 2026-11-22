@@ -18,29 +18,52 @@ const parseClass = value => {
 
 const parentTeacherIds = async parent => {
   const children = await User.find({ _id: { $in: parent.children || [] }, role: 'student' })
-    .select('_id std division className').lean()
+    .select('_id std division className classDivision').lean()
   if (!children.length) return []
+
   const childIds = new Set(children.map(child => String(child._id)))
   const teacherIds = new Set()
+  const childClassDivisionIds = new Set(children.map(child => child.classDivision ? String(child.classDivision) : '').filter(Boolean))
+  const childPlacements = children.map(child => ({
+    std: Number(child.std) || parseClass(child.className)?.std || null,
+    division: String(child.division || parseClass(child.className)?.division || 'A').toUpperCase(),
+  })).filter(item => item.std)
+
+  // Include teachers assigned to the child's configured class, even if they have
+  // not created a chapter or a timetable entry yet.
+  const assignedTeachers = await User.find({ role: 'teacher' })
+    .select('_id teachingClasses teachingClassDivisions').lean()
+  for (const teacher of assignedTeachers) {
+    const divisionIds = (teacher.teachingClassDivisions || []).map(id => String(id))
+    const hasClassDivisionAssignment = divisionIds.some(id => childClassDivisionIds.has(id))
+    const hasLegacyClassAssignment = (teacher.teachingClasses || []).some(value => {
+      const assigned = parseClass(value)
+      return assigned && childPlacements.some(child => child.std === assigned.std &&
+        (!assigned.division || assigned.division === child.division))
+    })
+    if (hasClassDivisionAssignment || hasLegacyClassAssignment) teacherIds.add(String(teacher._id))
+  }
+
   const chapters = await Chapter.find({ teacher: { $ne: null } }).select('teacher className').lean()
   for (const chapter of chapters) {
     const assignedClass = parseClass(chapter.className)
-    if (!assignedClass) continue
-    if (children.some(child => child.std === assignedClass.std &&
-      (!assignedClass.division || assignedClass.division === String(child.division || '').toUpperCase()))) {
+    if (assignedClass && childPlacements.some(child => child.std === assignedClass.std &&
+      (!assignedClass.division || assignedClass.division === child.division))) {
       teacherIds.add(String(chapter.teacher))
     }
   }
+
   const timetableRows = await TimetableEntry.find({
     teacher: { $ne: null },
-    standard: { $in: children.map(child => child.std).filter(Boolean) },
+    standard: { $in: childPlacements.map(child => child.std) },
   }).select('teacher standard division').lean()
   for (const row of timetableRows) {
-    if (children.some(child => child.std === row.standard &&
-      String(child.division || 'A').toUpperCase() === String(row.division || 'A').toUpperCase())) {
+    if (childPlacements.some(child => child.std === Number(row.standard) &&
+      child.division === String(row.division || 'A').toUpperCase())) {
       teacherIds.add(String(row.teacher))
     }
   }
+
   return [...teacherIds].filter(id => !childIds.has(id))
 }
 
