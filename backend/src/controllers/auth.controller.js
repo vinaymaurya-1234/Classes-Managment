@@ -114,7 +114,8 @@ export const createPrincipal = async (req, res, next) => {
 }
 
 export const me = async (req, res) => {
-  res.json({ success: true, user: publicUser(req.user) })
+  const user = await User.findById(req.user._id).populate('classDivision').populate('teachingClassDivisions')
+  res.json({ success: true, user: publicUser(user) })
 }
 
 export const updateProfile = async (req, res, next) => {
@@ -128,7 +129,7 @@ export const updateProfile = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No profile changes were provided' })
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions').populate('classDivision').populate('teachingClassDivisions')
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions').populate('classDivision').populate('teachingClassDivisions').populate('classDivision').populate('teachingClassDivisions')
     return res.json({ success: true, message: 'Profile updated', user: publicUser(user) })
   } catch (error) {
     next(error)
