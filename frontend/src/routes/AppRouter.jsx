@@ -18,6 +18,7 @@ import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
 import ChatPage from '../pages/ChatPage'
 import ClassStructurePage from '../pages/ClassStructurePage'
+import ChatPage from '../pages/ChatPage'
 import { useAuth } from '../context/AuthContext'
 
 export default function AppRouter() {
