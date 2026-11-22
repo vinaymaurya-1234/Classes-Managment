@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, MessageCircle, Paperclip, Search, Send, Trash2, Pencil, X, MoreHorizontal } from 'lucide-react'
 import './ChatPage.css'
 import { useAuth } from '../context/AuthContext'
@@ -142,10 +142,10 @@ export default function ChatPage() {
         <div className="chat-contacts-title"><strong>Messages</strong><span>{contacts.length} people</span></div>
         <label className="chat-search"><Search size={16}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search people..."/></label>
         <div className="chat-contact-list">
-          {loading ? <div className="chat-empty">Loading people...</div> : filteredContacts.map(contact => <button key={contact.id} className={'chat-contact ' + (selected?.id === contact.id ? 'active' : '')} onClick={() => { setSelected(contact); setError('') }}>
+          {loading ? <div className="chat-empty">Loading people...</div> : filteredContacts.map((contact, index) => <React.Fragment key={contact.id}>{user?.role === 'parent' && contact.role === 'principal' && <div className="chat-contacts-section">School Administration</div>}{user?.role === 'parent' && contact.role === 'teacher' && filteredContacts[index - 1]?.role !== 'teacher' && <div className="chat-contacts-section">My Child&apos;s Teachers</div>}<button className={'chat-contact ' + (selected?.id === contact.id ? 'active' : '')} onClick={() => { setSelected(contact); setError('') }}>
             <span className="chat-avatar">{contact.avatarUrl ? <img src={contact.avatarUrl} alt=""/> : initials(contact.name)}</span>
             <span className="chat-contact-copy"><strong>{contact.name}</strong><small>{roleLabel(contact.role)}{contact.std ? ` · Std ${contact.std}` : ''}</small></span>
-          </button>)}
+          </button></React.Fragment>)}
           {!loading && !filteredContacts.length && <div className="chat-empty">No people found.</div>}
         </div>
       </aside>
