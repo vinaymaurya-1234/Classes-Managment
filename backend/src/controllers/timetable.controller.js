@@ -235,8 +235,8 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
       const teacherName = String(slot.teacherName || '').trim()
-      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !className) {
-        return res.status(400).json({ success: false, message: `Check the day, time, subject and class for weekly lecture ${index + 1}.` })
+      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !isValidTime(startTime) || !isValidTime(endTime) || startTime >= endTime || !subject || !classDivision || !className) {
+        return res.status(400).json({ success: false, message: `Check the day, time, subject and configured class division for weekly lecture ${index + 1}.` })
       }
       let teacher = null
       if (teacherId) {
