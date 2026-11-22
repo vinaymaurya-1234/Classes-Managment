@@ -1,5 +1,5 @@
 import TimetableEntry from '../models/TimetableEntry.js'
-import User from '../models/User.js'
+import User from '../models/User.js'\nimport ClassDivision from '../models/ClassDivision.js'
 
 const requirePrincipal = req => req.user?.role === 'principal'
 const isValidDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -36,7 +36,7 @@ const publicEntry = entry => ({
   startTime: entry.startTime,
   endTime: entry.endTime,
   subject: entry.subject,
-  className: entry.className,
+  className: entry.classDivision?.displayName || entry.className,\n  classDivisionId: entry.classDivision?._id?.toString() || entry.classDivision?.toString() || '',
   standard: entry.standard ?? parseClassPlacement(entry.className).standard,
   division: entry.division || parseClassPlacement(entry.className).division,
   room: entry.room || '',
@@ -108,7 +108,7 @@ export const createTimetableEntry = async (req, res, next) => {
       if (!teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
     }
 
-    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
+    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
     await entry.populate('teacher', 'name email avatarUrl')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
@@ -122,12 +122,12 @@ export const updateTimetableEntry = async (req, res, next) => {
     const entry = await TimetableEntry.findById(req.params.id)
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
-    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
+    const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']\n    if (req.body.classDivisionId !== undefined) { const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true }); if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' }); entry.classDivision = selected._id; entry.className = selected.displayName; entry.standard = selected.standard; entry.division = selected.division }
     if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
     if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
     if (req.body.className !== undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(entry.className).standard
     if (req.body.className !== undefined && req.body.division === undefined) entry.division = parseClassPlacement(entry.className).division
-    for (const field of fields) if (req.body[field] !== undefined) entry[field] = String(req.body[field]).trim()
+    for (const field of fields) if (req.body[field] !== undefined && !(field === 'className' && req.body.classDivisionId !== undefined)) entry[field] = String(req.body[field]).trim()
 
     if (!isValidDate(entry.date) || !isValidTime(entry.startTime) || !isValidTime(entry.endTime) || !entry.subject || !entry.className) {
       return res.status(400).json({ success: false, message: 'Date, time, subject and class are required.' })
@@ -213,7 +213,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         teacher = await User.findOne({ _id: teacherId, role: 'teacher' }).select('_id').lean()
         if (!teacher) return res.status(400).json({ success: false, message: `Teacher for weekly lecture ${index + 1} was not found.` })
       }
-      prepared.push({ dayOfWeek, startTime, endTime, subject, className, standard, division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
+      prepared.push({ dayOfWeek, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard, division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName })
     }
 
     const start = new Date(startDate + 'T00:00:00.000Z')
@@ -231,7 +231,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         if (dateString < startDate || dateString > endDate) continue
         occurrences.push({
           date: dateString, startTime: slot.startTime, endTime: slot.endTime,
-          subject: slot.subject, className: slot.className, standard: slot.standard, division: slot.division, room: slot.room,
+          subject: slot.subject, className: slot.className, classDivision: slot.classDivision, standard: slot.standard, division: slot.division, room: slot.room,
           notes: slot.notes, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
         })
       }
