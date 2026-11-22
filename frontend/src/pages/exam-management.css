@@ -72,3 +72,7 @@
   .exam-import-assignment-card { padding: 15px; }
   .exam-column-map { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }
+
+
+/* Dedicated question picker for the paper generator */
+.exam-picker-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0 18px;border-bottom:1px solid var(--line);margin-bottom:18px}.exam-picker-header p{margin:0 0 7px;color:var(--muted);font-size:12px;line-height:1.5}.exam-picker-header strong{color:var(--green);font-size:13px}.exam-picker-header button{flex-shrink:0;min-height:40px}.exam-picker-options{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:12px;line-height:1.6}.exam-picker-options strong{color:var(--ink)}.exam-tab-panels{display:contents}@media(max-width:700px){.exam-picker-header{align-items:stretch;flex-direction:column}.exam-picker-header button{width:100%}}
