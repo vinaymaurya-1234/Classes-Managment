@@ -45,6 +45,27 @@ router.put('/:id/profile', async (req, res, next) => {
   } catch (error) { if (error?.code === 11000) return res.status(409).json({ success: false, message: 'This email is already used by another account.' }); next(error) }
 })
 
+router.put('/:id/parent-link', async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'principal') return res.status(403).json({ success: false, message: 'Only the principal can change parent links.' })
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid student ID.' })
+    const student = await User.findOne({ _id: req.params.id, role: 'student' })
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' })
+    const parentId = req.body.parentId ? String(req.body.parentId) : ''
+    let parent = null
+    if (parentId) {
+      if (!mongoose.isValidObjectId(parentId)) return res.status(400).json({ success: false, message: 'Select a valid parent account.' })
+      parent = await User.findOne({ _id: parentId, role: 'parent' })
+      if (!parent) return res.status(404).json({ success: false, message: 'Parent account not found.' })
+    }
+    await User.updateMany({ role: 'parent', children: student._id }, { $pull: { children: student._id } })
+    if (parent) {
+      await User.updateOne({ _id: parent._id }, { $addToSet: { children: student._id } })
+    }
+    return res.json({ success: true, parent: parent ? { id: parent._id.toString(), name: parent.name, email: parent.email, phone: parent.phone || '' } : null })
+  } catch (error) { next(error) }
+})
+
 router.put('/:id/teaching-classes', updateTeacherAssignments)
 
 router.put('/:id/class-placement', async (req, res, next) => {
