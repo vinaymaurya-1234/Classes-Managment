@@ -1,0 +1,51 @@
+/* Principal people detail pages: consistent breathing room and readable cards */
+.person-detail-page{
+  display:grid;
+  gap:18px;
+  padding:18px 16px 22px;
+  min-width:0;
+}
+.person-detail-page>.secondary{margin:0 0 2px}
+.person-detail-hero{padding:22px;gap:18px;background:linear-gradient(135deg,#f4fbf6,#fff)}
+.person-detail-hero h2{font-size:22px;line-height:1.25}
+.person-detail-hero p{font-size:12px}
+.person-detail-hero span:not(.avatar){font-size:11px}
+.person-detail-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.person-detail-grid{gap:12px}
+.person-detail-grid>div{padding:16px;border-radius:12px;background:#fbfefc}
+.person-detail-grid span{font-size:10px}
+.person-detail-grid strong{font-size:13px;line-height:1.5}
+.person-detail-section{gap:12px;padding-top:4px}
+.person-detail-section-head h3{font-size:15px}
+.person-detail-section-head>span{font-size:11px}
+.person-detail-empty{padding:14px 16px;margin:0;border:1px dashed #dce8df;border-radius:11px;color:#75877c;font-size:12px}
+.linked-parent-card{
+  display:flex;align-items:center;gap:12px;width:100%;min-width:0;
+  padding:13px 15px;border:1px solid #dcebe1;border-radius:12px;
+  background:#fbfefc;color:inherit;text-align:left;cursor:pointer;
+  transition:border-color .16s,background .16s,transform .16s;
+}
+.linked-parent-card:hover{border-color:#83bd99;background:#f2faf5;transform:translateY(-1px)}
+.linked-parent-avatar{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;background:#e1f2e7;color:#26734d;font-size:14px;font-weight:800}
+.linked-parent-info{display:grid;gap:4px;min-width:0;flex:1}
+.linked-parent-info strong{font-size:13px;color:var(--dark)}
+.linked-parent-info small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.linked-parent-link{display:flex;align-items:center;gap:4px;white-space:nowrap;color:#28754c;font-size:11px;font-weight:750}
+.person-fee-row{padding:15px 16px;border-radius:12px;background:#fbfefc;gap:7px 12px}
+.person-fee-row span{font-size:12px;color:var(--dark)}
+.person-fee-row strong{font-size:12px}
+.person-fee-row small{font-size:11px;line-height:1.5}
+.person-test-card{overflow:hidden;border-radius:12px}
+.person-test-summary{padding:13px 15px}
+@media(max-width:700px){
+ .person-detail-page{padding:14px 10px 18px;gap:14px}
+ .person-detail-hero{padding:16px;gap:12px}
+ .person-detail-hero h2{font-size:19px}
+ .person-detail-grid{grid-template-columns:1fr;gap:9px}
+ .person-detail-grid>div{padding:13px}
+ .linked-parent-card{padding:11px;gap:9px}
+ .linked-parent-avatar{width:36px;height:36px;flex-basis:36px}
+ .linked-parent-link{font-size:10px}
+ .person-fee-row{grid-template-columns:1fr;gap:6px}
+ .person-fee-row small{grid-column:auto}
+}
