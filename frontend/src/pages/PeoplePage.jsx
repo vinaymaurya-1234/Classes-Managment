@@ -67,6 +67,19 @@ export default function PeoplePage({ type, title }) {
   const [editingPlacement, setEditingPlacement] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
 
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [modalOpen]);
+
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
     setLoading(true);
@@ -825,9 +838,8 @@ export default function PeoplePage({ type, title }) {
               )}
 
               {type === "student" && (
-                <fieldset className="teacher-assignment-field">
+                <fieldset className="parent-login-section">
                   <legend>Parent / Guardian login</legend>
-                  <p>Enter the parent Gmail. If this parent already has an account for another child, use the same Gmail; the existing account will be linked automatically.</p>
                   <label>Parent full name
                     <input value={form.parentName} onChange={event=>setForm({...form,parentName:event.target.value})} placeholder="Parent name" required />
                   </label>
@@ -842,7 +854,6 @@ export default function PeoplePage({ type, title }) {
                   <label>Parent phone
                     <input value={form.parentPhone} onChange={event=>setForm({...form,parentPhone:event.target.value})} placeholder="Optional" />
                   </label>
-                  {!parentMatch && <small>If the Gmail already belongs to a parent, the system will reuse that account and preserve its password. If no account exists, enter a temporary password.</small>}
                 </fieldset>
               )}
 
