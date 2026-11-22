@@ -116,7 +116,7 @@ router.post('/questions', async (req, res, next) => {
     const subject = String(body.subject || '').trim(), text = String(body.text || '').trim()
     const type = ['mcq', 'short', 'long', 'true_false'].includes(body.type) ? body.type : 'mcq'
     const marks = Number(body.marks || 1)
-    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (classDivisionId && !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) return fail(res, 400, 'Class, subject, question text and valid marks are required.')
+    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (!classDivisionId || !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) return fail(res, 400, 'Class, subject, question text and valid marks are required.')
     if (!await canTeach(req.user, std, division, classDivisionId)) return forbidden(res)
     const options = Array.isArray(body.options) ? body.options.map((o, i) => ({ key: String(o.key || String.fromCharCode(65 + i)), text: String(o.text || '').trim() })).filter(o => o.text) : []
     const correctAnswer = String(body.correctAnswer || '').trim()
