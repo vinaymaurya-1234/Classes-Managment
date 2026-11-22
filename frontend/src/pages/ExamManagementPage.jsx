@@ -62,7 +62,33 @@ export default function ExamManagementPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  useEffect(()=>{if(!token)return;listClassDivisionsApi(token).then(async result=>{let options=result.classes||[];if(isTeacher){const assigned=await getTeacherClasses(token);const ids=new Set((assigned.classes||[]).map(item=>item.classDivisionId).filter(Boolean));options=options.filter(item=>ids.has(item.id))}setClassDivisionOptions(options.filter(item=>item.active));if(options.length&&!manualClassDivisionId){setManualClassDivisionId(options[0].id);setManualStandard(String(options[0].standard));setManualDivision(options[0].division)}}}).catch(err=>setError(err.message||'Unable to load class structure for exams.'))},[token,isTeacher])
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    const loadClassOptions = async () => {
+      try {
+        const result = await listClassDivisionsApi(token)
+        let options = result.classes || []
+        if (isTeacher) {
+          const assigned = await getTeacherClasses(token)
+          const assignedIds = new Set((assigned.classes || []).map(item => item.classDivisionId).filter(Boolean))
+          options = options.filter(item => assignedIds.has(item.id))
+        }
+        options = options.filter(item => item.active)
+        if (cancelled) return
+        setClassDivisionOptions(options)
+        if (options.length) {
+          setManualClassDivisionId(current => current || options[0].id)
+          setManualStandard(current => current || String(options[0].standard))
+          setManualDivision(current => current || options[0].division)
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Unable to load class structure for exams.')
+      }
+    }
+    loadClassOptions()
+    return () => { cancelled = true }
+  }, [token, isTeacher])
   const loadQuestions = useCallback(async () => {
     if (!isTeacher && !isPrincipal) return
     const query = new URLSearchParams()
