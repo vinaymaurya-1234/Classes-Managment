@@ -1,3 +1,4 @@
+import './PrincipalOverview.css'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getTimetableApi } from '../api/timetable.api'
