@@ -16,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { createUserApi, listUsersApi, updateUserApi } from "../api/users.api";
 import { api } from "../api/client";
 import { students, teachers } from "../data/mockData";
+import { listClassDivisionsApi } from "../api/classes.api";
 
 const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
 const descriptions = {
@@ -28,9 +29,43 @@ const emptyForm = () => ({
   email: "",
   password: "",
   phone: "",
-  std: "",
-  division: "",
-  teachingClasses: [],
+  classDivisionId: "",
+  teachingClassDivisionIds: [],
+  childIds: [],
+});
+mport { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  LoaderCircle,
+  UserPlus,
+  X,
+  BookOpen,
+  Trophy,
+  Wallet,
+  Users,
+} from "lucide-react";
+import { useOutletContext } from "react-router-dom";
+import { Card, SectionIntro } from "../components/common/UI";
+import { useAuth } from "../context/AuthContext";
+import { createUserApi, listUsersApi, updateUserApi } from "../api/users.api";
+import { api } from "../api/client";
+import { students, teachers } from "../data/mockData";
+import { listClassDivisionsApi } from "../api/classes.api";
+
+const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
+const descriptions = {
+  student: "Manage student records, class and optional division.",
+  teacher: "Manage faculty and assign their teaching classes.",
+  parent: "Manage parent accounts and family contacts.",
+};
+const emptyForm = () => ({
+  name: "",
+  email: "",
+  password: "",
+  phone: "",
+  classDivisionId: "",
+  teachingClassDivisionIds: [],
   childIds: [],
 });
 const teacherClassOptions = [11, 12].flatMap((std) => [
@@ -59,7 +94,7 @@ export default function PeoplePage({ type, title }) {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
-  const [availableStudents, setAvailableStudents] = useState([]);
+  const [availableStudents, setAvailableStudents] = useState([]);\n  const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
 
@@ -81,7 +116,7 @@ export default function PeoplePage({ type, title }) {
     if (canManage && token) loadUsers();
   }, [canManage, token, loadUsers]);
 
-  const visibleData = useMemo(() => {
+  useEffect(() => {\n    if (!token) return;\n    listClassDivisionsApi(token).then(result => setClassDivisions(result.classes || [])).catch(err => setError(err.message || "Unable to load class structure."));\n  }, [token]);\n  const visibleData = useMemo(() => {
     const query = String(search).toLowerCase().trim();
     const source = canManage ? data : type === "student" ? students : teachers;
     return source.filter((item) =>
@@ -188,10 +223,10 @@ export default function PeoplePage({ type, title }) {
         phone: form.phone.trim(),
         role: type,
         ...(type === "student"
-          ? { std: Number(form.std), division: form.division }
+          ? { classDivisionId: form.classDivisionId }
           : {}),
         ...(type === "teacher"
-          ? { teachingClasses: form.teachingClasses }
+          ? { teachingClassDivisionIds: form.teachingClassDivisionIds }
           : {}),
         ...(type === "parent" ? { childIds: form.childIds } : {}),
       };
@@ -207,7 +242,7 @@ export default function PeoplePage({ type, title }) {
   };
 
   const updateTeacherClasses = async (person) => {
-    const current = (person.teachingClasses || []).join(", ");
+    const current = (person.teachingClassDivisionIds || []).join(", ");
     const input = window.prompt(
       "Enter assigned classes separated by commas. Example: Class 11 - A, Class 12 - B",
       current,
@@ -222,7 +257,7 @@ export default function PeoplePage({ type, title }) {
       ),
     ];
     try {
-      await updateUserApi(token, person.id, { teachingClasses });
+      await updateUserApi(token, person.id, { teachingClassDivisionIds: teachingClasses });
       await loadUsers();
     } catch (err) {
       setError(err.message || "Unable to update teacher assignments.");
@@ -821,41 +856,14 @@ export default function PeoplePage({ type, title }) {
               </label>
 
               {type === "student" && (
-                <div className="people-form-grid">
-                  <label>
-                    Class / STD
-                    <select
-                      value={form.std}
-                      onChange={(event) =>
-                        setForm({ ...form, std: event.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Choose class</option>
-                      {[10, 11, 12].map((std) => (
-                        <option key={std} value={std}>
-                          Class {std}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Division
-                    <select
-                      value={form.division}
-                      onChange={(event) =>
-                        setForm({ ...form, division: event.target.value })
-                      }
-                    >
-                      <option value="">No division (optional)</option>
-                      {["A", "B", "C"].map((division) => (
-                        <option key={division} value={division}>
-                          Division {division}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                <label>
+                  Class and division
+                  <select value={form.classDivisionId} onChange={event=>setForm({...form,classDivisionId:event.target.value})} required>
+                    <option value="">Choose class / division</option>
+                    {classDivisions.filter(item=>item.active).map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}
+                  </select>
+                  {!classDivisions.length&&<small>Set up classes first from the Class Structure tab.</small>}
+                </label>
               )}
 
               {type === "parent" && (
@@ -895,19 +903,15 @@ export default function PeoplePage({ type, title }) {
                   <legend>Assign teaching classes</legend>
                   <p>Select every class this teacher will teach.</p>
                   <div className="teacher-assignment-options">
-                    {teacherClassOptions.map((option) => (
-                      <label key={option.value}>
-                        <input
-                          type="checkbox"
-                          checked={form.teachingClasses.includes(option.value)}
-                          onChange={() => toggleClass(option.value)}
-                        />
-                        {option.label}
+                    {classDivisions.filter(item=>item.active).map(option => (
+                      <label key={option.id}>
+                        <input type="checkbox" checked={form.teachingClassDivisionIds.includes(option.id)} onChange={() => toggleClass(option.id)} />
+                        {option.displayName}
                       </label>
                     ))}
                   </div>
-                  {!form.teachingClasses.length && (
-                    <small>Choose a class, with or without a division.</small>
+                  {!form.teachingClassDivisionIds.length && (
+                    <small>Choose one or more configured class divisions.</small>
                   )}
                 </fieldset>
               )}
