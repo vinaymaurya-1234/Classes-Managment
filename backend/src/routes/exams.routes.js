@@ -101,7 +101,7 @@ router.get('/questions', async (req, res, next) => {
     }
     if (req.query.search) filter.text = { $regex: String(req.query.search).trim().slice(0, 100), $options: 'i' }
     const questions = await Question.find(filter).sort({ updatedAt: -1 }).limit(500).lean()
-    res.json({ success: true, data: questions.map(q => ({ ...q, correctAnswer: isPrincipal(user) || String(q.teacher) === String(user._id) ? q.correctAnswer : undefined })) })
+    res.json({ success: true, data: questions.map(q => ({ ...q, classDivisionId: q.classDivision?.toString() || '', correctAnswer: isPrincipal(user) || String(q.teacher) === String(user._id) ? q.correctAnswer : undefined })) })
   } catch (error) { next(error) }
 })
 
