@@ -31,6 +31,14 @@ async function seedFromLegacyData() {
     divisions.add((match[2] || 'A').toUpperCase())
     standards.set(standard, divisions)
   }))
+  const homework = await Homework.find({}).select('className division').lean()
+  homework.forEach(item => { const standard=Number(String(item.className||'').match(/\\d+/)?.[0]); if(!standard||standard<1||standard>12||!item.division)return; const divisions=standards.get(standard)||new Set(); divisions.add(String(item.division).toUpperCase()); standards.set(standard,divisions) })
+  const chapters = await Chapter.find({}).select('className').lean()
+  chapters.forEach(item => { const match=String(item.className||'').match(/(1[0-2]|[1-9])(?:\\s*[-/]\\s*(?:division\\s*)?([a-z0-9_-]{1,8}))?/i); if(!match)return; const standard=Number(match[1]); const divisions=standards.get(standard)||new Set(); if(match[2])divisions.add(match[2].toUpperCase()); standards.set(standard,divisions) })
+  const questions = await Question.find({}).select('className division').lean()
+  const papers = await QuestionPaper.find({}).select('className division').lean()
+  const exams = await Exam.find({}).select('className division').lean()
+  for (const record of [...questions,...papers,...exams]) { const standard=Number(String(record.className||'').match(/\\d+/)?.[0]); if(!standard||standard<1||standard>12||!record.division)return; const divisions=standards.get(standard)||new Set(); divisions.add(String(record.division).toUpperCase()); standards.set(standard,divisions) }
   const timetable = await TimetableEntry.find({}).select('standard division className').lean()
   timetable.forEach(entry => {
     const standard = Number(entry.standard || String(entry.className || '').match(/\d+/)?.[0])
@@ -74,6 +82,29 @@ async function seedFromLegacyData() {
     return doc ? [{ updateOne: { filter: { _id: entry._id }, update: { $set: { classDivision: doc._id, className: doc.displayName, standard: doc.standard, division: doc.division } } }] : []
   })
   if (timetableOps.length) await TimetableEntry.bulkWrite(timetableOps)
+  const migrateRecords = async (Model, field = 'division') => {
+    const records = await Model.find({ classDivision: null }).select(`className ${field}`).lean()
+    const ops = records.flatMap(record => {
+      const standard = Number(String(record.className || '').match(/\\d+/)?.[0])
+      const division = String(record[field] || '').trim().toUpperCase()
+      if (!standard || !division) return []
+      const doc = byKey.get(`${standard}:${division}`)
+      return doc ? [{ updateOne: { filter: { _id: record._id }, update: { $set: { classDivision: doc._id } } } }] : []
+    })
+    if (ops.length) await Model.bulkWrite(ops)
+  }
+  await migrateRecords(Homework)
+  await migrateRecords(Question)
+  await migrateRecords(QuestionPaper)
+  await migrateRecords(Exam)
+  const chapterRecords = await Chapter.find({ classDivision: null }).select('className').lean()
+  const chapterOps = chapterRecords.flatMap(record => {
+    const match = String(record.className || '').match(/(1[0-2]|[1-9])(?:\\s*[-/]\\s*(?:division\\s*)?([a-z0-9_-]{1,8}))?/i)
+    if (!match?.[2]) return []
+    const doc = byKey.get(`${Number(match[1])}:${match[2].toUpperCase()}`)
+    return doc ? [{ updateOne: { filter: { _id: record._id }, update: { $set: { classDivision: doc._id } } } }] : []
+  })
+  if (chapterOps.length) await Chapter.bulkWrite(chapterOps)
 
 }
 
