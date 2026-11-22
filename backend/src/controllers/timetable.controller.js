@@ -107,7 +107,7 @@ export const createTimetableEntry = async (req, res, next) => {
     const teacherId = String(req.body.teacherId || '').trim()
     const teacherName = String(req.body.teacherName || '').trim()
 
-    if (!isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !subject || !className) {
+    if (!classDivision || !isValidDate(date) || !isValidTime(startTime) || !isValidTime(endTime) || !subject || !className) {
       return res.status(400).json({ success: false, message: 'Date, time, subject and class are required.' })
     }
     if (startTime >= endTime) return res.status(400).json({ success: false, message: 'End time must be after start time.' })
@@ -133,7 +133,7 @@ export const updateTimetableEntry = async (req, res, next) => {
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
     const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
-    if (req.body.classDivisionId !== undefined) {
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined) return res.status(400).json({ success: false, message: 'Choose a class division from Class Structure.' })\n    if (req.body.classDivisionId !== undefined) {
       const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true })
       if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' })
       entry.classDivision = selected._id
