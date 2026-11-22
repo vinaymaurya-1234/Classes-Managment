@@ -4,6 +4,7 @@ import { useOutletContext } from 'react-router-dom'
 import { Card, Stat } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 import { listStudentFeesApi, saveStudentFeeApi } from '../api/fees.api'
+import { listClassDivisionsApi } from '../api/classes.api'
 
 const ACADEMIC_YEAR = '2026-27'
 const methods = { cash: 'Cash', upi: 'UPI', bank: 'Bank transfer', card: 'Card', other: 'Other' }
@@ -16,6 +17,8 @@ export default function FeesPage() {
   const { token } = useAuth()
   const principal = role === 'principal'
   const [records, setRecords] = useState([])
+  const [classDivisions, setClassDivisions] = useState([])
+  const [classFilter, setClassFilter] = useState('')
   const [loading, setLoading] = useState(principal)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
@@ -29,11 +32,12 @@ export default function FeesPage() {
     catch (err) { setError(err.message) } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [token, principal])
+  useEffect(() => { if(token&&principal)listClassDivisionsApi(token).then(result=>setClassDivisions((result.classes||[]).filter(item=>item.active))).catch(err=>setError(err.message)) },[token,principal])
 
   const visible = useMemo(() => {
     const q = (search || '').toLowerCase().trim()
-    return records.filter(r => `${r.student.name} ${r.student.className || ''} ${r.status}`.toLowerCase().includes(q))
-  }, [records, search])
+    return records.filter(r => (!classFilter || r.student.classDivisionId === classFilter) && `${r.student.name} ${r.student.className || ''} ${r.status}`.toLowerCase().includes(q))
+  }, [records, search, classFilter])
 
   const totals = useMemo(() => ({
     total: records.reduce((n, r) => n + Number(r.totalFee || 0), 0),
@@ -80,7 +84,7 @@ export default function FeesPage() {
     </div>
 
     {error && !selected && <div className="profile-message error fees-error">{error}</div>}
-    <Card title="Student fee records">
+    <Card title="Student fee records"><div className="fee-filter-row"><label>Class / Division<select value={classFilter} onChange={event=>setClassFilter(event.target.value)}><option value="">All configured classes</option>{classDivisions.map(item=><option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label></div>
       {loading ? <div className="fee-state"><LoaderCircle size={18} className="spin" />Loading student fee records...</div> :
        visible.length ? <div className="fee-table">
         <div className="fee-table-row fee-table-head"><span>Student</span><span>Total</span><span>Paid</span><span>Installments</span><span>Balance</span><span>Status</span><span /></div>
