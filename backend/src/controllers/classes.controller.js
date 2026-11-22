@@ -127,9 +127,12 @@ export const saveClassStructure = async (req, res, next) => {
     if (!standards.length) return res.status(400).json({ success: false, message: 'Add at least one class with a division.' })
     const normalized = []
     const seen = new Set()
+    const seenStandards = new Set()
     for (const item of standards) {
       const standard = Number(item.standard)
       const standardLabel = String(item.label || labelFor(standard)).trim()
+      if (seenStandards.has(standard)) return res.status(400).json({ success: false, message: `Class ${standard} is listed more than once. Add its divisions in one class entry.` })
+      seenStandards.add(standard)
       const divisions = Array.isArray(item.divisions) ? item.divisions.map(value => String(value).trim().toUpperCase()).filter(Boolean) : []
       if (!Number.isInteger(standard) || standard < 1 || standard > 12 || !standardLabel || !divisions.length) return res.status(400).json({ success: false, message: 'Each class must have a valid standard (1–12), a name, and at least one division.' })
       for (const division of divisions) {
