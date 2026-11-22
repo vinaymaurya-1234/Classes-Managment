@@ -18,6 +18,7 @@ const chapterSchema = new mongoose.Schema(
     },
     subject: { type: String, required: true, trim: true },
     className: { type: String, required: true, trim: true },
+    classDivision: { type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision', default: null, index: true },
     chapterNumber: { type: Number, required: true, min: 1 },
     title: { type: String, required: true, trim: true },
     startedAt: { type: Date, default: null },
