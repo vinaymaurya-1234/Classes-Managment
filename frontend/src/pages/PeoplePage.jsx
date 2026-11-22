@@ -32,6 +32,7 @@ const emptyForm = () => ({
   division: "",
   teachingClasses: [],
   childIds: [],
+  relationship: "father",
 });
 const teacherClassOptions = [11, 12].flatMap((std) => [
   { value: `Class ${std}`, label: `Class ${std} · Any division` },
@@ -62,6 +63,7 @@ export default function PeoplePage({ type, title }) {
   const [availableStudents, setAvailableStudents] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState("");
+  const [selectedChildIds, setSelectedChildIds] = useState([]);
 
   const loadUsers = useCallback(async () => {
     if (!canManage || !token) return;
@@ -108,6 +110,7 @@ export default function PeoplePage({ type, title }) {
     setFeeRecords([]);
     setTeacherClasses([]);
     setSelectedTeachingClass("");
+    setSelectedChildIds([]);
     setError("");
     if (!canManage || !token) return;
     setDetailLoading(true);
@@ -131,9 +134,11 @@ export default function PeoplePage({ type, title }) {
         );
         setTeacherClasses(result.classes || []);
       } else if (type === "parent") {
-        const fees = await api
-          .get("/api/fees/students", token)
-          .catch(() => ({ fees: [] }));
+        const [fees, studentResult] = await Promise.all([
+          api.get("/api/fees/students", token).catch(() => ({ fees: [] })),
+          listUsersApi(token, "student"),
+        ]);
+        setAvailableStudents(studentResult.users || []);
         const linkedIds = (person.children || []).map((child) => child.id);
         setFeeRecords(
           (fees.fees || []).filter((fee) =>
@@ -193,7 +198,7 @@ export default function PeoplePage({ type, title }) {
         ...(type === "teacher"
           ? { teachingClasses: form.teachingClasses }
           : {}),
-        ...(type === "parent" ? { childIds: form.childIds } : {}),
+        ...(type === "parent" ? { childIds: form.childIds, relationship: form.relationship } : {}),
       };
       await createUserApi(token, payload);
       setModalOpen(false);
@@ -204,6 +209,28 @@ export default function PeoplePage({ type, title }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const generateParentPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$";
+    const bytes = new Uint32Array(12);
+    window.crypto.getRandomValues(bytes);
+    const password = Array.from(bytes, value => chars[value % chars.length]).join("");
+    setForm(current => ({ ...current, password }));
+  };
+
+  const linkStudentsToParent = async () => {
+    if (!selectedPerson || !selectedChildIds.length || saving) return;
+    setSaving(true); setError("");
+    try {
+      await api.put("/api/users/" + encodeURIComponent(selectedPerson.id) + "/children", { childIds: selectedChildIds }, token);
+      const refreshed = await listUsersApi(token, "parent");
+      const updated = (refreshed.users || []).find(parent => parent.id === selectedPerson.id);
+      if (updated) setSelectedPerson(updated);
+      setData(refreshed.users || []);
+      setSelectedChildIds([]);
+    } catch (err) { setError(err.message || "Unable to link students to this parent."); }
+    finally { setSaving(false); }
   };
 
   const updateTeacherClasses = async (person) => {
@@ -515,6 +542,19 @@ export default function PeoplePage({ type, title }) {
                         {(selectedPerson.children || []).length} children
                       </span>
                     </div>
+                    <div className="parent-link-existing">
+                      <strong>Link another existing student</strong>
+                      <div className="teacher-assignment-options">
+                        {availableStudents.filter(student => !(selectedPerson.children || []).some(child => child.id === student.id)).map(student => (
+                          <label key={student.id}>
+                            <input type="checkbox" checked={selectedChildIds.includes(student.id)} onChange={() => setSelectedChildIds(current => current.includes(student.id) ? current.filter(id => id !== student.id) : [...current, student.id])}/>
+                            {student.name} · Class {student.std || "—"}{student.division ? " - " + student.division : ""}
+                          </label>
+                        ))}
+                      </div>
+                      {!availableStudents.some(student => !(selectedPerson.children || []).some(child => child.id === student.id)) && <small>All existing students are already linked.</small>}
+                      <button type="button" className="secondary" disabled={!selectedChildIds.length || saving} onClick={linkStudentsToParent}>{saving ? "Linking..." : "Link " + (selectedChildIds.length || "selected") + " student" + (selectedChildIds.length === 1 ? "" : "s")}</button>
+                    </div>
                     {(selectedPerson.children || []).map((child) => (
                       <div className="person-fee-row" key={child.id}>
                         <span>
@@ -798,16 +838,8 @@ export default function PeoplePage({ type, title }) {
               </label>
               <label>
                 Temporary password
-                <input
-                  type="password"
-                  minLength={8}
-                  value={form.password}
-                  onChange={(event) =>
-                    setForm({ ...form, password: event.target.value })
-                  }
-                  placeholder="At least 8 characters"
-                  required
-                />
+                <input type="text" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required />
+                {type === "parent" && <button type="button" className="secondary" onClick={generateParentPassword}>Generate secure password</button>}
               </label>
               <label>
                 Phone
@@ -859,7 +891,14 @@ export default function PeoplePage({ type, title }) {
               )}
 
               {type === "parent" && (
-                <fieldset className="teacher-assignment-field">
+                <>
+                  <label>
+                    Relationship to child
+                    <select value={form.relationship} onChange={event => setForm({ ...form, relationship: event.target.value })} required>
+                      <option value="father">Father</option><option value="mother">Mother</option><option value="guardian">Guardian</option>
+                    </select>
+                  </label>
+                  <fieldset className="teacher-assignment-field">
                   <legend>Link children (optional)</legend>
                   <p>Select the students linked to this parent account.</p>
                   <div className="teacher-assignment-options">
@@ -888,6 +927,7 @@ export default function PeoplePage({ type, title }) {
                     )}
                   </div>
                 </fieldset>
+                </>
               )}
 
               {type === "teacher" && (
