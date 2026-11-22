@@ -71,8 +71,23 @@ export default function ExamManagementPage() {
         let options = result.classes || []
         if (isTeacher) {
           const assigned = await getTeacherClasses(token)
-          const assignedIds = new Set((assigned.classes || []).map(item => item.classDivisionId).filter(Boolean))
-          options = options.filter(item => assignedIds.has(item.id))
+          const assignedClasses = assigned.classes || []
+          const assignedIds = new Set(assignedClasses.map(item => String(item.classDivisionId || item.id || item._id || '')).filter(Boolean))
+          // Older teacher assignments may only contain a class label (for example,
+          // "Class 5 - A") and therefore have no ClassDivision ID. Match those
+          // assignments against the configured standard/division as a fallback.
+          const assignedKeys = assignedClasses.map(item => {
+            const standard = Number(item.std || String(item.className || item.label || '').match(/\\d+/)?.[0])
+            const division = String(item.division || String(item.label || item.className || '').match(/[-/ ]([A-Z0-9_-]{1,8})$/i)?.[1] || '').trim().toUpperCase()
+            return standard ? { standard, division } : null
+          }).filter(Boolean)
+          options = options.filter(item => {
+            if (assignedIds.has(String(item.id))) return true
+            return assignedKeys.some(assignedClass =>
+              Number(item.standard) === assignedClass.standard &&
+              (!assignedClass.division || String(item.division || '').toUpperCase() === assignedClass.division)
+            )
+          })
         }
         options = options.filter(item => item.active)
         if (cancelled) return
