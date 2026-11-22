@@ -86,7 +86,8 @@ export const saveClassStructure = async (req, res, next) => {
       if (!desiredKeys.has(key) && doc.active) {
         const assignedStudents = await User.countDocuments({ role: 'student', classDivision: doc._id })
         const assignedTeachers = await User.countDocuments({ teachingClassDivisions: doc._id })
-        if (assignedStudents || assignedTeachers) return res.status(409).json({ success: false, message: `${doc.displayName} is referenced by users or academic records. Reassign or remove those records before removing it.` })
+        const linkedRecords = await Promise.all([TimetableEntry.countDocuments({ classDivision: doc._id }), Homework.countDocuments({ classDivision: doc._id }), Chapter.countDocuments({ classDivision: doc._id }), Exam.countDocuments({ classDivision: doc._id }), QuestionPaper.countDocuments({ classDivision: doc._id }), Question.countDocuments({ classDivision: doc._id })])
+        if (assignedStudents || assignedTeachers || linkedRecords.some(count => count > 0)) return res.status(409).json({ success: false, message: `${doc.displayName} is referenced by users or academic records. Reassign or remove those records before removing it.` })
         doc.active = false
         await doc.save()
       }
