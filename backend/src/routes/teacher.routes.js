@@ -20,7 +20,8 @@ router.get('/classes', async (req, res, next) => {
     const chapters = await Chapter.find({ teacher: targetTeacher._id }).select('className subject title chapterName status progress updatedAt').lean()
     const configuredClasses = Array.isArray(targetTeacher.teachingClasses) ? targetTeacher.teachingClasses : []
     const classMap = new Map()
-    const divisionSources = (targetTeacher.teachingClassDivisions || []).map(item => item.displayName)\n    const classSources = divisionSources.length ? divisionSources : (configuredClasses.length ? configuredClasses : chapters.map(item => item.className)))
+    const divisionSources = (targetTeacher.teachingClassDivisions || []).map(item => item.displayName)
+    const classSources = divisionSources.length ? divisionSources : (configuredClasses.length ? configuredClasses : chapters.map(item => item.className))
     for (const value of classSources) {
       const parsed = parseClass(value)
       if (!parsed) continue
