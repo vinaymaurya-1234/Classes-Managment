@@ -209,7 +209,7 @@ router.post('/papers', async (req, res, next) => {
     let questions = []
     if (Array.isArray(body.questionIds) && body.questionIds.length) {
       if (body.questionIds.some(id => !validId(id))) return fail(res, 400, 'One or more question IDs are invalid.')
-      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject })
+      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}) })
       const byId = new Map(found.map(question => [String(question._id), question]))
       questions = body.questionIds.map(id => byId.get(String(id))).filter(Boolean)
     } else {
