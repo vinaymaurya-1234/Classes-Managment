@@ -6,6 +6,7 @@ const CHAT_URL = `${BASE_URL}/api/chat`
 const request = async (path, token, options = {}) => {
   const response = await fetch(`${CHAT_URL}${path}`, {
     ...options,
+    cache: options.cache || 'no-store',
     headers: { Authorization: `Bearer ${token}`, ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) },
   })
   const data = await response.json().catch(() => ({}))
