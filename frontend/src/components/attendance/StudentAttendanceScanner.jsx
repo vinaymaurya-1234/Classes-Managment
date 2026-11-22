@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, ClipboardPaste, LoaderCircle, QrCode, RotateCcw, ShieldCheck, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { getStudentAttendanceSummaryApi, markAttendanceApi } from '../../api/attendance.api'
+import { getStudentAttendanceSummaryApi, markAttendanceApi, getTeacherAttendanceSummaryApi, markTeacherAttendanceApi } from '../../api/attendance.api'
 
 const getTokenFromValue = value => {
   const raw = String(value || '').trim()
@@ -20,7 +20,7 @@ const formatTime = value =>
     ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : ''
 
-export default function StudentAttendanceScanner() {
+export default function StudentAttendanceScanner({ role = 'student' }) {
   const { token } = useAuth()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -56,12 +56,12 @@ export default function StudentAttendanceScanner() {
   const loadSummary = useCallback(async () => {
     if (!token) return
     try {
-      const data = await getStudentAttendanceSummaryApi(token)
+      const data = role === 'teacher' ? await getTeacherAttendanceSummaryApi(token) : await getStudentAttendanceSummaryApi(token)
       setSummary(data)
     } catch {
       // The scanner remains usable even if the historical summary is temporarily unavailable.
     }
-  }, [token])
+  }, [token, role])
 
   const mark = useCallback(async value => {
     const attendanceToken = getTokenFromValue(value)
@@ -74,7 +74,7 @@ export default function StudentAttendanceScanner() {
     stopCamera()
 
     try {
-      const data = await markAttendanceApi(token, attendanceToken)
+      const data = role === 'teacher' ? await markTeacherAttendanceApi(token, attendanceToken) : await markAttendanceApi(token, attendanceToken)
       setStatus({
         type: data.alreadyMarked ? 'already' : 'success',
         message: data.message,
@@ -93,7 +93,7 @@ export default function StudentAttendanceScanner() {
       busyRef.current = false
       setLoading(false)
     }
-  }, [loadSummary, stopCamera, token])
+  }, [loadSummary, stopCamera, token, role])
 
   const scanFrame = useCallback(async () => {
     if (!videoRef.current || !detectorRef.current || busyRef.current) return
@@ -256,7 +256,7 @@ export default function StudentAttendanceScanner() {
           </div>
 
           <p className="scanner-help">
-            The QR is valid only for today’s active attendance session and only for student accounts.
+            The QR is valid only for today’s active attendance session. Your record is kept separately from student attendance.
           </p>
         </section>
 
