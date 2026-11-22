@@ -44,6 +44,7 @@ export const listNotices = async (req, res, next) => {
 
     const notices = await Notice.find(query)
       .populate('createdBy', 'name')
+      .populate('classDivisionIds', 'displayName')
       .sort({ createdAt: -1 })
 
     return res.json({
