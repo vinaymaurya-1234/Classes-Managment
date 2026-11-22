@@ -129,7 +129,7 @@ export const updateProfile = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No profile changes were provided' })
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions').populate('classDivision').populate('teachingClassDivisions').populate('classDivision').populate('teachingClassDivisions')
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true }).populate('classDivision').populate('teachingClassDivisions')
     return res.json({ success: true, message: 'Profile updated', user: publicUser(user) })
   } catch (error) {
     next(error)
