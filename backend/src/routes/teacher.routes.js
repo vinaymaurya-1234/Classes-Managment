@@ -8,7 +8,7 @@ router.use(requireAuth)
 
 const parseClass = value => {
   const text = String(value ?? '').trim()
-  const match = text.match(/(?:class\s*)?(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z]))?/i)
+  const match = text.match(/(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z0-9_-]{1,8}))?/i)
   return match ? { std: Number(match[1]), division: (match[2] || '').toUpperCase() } : null
 }
 
@@ -29,8 +29,7 @@ router.get('/classes', async (req, res, next) => {
       if (!classMap.has(key)) classMap.set(key, { ...parsed, className: `Class ${parsed.std}`, division: parsed.division, classDivisionId: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?._id?.toString() || '', classLabel: (targetTeacher.teachingClassDivisions || []).find(doc => doc.displayName === value)?.displayName || '', subjects: [] })
     }
     const classes = await Promise.all([...classMap.values()].map(async item => {
-      const studentFilter = { role: 'student', std: item.std }
-      if (item.division) studentFilter.division = item.division
+      const studentFilter = item.classDivisionId ? { role: 'student', classDivision: item.classDivisionId } : { role: 'student', std: item.std, division: item.division }
       const students = await User.find(studentFilter).select('name email phone avatarUrl std division').sort({ name: 1 }).lean()
       const subjects = [...new Set(chapters.filter(ch => {
         const parsed = parseClass(ch.className)
