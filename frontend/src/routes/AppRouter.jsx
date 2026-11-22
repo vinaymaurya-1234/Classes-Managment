@@ -17,6 +17,7 @@ import PeoplePage from '../pages/PeoplePage'
 import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
 import ClassStructurePage from '../pages/ClassStructurePage'
+import ChatPage from '../pages/ChatPage'
 import { useAuth } from '../context/AuthContext'
 
 export default function AppRouter() {
@@ -46,6 +47,7 @@ export default function AppRouter() {
         <Route path="/:role/classes" element={<PeoplePage type="student" title="My Classes" />} />
         <Route path="/:role/children" element={<ChildrenPage />} />
         <Route path="/:role/notices" element={<NoticesPage />} />
+        <Route path="/:role/chat" element={<ChatPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
