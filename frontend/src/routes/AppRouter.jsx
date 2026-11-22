@@ -16,6 +16,7 @@ import ExamManagementPage from '../pages/ExamManagementPage'
 import PeoplePage from '../pages/PeoplePage'
 import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
+import ClassStructurePage from '../pages/ClassStructurePage'
 import { useAuth } from '../context/AuthContext'
 
 export default function AppRouter() {
@@ -31,6 +32,7 @@ export default function AppRouter() {
         <Route path="/teacher/classes" element={<TeacherClassesPage />} />
         <Route path="/:role/overview" element={<OverviewPage />} />
         <Route path="/principal/timetable/weekly-template" element={<WeeklyTimetablePage />} />
+        <Route path="/principal/class-structure" element={<ClassStructurePage />} />
         <Route path="/:role/timetable" element={<TimetablePage />} />
         <Route path="/:role/attendance" element={<AttendancePage />} />
         <Route path="/:role/homework" element={<HomeworkPage />} />
