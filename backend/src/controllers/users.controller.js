@@ -15,6 +15,7 @@ const publicUser = user => ({
   std: user.std ?? null,
   division: user.division || (user.role === 'student' ? 'A' : ''),
   teachingClasses: user.teachingClasses || [],
+  relationship: user.relationship || '',
   children: (user.children || []).map(child => child?._id ? ({ id: child._id.toString(), name: child.name, email: child.email, std: child.std ?? null, division: child.division || '', className: child.className || '' }) : ({ id: child.toString() })),
   createdAt: user.createdAt,
 })
@@ -40,6 +41,8 @@ export const createUser = async (req, res, next) => {
     const role = String(req.body.role || '').trim().toLowerCase()
     const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : ''
     const avatarUrl = typeof req.body.avatarUrl === 'string' ? req.body.avatarUrl.trim() : ''
+    const relationship = String(req.body.relationship || '').trim().toLowerCase()
+    if (role === 'parent' && !['father', 'mother', 'guardian'].includes(relationship)) return res.status(400).json({ success: false, message: 'Choose Father, Mother or Guardian.' })
     const std = req.body.std === '' || req.body.std == null ? null : Number(req.body.std)
     const division = String(req.body.division || (role === 'student' ? 'A' : '')).trim().toUpperCase()
     const teachingClasses = Array.isArray(req.body.teachingClasses) ? [...new Set(req.body.teachingClasses.map(normalizeTeachingClass))] : []
@@ -106,7 +109,7 @@ export const createUser = async (req, res, next) => {
       avatarUrl,
       ...(role === 'student' ? { std, division, className: `Class ${std}` } : {}),
       ...(role === 'teacher' ? { teachingClasses } : {}),
-      ...(role === 'parent' ? { children: childIds } : {}),
+      ...(role === 'parent' ? { children: childIds, relationship } : {}),
     })
     return res.status(201).json({ success: true, message: `${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully`, user: publicUser(user) })
   } catch (error) {
