@@ -34,7 +34,7 @@ const canTeach = async (user, std, division, classDivisionId = '') => {
   const labels = Array.isArray(user.teachingClasses) ? user.teachingClasses : []
   const assigned = labels.some(value => {
     const parsed = normalizeClassAssignment(value)
-    return parsed && parsed.std === Number(std) && (!parsed.division || parsed.division === String(division).toUpperCase())
+    return parsed && parsed.std === Number(std) && (!division || !parsed.division || parsed.division === String(division).toUpperCase())
   })
   if (assigned) return true
 
@@ -204,24 +204,27 @@ router.post('/papers', async (req, res, next) => {
     const std = classDivision?.standard || Number(body.std), division = classDivision?.division || String(body.division || '').toUpperCase()
     const subject = String(body.subject || '').trim(), title = String(body.title || '').trim()
     const className = `Class ${std}`
-    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (!classDivisionId || !classDivision) || !subject || !title) return fail(res, 400, 'Paper title, class and subject are required.')
-    if (!await canTeach(req.user, std, division, classDivisionId)) return forbidden(res)
+    if (!stds.includes(std) || !title) return fail(res, 400, 'Paper title and standard are required.')
+    if (!await canTeach(req.user, std, '', '')) return forbidden(res)
+    const standardDivisions = await ClassDivision.find({ standard: std, active: true }).select('_id').lean()
+    const divisionIds = standardDivisions.map(item => item._id)
+    const standardQuestionFilter = { $or: [{ className }, ...(divisionIds.length ? [{ classDivision: { $in: divisionIds } }] : [])] }
     let questions = []
     if (Array.isArray(body.questionIds) && body.questionIds.length) {
       if (body.questionIds.some(id => !validId(id))) return fail(res, 400, 'One or more question IDs are invalid.')
-      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}) })
+      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, ...standardQuestionFilter })
       const byId = new Map(found.map(question => [String(question._id), question]))
       questions = body.questionIds.map(id => byId.get(String(id))).filter(Boolean)
     } else {
       const count = Math.min(100, Math.max(1, Number(body.questionCount || 10)))
-      const filter = { teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject }
-      if (body.difficulty && ['easy','medium','hard'].includes(body.difficulty)) filter.difficulty = body.difficulty
+      const filter = { teacher: req.user._id, ...standardQuestionFilter }
+      if (subject) filter.subject = subject
       questions = await Question.aggregate([{ $match: { ...filter, teacher: new mongoose.Types.ObjectId(String(req.user._id)) } }, { $sample: { size: count } }])
     }
     if (!questions.length) return fail(res, 400, 'No matching questions found. Add questions or change your filters.')
     const snapshots = questions.map(q => ({ questionRef: q._id, text: q.text, type: q.type, options: q.options, correctAnswer: q.correctAnswer, explanation: q.explanation, marks: Number(q.marks || 1), difficulty: q.difficulty || 'medium', chapter: q.chapter || '' }))
     const totalMarks = snapshots.reduce((sum, q) => sum + q.marks, 0)
-    const paper = await QuestionPaper.create({ teacher: req.user._id, title, className, classDivision: classDivision?._id || null, std, division, subject, instructions: String(body.instructions || '').trim(), questions: snapshots, totalMarks, durationMinutes: Math.max(1, Number(body.durationMinutes || 60)), status: 'draft' })
+    const paper = await QuestionPaper.create({ teacher: req.user._id, title, className, classDivision: null, std, division: '', subject, instructions: String(body.instructions || '').trim(), questions: snapshots, totalMarks, durationMinutes: Math.max(1, Number(body.durationMinutes || 60)), status: 'draft' })
     res.status(201).json({ success: true, data: sanitizePaper(paper, true) })
   } catch (error) { next(error) }
 })
