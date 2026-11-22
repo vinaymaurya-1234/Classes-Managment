@@ -1,6 +1,6 @@
 const configuredUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim()
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-const BASE_URL = ((configuredUrl && !/localhost|127\\.0\\.1/i.test(configuredUrl)) ? configuredUrl : `http://${host}:5000`).replace(/\\/$/, '')
+const BASE_URL = ((configuredUrl && !/localhost|127\.0\.0\.1/i.test(configuredUrl)) ? configuredUrl : `http://${host}:5000`).replace(/\/$/, '')
 const CHAT_URL = `${BASE_URL}/api/chat`
 
 const request = async (path, token, options = {}) => {
