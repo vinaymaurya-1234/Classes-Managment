@@ -77,7 +77,7 @@ export default function ExamManagementPage() {
           // "Class 5 - A") and therefore have no ClassDivision ID. Match those
           // assignments against the configured standard/division as a fallback.
           const assignedKeys = assignedClasses.map(item => {
-            const standard = Number(item.std || String(item.className || item.label || '').match(/\\d+/)?.[0])
+            const standard = Number(item.std || String(item.className || item.label || '').match(/\d+/)?.[0])
             const division = String(item.division || String(item.label || item.className || '').match(/[-/ ]([A-Z0-9_-]{1,8})$/i)?.[1] || '').trim().toUpperCase()
             return standard ? { standard, division } : null
           }).filter(Boolean)
