@@ -52,7 +52,7 @@ router.post('/', async (req, res, next) => {
     if (!className || !subject || !title) return res.status(400).json({ success: false, message: 'Class, subject and title are required.' })
     const teacherRecord = await User.findById(req.user._id).populate('teachingClassDivisions')
     const assignedDivisionIds = (teacherRecord?.teachingClassDivisions || []).map(item => String(item._id))
-    if (classDivision && assignedDivisionIds.length && !assignedDivisionIds.includes(String(classDivision._id))) return res.status(403).json({ success: false, message: 'You can only assign homework to your configured teaching classes.' })
+    if (classDivision && !assignedDivisionIds.includes(String(classDivision._id))) return res.status(403).json({ success: false, message: 'You can only assign homework to your configured teaching classes.' })
     const teacherClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
     const requested = className.match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-Z0-9_-]{1,8}))?$/i)
     const sameAssignment = value => {
