@@ -54,6 +54,7 @@ export default function ExamManagementPage() {
   const [manualDivision, setManualDivision] = useState('')
   const [activeAttempt, setActiveAttempt] = useState(null)
   const [answerReview, setAnswerReview] = useState(null)
+  const [expandedResultId, setExpandedResultId] = useState(null)
   const [printTarget, setPrintTarget] = useState(null)
   const [printAnswers, setPrintAnswers] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -460,7 +461,32 @@ Student answer: ${a.answer || '(blank)'}`, String(a.marksAwarded || 0))
     {/* Temporarily hidden: online descriptive answer evaluation. */}
 
     {(tab === 'results') && answerReview && <Card title={`Answer review · ${answerReview.exam?.title || ''}`}><button className="secondary" onClick={() => setAnswerReview(null)}>Close review</button><div className="exam-answer-review">{(answerReview.answers || []).map((item, index) => <article key={item._id}><strong>{index + 1}. {item.text}</strong><p>Your answer: {item.answer || 'Not answered'} · Marks: {item.marksAwarded}/{item.marks}</p><p>Correct answer: {item.correctAnswer || 'Manual evaluation'}</p>{item.explanation && <small>{item.explanation}</small>}</article>)}</div></Card>}
-    {(tab === 'results') && <Card title={isPrincipal ? 'Results and performance reports' : isStudent ? 'Published results' : isParent ? 'Child exam reports' : 'Exam results'}><div className="exam-results-toolbar"><p>Results are visible to students and parents only after the principal publishes them.</p>{results.length > 0 && <button className="secondary" onClick={exportResults}><Download size={15}/>Export CSV</button>}</div><div className="exam-results-list">{results.map(result => <article className="exam-result-row" key={result._id}><div><strong>{result.exam?.title || 'Exam'}</strong><p>{result.student?.name || 'Student'} · {result.className}{result.division ? ' - ' + result.division : ''} · {result.exam?.subject}</p><small>{result.pendingManualCount ? `${result.pendingManualCount} written answers pending` : `${result.correctCount} correct · ${result.incorrectCount} incorrect · ${result.unansweredCount} unanswered`}</small></div><div className="exam-result-score"><strong>{result.score} / {result.totalMarks}</strong><span>{result.totalMarks ? Math.round(result.score / result.totalMarks * 100) : 0}%</span>{isStudent && result.exam?.answerReviewEnabled && <button className="secondary" onClick={() => loadAnswerReview(result)}>Review answers</button>}</div></article>)}</div>{!results.length && <div className="exam-state">No published results yet.</div>}</Card>}
+    {(tab === 'results') && <Card title={isPrincipal ? 'Results and performance reports' : isStudent ? 'Published results' : isParent ? 'Child exam reports' : 'Exam results'}><div className="exam-results-toolbar"><p>Results are visible to students and parents only after the principal publishes them.</p>{results.length > 0 && <button className="secondary" onClick={exportResults}><Download size={15}/>Export CSV</button>}</div><div className="exam-results-list">{results.map(result => {
+        const relatedAttempt = isTeacher ? attempts.find(a => String(a.exam?._id) === String(result.exam?._id) && String(a.student?._id) === String(result.student?._id)) : null
+        const isExpanded = expandedResultId === result._id
+        return <article className="exam-result-row exam-result-expandable" key={result._id}>
+          <button type="button" className="exam-result-expand-trigger" onClick={() => setExpandedResultId(isExpanded ? null : result._id)} aria-expanded={isExpanded}>
+            <div><strong>{result.exam?.title || 'Exam'}</strong><p>{result.student?.name || 'Student'} · {result.className}{result.division ? ' - ' + result.division : ''} · {result.exam?.subject}</p><small>{result.pendingManualCount ? `${result.pendingManualCount} written answers pending` : `${result.correctCount} correct · ${result.incorrectCount} incorrect · ${result.unansweredCount} unanswered`}</small></div>
+            <div className="exam-result-score"><strong>{result.score} / {result.totalMarks}</strong><span>{result.totalMarks ? Math.round(result.score / result.totalMarks * 100) : 0}%</span><span className="exam-result-chevron">{isExpanded ? '▲ Hide questions' : '▼ View questions'}</span></div>
+          </button>
+          {isExpanded && isTeacher && <div className="exam-result-question-review">
+            {relatedAttempt?.answers?.length ? relatedAttempt.answers.map((answer, index) => {
+              const q = answer.question
+              const response = String(answer.answer || '').trim()
+              const isObjective = ['mcq','true_false'].includes(q?.type)
+              const correct = isObjective && response && (response.toLowerCase() === String(q?.correctAnswer || '').toLowerCase() || response.toLowerCase() === String(q?.options?.find(o => o.key === q?.correctAnswer)?.text || '').toLowerCase())
+              const wrong = isObjective && response && !correct
+              return <div className={'exam-review-question ' + (wrong ? 'incorrect' : correct ? 'correct' : 'unanswered')} key={answer._id || answer.questionId}>
+                <strong>Q{index + 1}. {q?.text || 'Question'}</strong>
+                <p><b>Student's answer:</b> {response ? (q?.options?.find(o => o.key === response)?.text || response) : 'Not answered'}</p>
+                {isObjective && <p><b>Correct answer:</b> {q?.options?.find(o => o.key === q?.correctAnswer)?.text || q?.correctAnswer || '—'}</p>}
+                <small>{wrong ? 'Incorrect' : correct ? 'Correct' : !response ? 'Unanswered' : answer.reviewed ? `${answer.marksAwarded} / ${q?.marks} marks` : 'Awaiting manual evaluation'}</small>
+              </div>
+            }) : <div className="exam-state">Detailed question responses are not available for this result.</div>}
+          </div>}
+          {isExpanded && !isTeacher && <div className="exam-result-question-review"><p>Question-by-question review is available to teachers for this result.</p></div>}
+        </article>
+      })}</div>{!results.length && <div className="exam-state">No published results yet.</div>}</Card>}
     </div>}
   </>
 }
