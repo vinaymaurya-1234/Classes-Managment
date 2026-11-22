@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   std: { type: Number, enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
   division: { type: String, enum: ['', 'A', 'B', 'C'], default: '' },
   teachingClasses: { type: [String], default: [] },
+  relationship: { type: String, enum: ['', 'father', 'mother', 'guardian'], default: '' },
   children: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], default: [] },
 }, { timestamps: true })
 
