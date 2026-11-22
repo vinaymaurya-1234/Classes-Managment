@@ -38,3 +38,11 @@ export const updateUserApi = (token, userId, payload) =>
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   })
+
+
+export const updateParentChildrenApi = (token, parentId, childIds) =>
+  request("/" + encodeURIComponent(parentId) + "/children", {
+    method: "PUT",
+    headers: { Authorization: "Bearer " + token },
+    body: JSON.stringify({ childIds }),
+  })
