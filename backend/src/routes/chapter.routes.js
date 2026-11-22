@@ -1,5 +1,7 @@
 import express from 'express'
 import Chapter from '../models/Chapter.js'
+import ClassDivision from '../models/ClassDivision.js'
+import User from '../models/User.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = express.Router()
