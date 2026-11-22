@@ -42,9 +42,14 @@ export default function ChatPage() {
   useEffect(() => { loadContacts() }, [loadContacts])
   useEffect(() => {
     if (!selected) { setMessages([]); return undefined }
-    loadMessages()
-    const timer = window.setInterval(() => loadMessages(true), 4000)
-    return () => window.clearInterval(timer)
+    let cancelled = false
+    let timer
+    const poll = async () => {
+      await loadMessages(true)
+      if (!cancelled) timer = window.setTimeout(poll, 2500)
+    }
+    poll()
+    return () => { cancelled = true; window.clearTimeout(timer) }
   }, [selected, loadMessages])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -113,7 +118,7 @@ export default function ChatPage() {
           <div className="chat-messages">
             {!messages.length && <div className="chat-start"><MessageCircle size={28}/><strong>Start a conversation</strong><span>Send a message to {selected.name}.</span></div>}
             {messages.map((message, index) => {
-              const mine = message.senderId === user?.id
+              const mine = message.senderId === String(user?.id || user?._id || '')
               const previous = messages[index - 1]
               const showDate = !previous || dateLabel(previous.createdAt) !== dateLabel(message.createdAt)
               return <div key={message.id}>{showDate && <div className="chat-date"><span>{dateLabel(message.createdAt)}</span></div>}
