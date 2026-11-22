@@ -9,6 +9,12 @@ const publicUser = user => ({
   role: user.role,
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
+  className: user.className || '',
+  classDivisionId: user.classDivision?.toString() || '',
+  std: user.std ?? null,
+  division: user.division || '',
+  teachingClasses: user.teachingClasses || [],
+  teachingClassDivisionIds: (user.teachingClassDivisions || []).map(id => id.toString()),
 })
 
 export const login = async (req, res, next) => {
