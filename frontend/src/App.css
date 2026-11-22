@@ -1308,33 +1308,38 @@
 }
 
 
-/* Student admission modal: parent login section */
+/* Student admission modal: contained scrolling and compact form */
 .user-modal-backdrop{
   position:fixed;
   inset:0;
   z-index:1000;
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
+  overflow-x:hidden;
   overflow-y:auto;
   overscroll-behavior:contain;
-  padding:20px;
+  padding:20px 14px;
   background:rgba(22,45,33,.48);
   backdrop-filter:blur(6px);
   -webkit-overflow-scrolling:touch;
 }
 .user-modal{
+  display:block;
   width:min(560px,100%);
-  max-height:calc(100dvh - 40px);
-  margin:auto;
-  overflow-x:hidden;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  -webkit-overflow-scrolling:touch;
+  max-height:none;
+  height:auto;
+  margin:0 auto;
+  padding:22px;
+  overflow:visible;
   flex:0 0 auto;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 24px 70px rgba(23,56,39,.2);
 }
 .user-modal>form{display:grid;gap:2px}
-.user-modal label{display:grid;gap:6px;margin-top:13px;line-height:1.35}
+.user-modal label{display:grid;gap:6px;margin-top:11px;line-height:1.35}
 .user-modal label input,
 .user-modal label select{
   display:block;
@@ -1356,43 +1361,32 @@
   display:grid;
   gap:4px;
   min-width:0;
-  margin:18px 0 2px;
-  padding:16px;
+  margin:15px 0 2px;
+  padding:14px;
   border:1px solid #dcebe1;
   border-radius:13px;
-  background:linear-gradient(180deg,#f8fcf9 0%,#fff 100%);
+  background:#f8fcf9;
 }
-.parent-login-section legend{
-  padding:0 7px;
-  color:#245d43;
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.01em;
-}
-.parent-login-section>p{
-  margin:0 0 5px;
-  color:var(--muted);
-  font-size:11px;
-  line-height:1.5;
-}
-.parent-login-section label{margin-top:9px}
-.parent-login-section small{
-  display:block;
-  margin-top:7px;
-  color:var(--muted);
-  font-size:10px;
-  line-height:1.45;
-}
-.parent-login-section .profile-message{
-  margin-top:8px;
-  padding:9px 11px;
-  border-radius:9px;
-  font-size:11px;
-  line-height:1.45;
-  overflow-wrap:anywhere;
+.parent-login-section legend{padding:0 7px;color:#245d43;font-size:12px;font-weight:800}
+.parent-login-section label{margin-top:8px}
+.parent-login-section small{display:block;margin-top:7px;color:var(--muted);font-size:10px;line-height:1.45}
+.parent-login-section .profile-message{margin-top:8px;padding:9px 11px;border-radius:9px;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.user-modal-actions{
+  position:sticky;
+  bottom:-22px;
+  z-index:2;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin:18px -22px -22px;
+  padding:13px 22px 18px;
+  border-top:1px solid #e8eee9;
+  border-radius:0 0 18px 18px;
+  background:rgba(255,255,255,.97);
 }
 @media(max-width:600px){
-  .user-modal-backdrop{align-items:flex-start;padding:10px}
-  .user-modal{max-height:calc(100dvh - 20px);margin:0 auto;padding:18px}
-  .parent-login-section{padding:12px}
+  .user-modal-backdrop{padding:10px 8px;justify-content:center}
+  .user-modal{width:100%;padding:17px;border-radius:15px}
+  .parent-login-section{padding:11px}
+  .user-modal-actions{bottom:-17px;margin:16px -17px -17px;padding:11px 17px 15px}
 }
