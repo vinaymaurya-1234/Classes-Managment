@@ -369,6 +369,12 @@ export default function PeoplePage({ type, title }) {
                     <span>Phone</span>
                     <strong>{selectedPerson.phone || "—"}</strong>
                   </div>
+                  {type === "parent" && (
+                    <div>
+                      <span>Relationship</span>
+                      <strong>{selectedPerson.relationship ? selectedPerson.relationship.charAt(0).toUpperCase() + selectedPerson.relationship.slice(1) : "Not specified"}</strong>
+                    </div>
+                  )}
                   {type === "student" && (
                     <>
                       <div>
@@ -838,7 +844,7 @@ export default function PeoplePage({ type, title }) {
               </label>
               <label>
                 Temporary password
-                <input type="text" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required />
+                <input type="password" minLength={8} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" required />
                 {type === "parent" && <button type="button" className="secondary" onClick={generateParentPassword}>Generate secure password</button>}
               </label>
               <label>
