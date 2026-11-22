@@ -359,8 +359,7 @@ Student answer: ${a.answer || '(blank)'}`, String(a.marksAwarded || 0))
 
   const exportResults = () => {
     const rows = results.map(result => ({ Exam: result.exam?.title || '', Student: result.student?.name || '', Class: result.className, Division: result.division, Score: result.score, Total: result.totalMarks, Correct: result.correctCount, Incorrect: result.incorrectCount, Unanswered: result.unansweredCount, PendingManual: result.pendingManualCount }))
-    const csv = [Object.keys(rows[0] || { Exam: '', Student: '', Class: '', Division: '', Score: '', Total: '' }).join(','), ...rows.map(row => Object.values(row).map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))].join('
-')
+    const csv = [Object.keys(rows[0] || { Exam: '', Student: '', Class: '', Division: '', Score: '', Total: '' }).join(','), ...rows.map(row => Object.values(row).map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))].join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
     const link = document.createElement('a'); link.href = url; link.download = 'exam-results.csv'; link.click(); URL.revokeObjectURL(url)
   }
