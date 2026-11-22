@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import AttendanceRecord from '../models/AttendanceRecord.js'
 import AttendanceSession from '../models/AttendanceSession.js'
+import TeacherAttendanceRecord from '../models/TeacherAttendanceRecord.js'
 import User from '../models/User.js'
 
 const INDIA_TIME_ZONE = 'Asia/Kolkata'
@@ -446,4 +447,47 @@ export const getPrincipalStudentAttendance = async (req, res, next) => {
   } catch (error) {
     next(error)
   }
+}
+
+export const markTeacherAttendance = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'teacher')) {
+      return res.status(403).json({ success: false, message: 'Only teacher accounts can mark teacher attendance' })
+    }
+    const accessToken = String(req.body.accessToken || '').trim()
+    if (!accessToken) return res.status(400).json({ success: false, message: 'Attendance QR token is required' })
+
+    const session = await AttendanceSession.findOne({
+      date: getIndiaDate(), active: true, tokenHash: hashToken(accessToken),
+    })
+    if (!session) return res.status(400).json({ success: false, message: "This QR is invalid or today's attendance is not active" })
+
+    const existing = await TeacherAttendanceRecord.findOne({ session: session._id, teacher: req.user._id })
+    if (existing) return res.json({ success: true, alreadyMarked: true, message: 'Your attendance has already been marked for today', attendance: { id: existing._id.toString(), markedAt: existing.markedAt, status: existing.status } })
+
+    const record = await TeacherAttendanceRecord.create({ session: session._id, teacher: req.user._id, status: 'present' })
+    return res.status(201).json({ success: true, alreadyMarked: false, message: 'Teacher attendance marked successfully', attendance: { id: record._id.toString(), markedAt: record.markedAt, status: record.status } })
+  } catch (error) {
+    if (error?.code === 11000) {
+      const session = await AttendanceSession.findOne({ date: getIndiaDate(), active: true })
+      const existing = session ? await TeacherAttendanceRecord.findOne({ session: session._id, teacher: req.user._id }) : null
+      return res.json({ success: true, alreadyMarked: true, message: 'Your attendance has already been marked for today', attendance: existing ? { id: existing._id.toString(), markedAt: existing.markedAt, status: existing.status } : null })
+    }
+    next(error)
+  }
+}
+
+export const getTeacherAttendanceSummary = async (req, res, next) => {
+  try {
+    if (!requireRole(req, 'teacher')) return res.status(403).json({ success: false, message: 'Only teacher accounts can view teacher attendance' })
+    const sessions = await AttendanceSession.find({ active: true }).select('_id date').sort({ date: -1 }).lean()
+    const records = sessions.length ? await TeacherAttendanceRecord.find({ teacher: req.user._id, session: { $in: sessions.map(s => s._id) }, status: 'present' }).select('session markedAt status').lean() : []
+    const presentSessionIds = new Set(records.map(r => String(r.session)))
+    const todaySession = sessions.find(s => s.date === getIndiaDate())
+    const todayRecord = todaySession ? records.find(r => String(r.session) === String(todaySession._id)) : null
+    const present = records.length
+    const totalSessions = sessions.length
+    const days = sessions.map(s => ({ date: s.date, present: presentSessionIds.has(String(s._id)), markedAt: records.find(r => String(r.session) === String(s._id))?.markedAt || null }))
+    return res.json({ success: true, date: getIndiaDate(), totalSessions, present, absent: Math.max(totalSessions - present, 0), percentage: totalSessions ? Math.round(present / totalSessions * 100) : 0, today: { active: Boolean(todaySession), marked: Boolean(todayRecord), markedAt: todayRecord?.markedAt || null, status: todayRecord?.status || null }, days })
+  } catch (error) { next(error) }
 }
