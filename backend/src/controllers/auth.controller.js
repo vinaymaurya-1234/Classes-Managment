@@ -16,6 +16,7 @@ const publicUser = user => ({
   division: user.classDivision?.division || user.division || '',
   teachingClasses: user.teachingClassDivisions?.length ? user.teachingClassDivisions.map(item=>item.displayName) : (user.teachingClasses || []),
   teachingClassDivisionIds: (user.teachingClassDivisions || []).map(item=>item?._id?.toString() || item.toString()),
+  children: (user.children || []).map(child => ({ id: child._id.toString(), name: child.name, email: child.email, std: child.classDivision?.standard ?? child.std ?? null, division: child.classDivision?.division || child.division || '', className: child.classDivision?.displayName || child.className || '' })),
 })
 
 export const login = async (req, res, next) => {
@@ -27,7 +28,7 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' })
     }
 
-    const user = await User.findOne({ email }).select('+password').populate('classDivision').populate('teachingClassDivisions')
+    const user = await User.findOne({ email }).select('+password').populate('classDivision').populate('teachingClassDivisions').populate({ path:'children', select:'name email std division className classDivision', populate:{path:'classDivision'} })
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' })
     }
@@ -115,7 +116,7 @@ export const createPrincipal = async (req, res, next) => {
 }
 
 export const me = async (req, res) => {
-  const user = await User.findById(req.user._id).populate('classDivision').populate('teachingClassDivisions')
+  const user = await User.findById(req.user._id).populate('classDivision').populate('teachingClassDivisions').populate({ path:'children', select:'name email std division className classDivision', populate:{path:'classDivision'} })
   res.json({ success: true, user: publicUser(user) })
 }
 
