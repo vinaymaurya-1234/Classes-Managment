@@ -16,22 +16,23 @@ export default function FeesPage() {
   const { role, search } = useOutletContext()
   const { token } = useAuth()
   const principal = role === 'principal'
+  const parent = role === 'parent'
   const [records, setRecords] = useState([])
   const [classDivisions, setClassDivisions] = useState([])
   const [classFilter, setClassFilter] = useState('')
-  const [loading, setLoading] = useState(principal)
+  const [loading, setLoading] = useState(principal || parent)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ totalFee: '', academicYear: ACADEMIC_YEAR, notes: '', installments: [] })
 
   const load = async () => {
-    if (!principal) return
+    if (!principal && !parent) return
     setLoading(true); setError('')
     try { const result = await listStudentFeesApi(token, ACADEMIC_YEAR); setRecords(result.fees || []) }
     catch (err) { setError(err.message) } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [token, principal])
+  useEffect(() => { load() }, [token, principal, parent])
   useEffect(() => { if(token&&principal)listClassDivisionsApi(token).then(result=>setClassDivisions((result.classes||[]).filter(item=>item.active))).catch(err=>setError(err.message)) },[token,principal])
 
   const visible = useMemo(() => {
@@ -73,7 +74,32 @@ export default function FeesPage() {
     } catch (err) { setError(err.message) } finally { setSaving(false) }
   }
 
-  if (!principal) return <Card title="Fee details"><div className="fee-state">Fee information for your account will appear here.</div></Card>
+  if (parent) return <>
+    <div className="fee-summary-grid">
+      <Stat icon={CreditCard} label="Total fees" value={money(records.reduce((sum, record) => sum + Number(record.totalFee || 0), 0))} detail="For your linked children" />
+      <Stat icon={CheckCircle2} label="Paid" value={money(records.reduce((sum, record) => sum + Number(record.paidAmount || 0), 0))} detail="Payments recorded by school" />
+      <Stat icon={IndianRupee} label="Pending" value={money(records.reduce((sum, record) => sum + Number(record.pendingAmount || 0), 0))} detail="Remaining fee balance" />
+    </div>
+    {error && <div className="profile-message error fees-error">{error}</div>}
+    <Card title="Children's fee details">
+      {loading ? <div className="fee-state"><LoaderCircle size={18} className="spin"/>Loading fee details...</div> :
+       records.length ? <div className="fee-table">
+        <div className="fee-table-row fee-table-head"><span>Student</span><span>Class</span><span>Total fee</span><span>Paid</span><span>Balance</span><span>Status</span></div>
+        {records.map(record => <div className="fee-table-row" key={record.student.id}>
+          <span className="fee-student"><span className="avatar green">{(record.student.name || "?")[0]}</span><span><b>{record.student.name}</b><small>{record.academicYear}</small></span></span>
+          <span>{record.student.className || "—"}</span><strong>{money(record.totalFee)}</strong><strong>{money(record.paidAmount)}</strong>
+          <strong className={record.pendingAmount ? "fee-balance" : "fee-paid"}>{money(record.pendingAmount)}</strong>
+          <span className={"pill " + (record.status === "Paid" ? "success" : record.status === "Partially paid" ? "warning" : "danger")}>{record.id ? record.status : "Not assigned"}</span>
+        </div>)}
+        {records.map(record => record.installments?.length ? <div className="fee-parent-payments" key={record.student.id + "-payments"}>
+          <strong>{record.student.name} · Payment history</strong>
+          {record.installments.map(item => <div key={item.id}><span>{money(item.amount)}</span><span>{new Date(item.paidOn).toLocaleDateString("en-IN")}</span><span>{methods[item.method] || item.method}</span>{item.reference && <small>Ref: {item.reference}</small>}</div>)}
+        </div> : null)}
+       </div> : <div className="fee-state">No children are linked to this parent account yet.</div>}
+    </Card>
+  </>
+
+  if (!principal) return <Card title="Fee details"><div className="fee-state">Fee information is not available for this account.</div></Card>
 
   return <>
     <div className="fee-summary-grid">
