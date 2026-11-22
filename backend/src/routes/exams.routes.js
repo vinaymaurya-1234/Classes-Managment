@@ -23,7 +23,7 @@ const isTeacher = user => user?.role === 'teacher'
 const isStudent = user => user?.role === 'student'
 const normalizeClassAssignment = value => {
   const raw = String(value || '').trim()
-  const match = raw.match(/(?:class\\s*)?(1[0-2]|[1-9])(?:\\s*[-–/]\\s*([A-Z0-9_-]+))?/i)
+  const match = raw.match(/(?:class\s*)?(1[0-2]|[1-9])(?:\s*[-–/]\s*([A-Z0-9_-]+))?/i)
   return match ? { std: Number(match[1]), division: match[2]?.toUpperCase() || '' } : null
 }
 const canTeach = async (user, std, division, classDivisionId = '') => {
@@ -48,16 +48,17 @@ const canTeach = async (user, std, division, classDivisionId = '') => {
   })
 }
 const getStudentClass = user => {
-  const classMatch = String(user.className || '').match(/\\d+/)
+  const classMatch = String(user.className || '').match(/\d+/)
   const std = Number(user.std || classMatch?.[0])
   const division = String(user.division || 'A').trim().toUpperCase()
   return { std, division, className: `Class ${std}` }
 }
 const studentExamFilter = user => {
   const { std, division } = getStudentClass(user)
-  return { std, $or: [{ division }, { division: '' }, { division: { $exists: false } }, { division: null }] }
+  return user.classDivision ? { classDivision: user.classDivision } : { std, $or: [{ division }, { division: '' }, { division: { $exists: false } }, { division: null }] }
 }
 const studentCanAccessExam = (user, exam) => {
+  if (user.classDivision && exam.classDivision) return String(user.classDivision) === String(exam.classDivision)
   const { std, division } = getStudentClass(user)
   return Number.isInteger(std) && std === Number(exam.std) &&
     (!String(exam.division || '').trim() || String(exam.division).trim().toUpperCase() === division)
@@ -158,7 +159,7 @@ router.put('/questions/:id', async (req, res, next) => {
     if (!isTeacher(req.user) || !validId(req.params.id)) return forbidden(res)
     const question = await Question.findOne({ _id: req.params.id, teacher: req.user._id })
     if (!question) return fail(res, 404, 'Question not found.')
-    const std = req.body.std === undefined ? Number(String(question.className).match(/\\d+/)?.[0]) : Number(req.body.std)
+    const std = req.body.std === undefined ? Number(String(question.className).match(/\d+/)?.[0]) : Number(req.body.std)
     const division = req.body.division === undefined ? question.division : String(req.body.division).toUpperCase()
     if (!stds.includes(std) || (division && !divisions.includes(division))) return fail(res, 400, 'Choose a valid class and optionally division A, B or C.')
     if (!await canTeach(req.user, std, division)) return forbidden(res)
@@ -253,7 +254,7 @@ router.get('/exams', async (req, res, next) => {
     if (isTeacher(user)) filter.teacher = user._id
     else if (isStudent(user)) {
       // Older student records may have className (e.g. "Class 10") but no std.
-      const classMatch = String(user.className || '').match(/\\d+/)
+      const classMatch = String(user.className || '').match(/\d+/)
       const studentStd = Number(user.std || classMatch?.[0])
       const studentDivision = String(user.division || 'A').trim().toUpperCase()
       if (!Number.isInteger(studentStd) || studentStd < 1) return res.json({ success: true, data: [] })
@@ -263,14 +264,14 @@ router.get('/exams', async (req, res, next) => {
         status: { $ne: 'cancelled' },
       }
     } else if (user.role === 'parent') {
-      const parent = await User.findById(user._id).populate('children', 'std division className').lean()
+      const parent = await User.findById(user._id).populate('children', 'std division className classDivision').lean()
       const children = parent?.children || []
       const classFilters = children.flatMap(child => {
-        const classMatch = String(child.className || '').match(/\\d+/)
+        const classMatch = String(child.className || '').match(/\d+/)
         const childStd = Number(child.std || classMatch?.[0])
         if (!Number.isInteger(childStd) || childStd < 1) return []
         const childDivision = String(child.division || 'A').trim().toUpperCase()
-        return [{ std: childStd, $or: [{ division: childDivision }, { division: '' }, { division: { $exists: false } }, { division: null }] }]
+        return child.classDivision ? [{ classDivision: child.classDivision }] : [{ std: childStd, $or: [{ division: childDivision }, { division: '' }, { division: { $exists: false } }, { division: null }] }]
       })
       if (!classFilters.length) return res.json({ success: true, data: [] })
       filter = { $or: classFilters, status: { $ne: 'cancelled' } }
