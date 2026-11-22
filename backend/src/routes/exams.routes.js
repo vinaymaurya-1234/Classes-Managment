@@ -8,11 +8,12 @@ import QuestionPaper from '../models/QuestionPaper.js'
 import Exam from '../models/Exam.js'
 import ExamAttempt from '../models/ExamAttempt.js'
 import ExamResult from '../models/ExamResult.js'
+import ClassDivision from '../models/ClassDivision.js'
 
 const router = Router()
 router.use(requireAuth)
 const divisions = ['A', 'B', 'C']
-const stds = [10, 11, 12]
+const stds = Array.from({ length: 12 }, (_, index) => index + 1)
 const classLabel = (std, division) => `Class ${Number(std)} - ${division}`
 const forbidden = res => res.status(403).json({ success: false, message: 'You do not have permission to perform this action.' })
 const validId = id => mongoose.isValidObjectId(id)
@@ -22,10 +23,14 @@ const isTeacher = user => user?.role === 'teacher'
 const isStudent = user => user?.role === 'student'
 const normalizeClassAssignment = value => {
   const raw = String(value || '').trim()
-  const match = raw.match(/(?:class\\s*)?(10|11|12)(?:\\s*[-–/]\\s*([ABC]))?/i)
+  const match = raw.match(/(?:class\\s*)?(1[0-2]|[1-9])(?:\\s*[-–/]\\s*([A-Z0-9_-]+))?/i)
   return match ? { std: Number(match[1]), division: match[2]?.toUpperCase() || '' } : null
 }
-const canTeach = async (user, std, division) => {
+const canTeach = async (user, std, division, classDivisionId = '') => {
+  if (classDivisionId) {
+    const teacher = await User.findById(user._id).populate('teachingClassDivisions')
+    return (teacher?.teachingClassDivisions || []).some(item => String(item._id) === String(classDivisionId))
+  }
   const labels = Array.isArray(user.teachingClasses) ? user.teachingClasses : []
   const assigned = labels.some(value => {
     const parsed = normalizeClassAssignment(value)
@@ -67,14 +72,14 @@ const safeQuestion = question => ({
   difficulty: question.difficulty,
 })
 const sanitizePaper = (paper, includeAnswers = false) => ({
-  _id: paper._id, title: paper.title, className: paper.className, std: paper.std,
+  _id: paper._id, title: paper.title, className: paper.className, classDivisionId: paper.classDivision?.toString() || '', std: paper.std,
   division: paper.division, subject: paper.subject, instructions: paper.instructions,
   totalMarks: paper.totalMarks, durationMinutes: paper.durationMinutes, status: paper.status,
   questions: paper.questions.map(q => includeAnswers ? q : safeQuestion(q)),
   createdAt: paper.createdAt, teacher: paper.teacher,
 })
 const sanitizeExam = exam => ({
-  _id: exam._id, title: exam.title, type: exam.type, className: exam.className,
+  _id: exam._id, title: exam.title, type: exam.type, className: exam.className, classDivisionId: exam.classDivision?.toString() || '',
   std: exam.std, division: exam.division, subject: exam.subject, startsAt: exam.startsAt,
   durationMinutes: exam.durationMinutes, totalMarks: exam.totalMarks, instructions: exam.instructions,
   status: exam.status, resultsPublished: exam.resultsPublished, paper: exam.paper,
@@ -86,6 +91,7 @@ router.get('/questions', async (req, res, next) => {
     const filter = {}
     if (isTeacher(user)) filter.teacher = user._id
     else if (!isPrincipal(user)) return forbidden(res)
+    if (req.query.classDivisionId) filter.classDivision = String(req.query.classDivisionId)
     for (const key of ['std', 'division', 'subject', 'chapter', 'difficulty', 'type']) {
       if (req.query[key]) {
         if (key === 'std') filter.className = `Class ${Number(req.query.std)}`
@@ -102,17 +108,20 @@ router.post('/questions', async (req, res, next) => {
   try {
     if (!isTeacher(req.user)) return forbidden(res)
     const body = req.body || {}
-    const std = Number(body.std), division = String(body.division || '').toUpperCase()
+    const classDivisionId = String(body.classDivisionId || '')
+    const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+    const std = classDivision?.standard || Number(body.std), division = classDivision?.division || String(body.division || '').toUpperCase()
+    const className = classDivision ? `Class ${std}` : `Class ${std}`
     const subject = String(body.subject || '').trim(), text = String(body.text || '').trim()
     const type = ['mcq', 'short', 'long', 'true_false'].includes(body.type) ? body.type : 'mcq'
     const marks = Number(body.marks || 1)
-    if (!stds.includes(std) || (division && !divisions.includes(division)) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) return fail(res, 400, 'Class, subject, question text and valid marks are required. Division is optional.')
-    if (!await canTeach(req.user, std, division)) return forbidden(res)
+    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (classDivisionId && !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) return fail(res, 400, 'Class, subject, question text and valid marks are required.')
+    if (!await canTeach(req.user, std, division, classDivisionId)) return forbidden(res)
     const options = Array.isArray(body.options) ? body.options.map((o, i) => ({ key: String(o.key || String.fromCharCode(65 + i)), text: String(o.text || '').trim() })).filter(o => o.text) : []
     const correctAnswer = String(body.correctAnswer || '').trim()
     if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) return fail(res, 400, 'Objective questions require options and a correct answer matching an option.')
     const normalizedAnswer = options.find(o => o.key === correctAnswer || o.text === correctAnswer)?.key || correctAnswer
-    const question = await Question.create({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(body.chapter || '').trim(), topic: String(body.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(body.explanation || '').trim(), marks, difficulty: ['easy', 'medium', 'hard'].includes(body.difficulty) ? body.difficulty : 'medium', tags: Array.isArray(body.tags) ? body.tags.map(String).slice(0, 20) : [] })
+    const question = await Question.create({ teacher: req.user._id, className, classDivision: classDivision?._id || null, division, subject, chapter: String(body.chapter || '').trim(), topic: String(body.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(body.explanation || '').trim(), marks, difficulty: ['easy', 'medium', 'hard'].includes(body.difficulty) ? body.difficulty : 'medium', tags: Array.isArray(body.tags) ? body.tags.map(String).slice(0, 20) : [] })
     res.status(201).json({ success: true, data: question })
   } catch (error) { next(error) }
 })
@@ -183,26 +192,30 @@ router.get('/papers', async (req, res, next) => {
 router.post('/papers', async (req, res, next) => {
   try {
     if (!isTeacher(req.user)) return forbidden(res)
-    const body = req.body || {}, std = Number(body.std), division = String(body.division || '').toUpperCase()
+    const body = req.body || {}
+    const classDivisionId = String(body.classDivisionId || '')
+    const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+    const std = classDivision?.standard || Number(body.std), division = classDivision?.division || String(body.division || '').toUpperCase()
     const subject = String(body.subject || '').trim(), title = String(body.title || '').trim()
-    if (!stds.includes(std) || (division && !divisions.includes(division)) || !subject || !title) return fail(res, 400, 'Paper title, class and subject are required. Division is optional.')
-    if (!await canTeach(req.user, std, division)) return forbidden(res)
+    const className = `Class ${std}`
+    if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (classDivisionId && !classDivision) || !subject || !title) return fail(res, 400, 'Paper title, class and subject are required.')
+    if (!await canTeach(req.user, std, division, classDivisionId)) return forbidden(res)
     let questions = []
     if (Array.isArray(body.questionIds) && body.questionIds.length) {
       if (body.questionIds.some(id => !validId(id))) return fail(res, 400, 'One or more question IDs are invalid.')
-      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, className: `Class ${std}`, division, subject })
+      const found = await Question.find({ _id: { $in: body.questionIds }, teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject })
       const byId = new Map(found.map(question => [String(question._id), question]))
       questions = body.questionIds.map(id => byId.get(String(id))).filter(Boolean)
     } else {
       const count = Math.min(100, Math.max(1, Number(body.questionCount || 10)))
-      const filter = { teacher: req.user._id, className: `Class ${std}`, division, subject }
+      const filter = { teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject }
       if (body.difficulty && ['easy','medium','hard'].includes(body.difficulty)) filter.difficulty = body.difficulty
       questions = await Question.aggregate([{ $match: { ...filter, teacher: new mongoose.Types.ObjectId(String(req.user._id)) } }, { $sample: { size: count } }])
     }
     if (!questions.length) return fail(res, 400, 'No matching questions found. Add questions or change your filters.')
     const snapshots = questions.map(q => ({ questionRef: q._id, text: q.text, type: q.type, options: q.options, correctAnswer: q.correctAnswer, explanation: q.explanation, marks: Number(q.marks || 1), difficulty: q.difficulty || 'medium', chapter: q.chapter || '' }))
     const totalMarks = snapshots.reduce((sum, q) => sum + q.marks, 0)
-    const paper = await QuestionPaper.create({ teacher: req.user._id, title, className: `Class ${std}`, std, division, subject, instructions: String(body.instructions || '').trim(), questions: snapshots, totalMarks, durationMinutes: Math.max(1, Number(body.durationMinutes || 60)), status: 'draft' })
+    const paper = await QuestionPaper.create({ teacher: req.user._id, title, className, classDivision: classDivision?._id || null, std, division, subject, instructions: String(body.instructions || '').trim(), questions: snapshots, totalMarks, durationMinutes: Math.max(1, Number(body.durationMinutes || 60)), status: 'draft' })
     res.status(201).json({ success: true, data: sanitizePaper(paper, true) })
   } catch (error) { next(error) }
 })
@@ -275,7 +288,7 @@ router.post('/exams', async (req, res, next) => {
     if (!paper) return fail(res, 400, 'Choose an approved question paper.')
     const startsAt = new Date(body.startsAt), type = ['weekly','unit','midterm','final','practice','other'].includes(body.type) ? body.type : 'unit'
     if (!Number.isFinite(startsAt.getTime()) || startsAt.getTime() < Date.now() - 60000) return fail(res, 400, 'Choose a valid future exam date and time.')
-    const exam = await Exam.create({ createdBy: req.user._id, teacher: paper.teacher, paper: paper._id, title: String(body.title || paper.title).trim(), type, className: paper.className, std: paper.std, division: paper.division, subject: paper.subject, startsAt, durationMinutes: Math.max(1, Number(body.durationMinutes || paper.durationMinutes)), totalMarks: paper.totalMarks, instructions: String(body.instructions ?? paper.instructions).trim(), status: 'scheduled', answerReviewEnabled: body.answerReviewEnabled === true, attemptsAllowed: Math.min(5, Math.max(1, Number(body.attemptsAllowed || 1))) })
+    const exam = await Exam.create({ createdBy: req.user._id, teacher: paper.teacher, paper: paper._id, title: String(body.title || paper.title).trim(), type, className: paper.className, classDivision: paper.classDivision, std: paper.std, division: paper.division, subject: paper.subject, startsAt, durationMinutes: Math.max(1, Number(body.durationMinutes || paper.durationMinutes)), totalMarks: paper.totalMarks, instructions: String(body.instructions ?? paper.instructions).trim(), status: 'scheduled', answerReviewEnabled: body.answerReviewEnabled === true, attemptsAllowed: Math.min(5, Math.max(1, Number(body.attemptsAllowed || 1))) })
     res.status(201).json({ success: true, data: sanitizeExam(exam) })
   } catch (error) { next(error) }
 })
