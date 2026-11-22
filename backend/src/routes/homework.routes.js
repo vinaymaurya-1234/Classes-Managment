@@ -54,7 +54,7 @@ router.post('/', async (req, res, next) => {
     const assignedDivisionIds = (teacherRecord?.teachingClassDivisions || []).map(item => String(item._id))
     if (classDivision && assignedDivisionIds.length && !assignedDivisionIds.includes(String(classDivision._id))) return res.status(403).json({ success: false, message: 'You can only assign homework to your configured teaching classes.' })
     const teacherClasses = Array.isArray(req.user.teachingClasses) ? req.user.teachingClasses : []
-    const requested = className.match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
+    const requested = className.match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-Z0-9_-]{1,8}))?$/i)
     const sameAssignment = value => {
       const assigned = String(value || '').match(/^(?:Class\s*)?(\d+)(?:\s*[-–/]\s*([A-F]))?$/i)
       if (!requested || !assigned || Number(requested[1]) !== Number(assigned[1])) return false
