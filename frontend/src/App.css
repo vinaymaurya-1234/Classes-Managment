@@ -1306,3 +1306,75 @@
   .class-structure-label{grid-template-columns:1fr}
   .class-structure-row-head>.danger-ghost{align-self:flex-start}
 }
+
+
+/* Student admission modal: parent login section */
+.user-modal{
+  width:min(560px,100%);
+  max-height:calc(100vh - 36px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.user-modal>form{display:grid;gap:2px}
+.user-modal label{display:grid;gap:6px;margin-top:13px;line-height:1.35}
+.user-modal label input,
+.user-modal label select{
+  display:block;
+  width:100%;
+  min-width:0;
+  height:42px;
+  margin-top:0;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f9fcfa;
+  color:var(--ink);
+  font:inherit;
+  font-size:12px;
+  font-weight:500;
+}
+.user-modal label select{appearance:auto;cursor:pointer}
+.parent-login-section{
+  display:grid;
+  gap:4px;
+  min-width:0;
+  margin:18px 0 2px;
+  padding:16px;
+  border:1px solid #dcebe1;
+  border-radius:13px;
+  background:linear-gradient(180deg,#f8fcf9 0%,#fff 100%);
+}
+.parent-login-section legend{
+  padding:0 7px;
+  color:#245d43;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+.parent-login-section>p{
+  margin:0 0 5px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+.parent-login-section label{margin-top:9px}
+.parent-login-section small{
+  display:block;
+  margin-top:7px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.45;
+}
+.parent-login-section .profile-message{
+  margin-top:8px;
+  padding:9px 11px;
+  border-radius:9px;
+  font-size:11px;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+@media(max-width:600px){
+  .user-modal-backdrop{padding:10px}
+  .user-modal{max-height:calc(100dvh - 20px);padding:18px}
+  .parent-login-section{padding:12px}
+}
