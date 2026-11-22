@@ -15,7 +15,6 @@ import assessmentRoutes from './routes/assessment.routes.js'
 import examRoutes from './routes/exams.routes.js'
 import chatRoutes from './routes/chat.routes.js'
 import classRoutes from './routes/classes.routes.js'
-import chatRoutes from './routes/chat.routes.js'
 
 const app = express()
 
