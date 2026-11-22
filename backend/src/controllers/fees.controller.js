@@ -32,7 +32,8 @@ const serializeFee = (fee, student) => {
       email: student.email,
       phone: student.phone || '',
       avatarUrl: student.avatarUrl || '',
-      className: student.className || '',
+      className: student.classDivision?.displayName || student.className || '',
+      classDivisionId: student.classDivision?._id?.toString() || student.classDivision?.toString() || '',
     },
     academicYear: fee?.academicYear || CURRENT_ACADEMIC_YEAR,
     totalFee,
@@ -48,11 +49,31 @@ const serializeFee = (fee, student) => {
 
 export const listStudentFees = async (req, res, next) => {
   try {
-    if (!requirePrincipal(req)) {
-      return res.status(403).json({ success: false, message: 'Only the principal can manage student fees' })
+    if (req.user?.role === 'parent') {
+      const parent = await User.findById(req.user._id).select('children')
+      const childIds = parent?.children || []
+      const students = await User.find({ _id: { $in: childIds }, role: 'student' })
+        .populate('classDivision')
+        .sort({ name: 1 })
+      const academicYear = String(req.query.academicYear || CURRENT_ACADEMIC_YEAR).trim()
+      const feeRecords = await StudentFee.find({
+        student: { $in: students.map(student => student._id) },
+        academicYear,
+      })
+      const byStudent = new Map(feeRecords.map(fee => [fee.student.toString(), fee]))
+
+      return res.json({
+        success: true,
+        academicYear,
+        fees: students.map(student => serializeFee(byStudent.get(student._id.toString()), student)),
+      })
     }
 
-    const students = await User.find({ role: 'student' }).sort({ name: 1 })
+    if (!requirePrincipal(req)) {
+      return res.status(403).json({ success: false, message: 'Only the principal or linked parent can view student fees' })
+    }
+
+    const students = await User.find({ role: 'student' }).populate('classDivision').sort({ name: 1 })
     const feeRecords = await StudentFee.find({
       student: { $in: students.map(student => student._id) },
       academicYear: String(req.query.academicYear || CURRENT_ACADEMIC_YEAR).trim(),
