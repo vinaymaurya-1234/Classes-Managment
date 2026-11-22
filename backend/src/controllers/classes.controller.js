@@ -51,7 +51,7 @@ async function seedFromLegacyData() {
   const created = await ClassDivision.find({ active: true }).lean()
   const byKey = new Map(created.map(item => [`${item.standard}:${item.division}`, item]))
   const studentOps = students.flatMap(student => {
-    const standard = Number(student.std || String(student.className || '').match(/\\d+/)?.[0])
+    const standard = Number(student.std || String(student.className || '').match(/\d+/)?.[0])
     const division = String(student.division || 'A').toUpperCase()
     const doc = byKey.get(`${standard}:${division}`)
     return doc ? [{ updateOne: { filter: { _id: student._id }, update: { $set: { classDivision: doc._id, std: doc.standard, division: doc.division, className: `Class ${doc.standard}` } } }] : []
@@ -59,7 +59,7 @@ async function seedFromLegacyData() {
   if (studentOps.length) await User.bulkWrite(studentOps)
   const teacherOps = teachers.map(teacher => {
     const ids = (teacher.teachingClasses || []).flatMap(value => {
-      const match = String(value).match(/(1[0-2]|[1-9])(?:\\s*[-/]\\s*([a-z0-9_-]{1,8}))?/i)
+      const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z0-9_-]{1,8}))?/i)
       if (!match) return []
       const doc = byKey.get(`${Number(match[1])}:${(match[2] || 'A').toUpperCase()}`)
       return doc ? [doc] : []
@@ -68,7 +68,7 @@ async function seedFromLegacyData() {
   })
   if (teacherOps.length) await User.bulkWrite(teacherOps)
   const timetableOps = timetable.flatMap(entry => {
-    const standard = Number(entry.standard || String(entry.className || '').match(/\\d+/)?.[0])
+    const standard = Number(entry.standard || String(entry.className || '').match(/\d+/)?.[0])
     const division = String(entry.division || 'A').toUpperCase()
     const doc = byKey.get(`${standard}:${division}`)
     return doc ? [{ updateOne: { filter: { _id: entry._id }, update: { $set: { classDivision: doc._id, className: doc.displayName, standard: doc.standard, division: doc.division } } }] : []
