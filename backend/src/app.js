@@ -59,6 +59,7 @@ app.use('/api/assessments', assessmentRoutes)
 app.use('/api/exams', examRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/classes', classRoutes)
+app.use('/api/chat', chatRoutes)
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' })

@@ -16,9 +16,9 @@ import ExamManagementPage from '../pages/ExamManagementPage'
 import PeoplePage from '../pages/PeoplePage'
 import ChildrenPage from '../pages/ChildrenPage'
 import NoticesPage from '../pages/NoticesPage'
-import ChatPage from '../pages/ChatPage'
 import ClassStructurePage from '../pages/ClassStructurePage'
 import ParentPasswordSetupPage from '../pages/ParentPasswordSetupPage'
+import ChatPage from '../pages/ChatPage'
 import { useAuth } from '../context/AuthContext'
 
 export default function AppRouter() {
