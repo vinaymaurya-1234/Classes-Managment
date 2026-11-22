@@ -8,19 +8,19 @@ router.use(requireAuth)
 
 const parseClass = value => {
   const text = String(value ?? '').trim()
-  const match = text.match(/(?:class\s*)?(10|11|12)(?:\s*[-/]\s*([a-z]))?/i)
+  const match = text.match(/(?:class\s*)?(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z]))?/i)
   return match ? { std: Number(match[1]), division: (match[2] || '').toUpperCase() } : null
 }
 
 router.get('/classes', async (req, res, next) => {
   try {
     if (!['teacher', 'principal'].includes(req.user?.role)) return res.status(403).json({ success: false, message: 'You do not have permission to view teaching classes.' })
-    const targetTeacher = req.user.role === 'teacher' ? req.user : await User.findOne({ _id: req.query.teacherId, role: 'teacher' })
+    const targetTeacher = req.user.role === 'teacher' ? await User.findById(req.user._id).populate('teachingClassDivisions') : await User.findOne({ _id: req.query.teacherId, role: 'teacher' }).populate('teachingClassDivisions')
     if (!targetTeacher) return res.status(404).json({ success: false, message: 'Teacher not found.' })
     const chapters = await Chapter.find({ teacher: targetTeacher._id }).select('className subject title chapterName status progress updatedAt').lean()
     const configuredClasses = Array.isArray(targetTeacher.teachingClasses) ? targetTeacher.teachingClasses : []
     const classMap = new Map()
-    const classSources = configuredClasses.length ? configuredClasses : chapters.map(item => item.className)
+    const divisionSources = (targetTeacher.teachingClassDivisions || []).map(item => item.displayName)\n    const classSources = divisionSources.length ? divisionSources : (configuredClasses.length ? configuredClasses : chapters.map(item => item.className))
     for (const value of classSources) {
       const parsed = parseClass(value)
       if (!parsed) continue
