@@ -1555,3 +1555,8 @@
  .class-structure-v2-footer{align-items:stretch;flex-direction:column;padding:13px}
  .class-structure-v2-footer button{width:100%}
 }
+
+
+/* Class structure: class number is display-only; divisions use full row width */
+.class-structure-v2-main{grid-template-columns:minmax(0,1fr)}
+@media(max-width:850px){.class-structure-v2-main{grid-template-columns:minmax(0,1fr)}}
