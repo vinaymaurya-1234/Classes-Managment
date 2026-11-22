@@ -1560,3 +1560,11 @@
 /* Class structure: class number is display-only; divisions use full row width */
 .class-structure-v2-main{grid-template-columns:minmax(0,1fr)}
 @media(max-width:850px){.class-structure-v2-main{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Parent portal fee summary and payment history */
+.fee-parent-payments{min-width:850px;padding:13px 16px;border-bottom:1px solid #edf2ef;background:#fbfdfc}
+.fee-parent-payments>strong{display:block;margin-bottom:9px;color:var(--dark);font-size:9px}
+.fee-parent-payments>div{display:flex;align-items:center;gap:18px;padding:7px 0;border-top:1px solid #edf2ef;color:var(--muted);font-size:8px}
+.fee-parent-payments>div span:first-child{min-width:90px;color:var(--dark);font-weight:800}
+.fee-parent-payments>div small{color:#819087}
