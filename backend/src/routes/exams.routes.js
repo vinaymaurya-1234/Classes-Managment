@@ -258,7 +258,7 @@ router.get('/exams', async (req, res, next) => {
       const studentStd = Number(user.std || classMatch?.[0])
       const studentDivision = String(user.division || 'A').trim().toUpperCase()
       if (!Number.isInteger(studentStd) || studentStd < 1) return res.json({ success: true, data: [] })
-      filter = {
+      filter = user.classDivision ? { classDivision: user.classDivision, status: { $ne: 'cancelled' } } : {
         std: studentStd,
         $or: [{ division: studentDivision }, { division: '' }, { division: { $exists: false } }, { division: null }],
         status: { $ne: 'cancelled' },
@@ -267,11 +267,12 @@ router.get('/exams', async (req, res, next) => {
       const parent = await User.findById(user._id).populate('children', 'std division className classDivision').lean()
       const children = parent?.children || []
       const classFilters = children.flatMap(child => {
-        const classMatch = String(child.className || '').match(/\d+/)
+        if (child.classDivision) return [{ classDivision: child.classDivision }]
+        const classMatch = String(child.className || '').match(/\\d+/)
         const childStd = Number(child.std || classMatch?.[0])
         if (!Number.isInteger(childStd) || childStd < 1) return []
         const childDivision = String(child.division || 'A').trim().toUpperCase()
-        return child.classDivision ? [{ classDivision: child.classDivision }] : [{ std: childStd, $or: [{ division: childDivision }, { division: '' }, { division: { $exists: false } }, { division: null }] }]
+        return [{ std: childStd, $or: [{ division: childDivision }, { division: '' }, { division: { $exists: false } }, { division: null }] }]
       })
       if (!classFilters.length) return res.json({ success: true, data: [] })
       filter = { $or: classFilters, status: { $ne: 'cancelled' } }
