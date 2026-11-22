@@ -135,19 +135,22 @@ router.post('/questions/import', async (req, res, next) => {
     const created = [], errors = []
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i] || {}
-      const std = Number(row.std), division = String(row.division || '').toUpperCase()
+      const classDivisionId = String(row.classDivisionId || '')
+      const classDivision = classDivisionId ? await ClassDivision.findOne({ _id: classDivisionId, active: true }) : null
+      const std = classDivision?.standard || Number(row.std), division = classDivision?.division || String(row.division || '').toUpperCase()
+      const className = `Class ${std}`
       const subject = String(row.subject || '').trim(), text = String(row.text || '').trim()
       const type = ['mcq', 'short', 'long', 'true_false'].includes(String(row.type || '').toLowerCase()) ? String(row.type).toLowerCase() : 'mcq'
       const marks = Number(row.marks || 1)
       const options = Array.isArray(row.options) ? row.options.map((o, j) => ({ key: String(o.key || String.fromCharCode(65 + j)), text: String(o.text || '').trim() })).filter(o => o.text) : ['A','B','C','D'].map(k => ({ key: k, text: String(row['option' + k] || row[k] || '').trim() })).filter(o => o.text)
       const correctAnswer = String(row.correctAnswer || row.answer || '').trim()
-      if (!stds.includes(std) || (division && !divisions.includes(division)) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, subject, question text or valid marks. Division is optional.' }); continue }
-      if (!await canTeach(req.user, std, division)) { errors.push({ row: i + 2, message: `Class ${std}-${division} is not assigned to you.` }); continue }
+      if (!stds.includes(std) || (!classDivision && division && !divisions.includes(division)) || (classDivisionId && !classDivision) || !subject || !text || !Number.isFinite(marks) || marks < 0.5) { errors.push({ row: i + 2, message: 'Missing class, subject, question text or valid marks. Division is optional.' }); continue }
+      if (!await canTeach(req.user, std, division, classDivisionId)) { errors.push({ row: i + 2, message: `Class ${std}-${division} is not assigned to you.` }); continue }
       if (['mcq', 'true_false'].includes(type) && (!options.length || !correctAnswer || !options.some(o => o.key === correctAnswer || o.text === correctAnswer))) { errors.push({ row: i + 2, message: 'Objective question has missing options or an invalid answer.' }); continue }
-      const duplicate = await Question.exists({ teacher: req.user._id, className: `Class ${std}`, division, subject, text })
+      const duplicate = await Question.exists({ teacher: req.user._id, ...(classDivision?{classDivision:classDivision._id}:{className,division}), subject, text })
       if (duplicate) { errors.push({ row: i + 2, message: 'Duplicate question skipped.' }); continue }
       const normalizedAnswer = options.find(o => o.key === correctAnswer || o.text === correctAnswer)?.key || correctAnswer
-      created.push({ teacher: req.user._id, className: `Class ${std}`, division, subject, chapter: String(row.chapter || '').trim(), topic: String(row.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(row.explanation || '').trim(), marks, difficulty: ['easy','medium','hard'].includes(String(row.difficulty).toLowerCase()) ? String(row.difficulty).toLowerCase() : 'medium' })
+      created.push({ teacher: req.user._id, className, classDivision: classDivision?._id || null, division, subject, chapter: String(row.chapter || '').trim(), topic: String(row.topic || '').trim(), type, text, options, correctAnswer: normalizedAnswer, explanation: String(row.explanation || '').trim(), marks, difficulty: ['easy','medium','hard'].includes(String(row.difficulty).toLowerCase()) ? String(row.difficulty).toLowerCase() : 'medium' })
     }
     const data = created.length ? await Question.insertMany(created) : []
     res.status(201).json({ success: true, imported: data.length, skipped: errors.length, errors })
