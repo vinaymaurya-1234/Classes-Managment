@@ -297,7 +297,7 @@ export default function PeoplePage({ type, title }) {
 
   useEffect(() => {
     const parentId = location.state?.openPersonId;
-    if (type === "parent" && parentId && data.length && !selectedPerson) {
+    if ((type === "parent" || type === "student") && parentId && data.length && !selectedPerson) {
       const parent = data.find(item => item.id === parentId);
       if (parent) openPerson(parent);
       navigate(location.pathname, { replace: true, state: null });
