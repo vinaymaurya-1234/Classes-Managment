@@ -55,6 +55,14 @@ export default function ChatPage() {
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [selected, loadMessages])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    if (!openMessageMenuId) return undefined
+    const closeOnOutsideClick = event => {
+      if (!event.target.closest('.chat-message-menu-wrap')) setOpenMessageMenuId(null)
+    }
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
+  }, [openMessageMenuId])
 
   const filteredContacts = useMemo(() => contacts.filter(contact => `${contact.name} ${contact.email} ${contact.role}`.toLowerCase().includes(search.toLowerCase())), [contacts, search])
   const chooseFile = async event => {
@@ -135,10 +143,10 @@ export default function ChatPage() {
               return <div key={message.id}>{showDate && <div className="chat-date"><span>{dateLabel(message.createdAt)}</span></div>}
                 <div className={'chat-message-row ' + (mine ? 'mine' : '')}><article className="chat-bubble">
                   {message.deleted ? <em>This message was deleted</em> : <>
-                    {editingMessageId === message.id ? <div className="chat-edit-form"><input autoFocus value={editingText} maxLength={5000} onChange={event => setEditingText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); saveEdit(message) } if (event.key === 'Escape') setEditingMessageId(null) }}/><div><button type="button" onClick={() => setEditingMessageId(null)}>Cancel</button><button type="button" onClick={() => saveEdit(message)} disabled={!editingText.trim()}>Save</button></div></div> : message.text && <p>{message.text}</p>}
+                    {editingMessageId === message.id ? <div className="chat-edit-form"><input autoFocus value={editingText} maxLength={5000} onChange={event => setEditingText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); saveEdit(message) } if (event.key === 'Escape') setEditingMessageId(null) }}/><div><button type="button" onClick={() => setEditingMessageId(null)}>Cancel</button><button type="button" onClick={() => saveEdit(message)} disabled={!editingText.trim()}>Save</button></div></div> : message.text && <div className="chat-bubble-text-row"><p>{message.text}</p><small className="chat-inline-time">{timeLabel(message.createdAt)}{message.edited ? ' · edited' : ''}</small></div>}
                     {message.attachment && (message.attachment.mimeType.startsWith('image/') ? <a href={message.attachment.dataUrl} target="_blank" rel="noreferrer" className="chat-image-link"><img src={message.attachment.dataUrl} alt={message.attachment.name}/></a> : <a className="chat-file" href={message.attachment.dataUrl} download={message.attachment.name}><FileText size={20}/><span>{message.attachment.name}<small>PDF attachment</small></span></a>)}
                   </>}
-                  <footer><small>{timeLabel(message.createdAt)}{message.edited ? ' · edited' : ''}</small>{mine && !message.deleted && <div className="chat-message-menu-wrap"><button type="button" className="chat-message-menu-trigger" title="Message options" aria-label="Message options" aria-expanded={openMessageMenuId === message.id} onClick={() => setOpenMessageMenuId(current => current === message.id ? null : message.id)}><MoreHorizontal size={17}/></button>{openMessageMenuId === message.id && <div className="chat-message-menu"><button type="button" onClick={() => startEdit(message)}><Pencil size={14}/>Edit</button><button type="button" className="delete" onClick={() => removeMessage(message)}><Trash2 size={14}/>Delete message</button></div>}</div>}</footer>
+                  <footer>{!message.text && <small>{timeLabel(message.createdAt)}</small>}{mine && !message.deleted && <div className="chat-message-menu-wrap"><button type="button" className="chat-message-menu-trigger" title="Message options" aria-label="Message options" aria-expanded={openMessageMenuId === message.id} onClick={() => setOpenMessageMenuId(current => current === message.id ? null : message.id)}><MoreHorizontal size={17}/></button>{openMessageMenuId === message.id && <div className="chat-message-menu"><button type="button" onClick={() => startEdit(message)}><Pencil size={14}/>Edit</button><button type="button" className="delete" onClick={() => removeMessage(message)}><Trash2 size={14}/>Delete message</button></div>}</div>}</footer>
                 </article></div>
               </div>
             })}
