@@ -23,7 +23,7 @@ async function seedFromLegacyData() {
   })
   const teachers = await User.find({ role: 'teacher' }).select('teachingClasses').lean()
   teachers.forEach(teacher => (teacher.teachingClasses || []).forEach(value => {
-    const match = String(value).match(/(?:class\s*)?(\d{1,2})(?:\s*[-/]\s*([a-z]))?/i)
+    const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*(?:division\s*)?([a-z0-9_-]{1,8}))?/i)
     if (!match) return
     const standard = Number(match[1])
     if (standard < 1 || standard > 12) return
