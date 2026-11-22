@@ -74,7 +74,7 @@ router.post('/:id/submit', async (req, res, next) => {
   try {
     if (!role(req, res, ['student'])) return
     const className = req.user.className || (req.user.std ? `Class ${req.user.std}` : '')
-    const item = await Homework.findOne({ _id: req.params.id, className, $or: [{ division: req.user.division || '' }, { division: '' }], status: 'published' })
+    const item = await Homework.findOne({ _id: req.params.id, ...(req.user.classDivision ? { classDivision: req.user.classDivision } : { className, $or: [{ division: req.user.division || '' }, { division: '' }] }), status: 'published' })
     if (!item) return res.status(404).json({ success: false, message: 'Homework not found for your class.' })
     const text = String(req.body.text || '').trim()
     if (!text) return res.status(400).json({ success: false, message: 'Write a submission before sending.' })
