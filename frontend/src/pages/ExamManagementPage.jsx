@@ -11,8 +11,8 @@ import { getTeacherClasses } from '../api/teacher.api'
 
 const divisions = ['A', 'B', 'C']
 const stds = [10, 11, 12]
-const emptyQuestion = { std: '10', division: '', classDivisionId: '', subject: '', chapter: '', type: 'mcq', text: '', optionA: '', optionB: '', optionC: '', optionD: '', correctAnswer: 'A', explanation: '', marks: '1', difficulty: 'medium' }
-const emptyPaper = { title: '', std: '10', division: '', classDivisionId: '', subject: '', instructions: '', questionCount: '10', durationMinutes: '60', difficulty: '' }
+const emptyQuestion = { std: '', division: '', classDivisionId: '', subject: '', chapter: '', type: 'mcq', text: '', optionA: '', optionB: '', optionC: '', optionD: '', correctAnswer: 'A', explanation: '', marks: '1', difficulty: 'medium' }
+const emptyPaper = { title: '', std: '', division: '', classDivisionId: '', subject: '', instructions: '', questionCount: '10', durationMinutes: '60', difficulty: '' }
 const emptyExam = { paperId: '', title: '', type: 'unit', startsAt: '', durationMinutes: '60', instructions: '', answerReviewEnabled: false }
 const formatDate = value => value ? new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled'
 const getRows = workbook => {
@@ -47,10 +47,10 @@ export default function ExamManagementPage() {
   const [columnMap, setColumnMap] = useState({})
   const [importName, setImportName] = useState('')
   const [standardMode, setStandardMode] = useState('excel')
-  const [manualStandard, setManualStandard] = useState('10')
+  const [manualStandard, setManualStandard] = useState('')
   const [manualClassDivisionId, setManualClassDivisionId] = useState('')
   const [divisionMode, setDivisionMode] = useState('excel')
-  const [manualDivision, setManualDivision] = useState('A')
+  const [manualDivision, setManualDivision] = useState('')
   const [activeAttempt, setActiveAttempt] = useState(null)
   const [answerReview, setAnswerReview] = useState(null)
   const [printTarget, setPrintTarget] = useState(null)
