@@ -162,7 +162,7 @@ export const updateTimetableEntry = async (req, res, next) => {
     }
 
     await entry.save()
-    await entry.populate('teacher', 'name email avatarUrl')
+    await entry.populate('teacher', 'name email avatarUrl'); await entry.populate('classDivision')
     return res.json({ success: true, message: 'Lecture updated.', entry: publicEntry(entry) })
   } catch (error) { next(error) }
 }
