@@ -32,6 +32,7 @@ router.get('/', async (req, res, next) => {
     if (user.role === 'parent') {
       const parent = await User.findById(user._id).populate({path:'children',select:'className std division classDivision',populate:{path:'classDivision'}}).lean()
       const filters = (parent?.children || []).filter(child => child.className || child.std).flatMap(child => {
+        if (child.classDivision?._id) return [{ classDivision: child.classDivision._id, status: 'published' }]
         const className = child.className || `Class ${child.std}`
         return [{ className, division: child.division || '', status: 'published' }, { className, division: '', status: 'published' }]
       })
