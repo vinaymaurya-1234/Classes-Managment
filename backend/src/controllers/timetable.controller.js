@@ -24,6 +24,7 @@ const studentPlacement = user => {
 const placementQuery = user => {
   const placement = studentPlacement(user)
   if (!placement.standard) return { _id: null }
+  if (user?.classDivision) return { $or: [{ classDivision: user.classDivision }, { standard: placement.standard, division: placement.division }] }
   const className = 'Class ' + placement.standard + ' - Division ' + placement.division
   return { $or: [
     { standard: placement.standard, division: placement.division },
@@ -59,7 +60,7 @@ export const listTimetable = async (req, res, next) => {
     const filter = { date }
     if (req.user?.role === 'student') Object.assign(filter, placementQuery(req.user))
     const entries = await TimetableEntry.find(filter)
-      .populate('teacher', 'name email avatarUrl')
+      .populate('teacher', 'name email avatarUrl').populate('classDivision')
       .sort({ startTime: 1, endTime: 1 })
 
     return res.json({ success: true, date, entries: entries.map(publicEntry) })
@@ -92,8 +93,15 @@ export const createTimetableEntry = async (req, res, next) => {
     const startTime = String(req.body.startTime || '').trim()
     const endTime = String(req.body.endTime || '').trim()
     const subject = String(req.body.subject || '').trim()
-    const className = String(req.body.className || '').trim()
-    const placement = { standard: Number(req.body.standard) || parseClassPlacement(className).standard, division: String(req.body.division || parseClassPlacement(className).division || 'A').toUpperCase() }
+    let className = String(req.body.className || '').trim()
+    const classDivisionId = String(req.body.classDivisionId || '').trim()
+    let classDivision = null
+    if (classDivisionId) {
+      classDivision = await ClassDivision.findOne({ _id: classDivisionId, active: true })
+      if (!classDivision) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' })
+      className = classDivision.displayName
+    }
+    const placement = { standard: classDivision?.standard || Number(req.body.standard) || parseClassPlacement(className).standard, division: classDivision?.division || String(req.body.division || parseClassPlacement(className).division || 'A').toUpperCase() }
     const room = String(req.body.room || '').trim()
     const notes = String(req.body.notes || '').trim()
     const teacherId = String(req.body.teacherId || '').trim()
@@ -111,7 +119,7 @@ export const createTimetableEntry = async (req, res, next) => {
     }
 
     const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
-    await entry.populate('teacher', 'name email avatarUrl')
+    await entry.populate('teacher', 'name email avatarUrl'); await entry.populate('classDivision')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
   } catch (error) { next(error) }
@@ -125,11 +133,18 @@ export const updateTimetableEntry = async (req, res, next) => {
     if (!entry) return res.status(404).json({ success: false, message: 'Lecture not found.' })
 
     const fields = ['date', 'startTime', 'endTime', 'subject', 'className', 'room', 'notes', 'teacherName']
-    if (req.body.classDivisionId !== undefined) { const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true }); if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' }); entry.classDivision = selected._id; entry.className = selected.displayName; entry.standard = selected.standard; entry.division = selected.division }
+    if (req.body.classDivisionId !== undefined) {
+      const selected = await ClassDivision.findOne({ _id: req.body.classDivisionId, active: true })
+      if (!selected) return res.status(400).json({ success: false, message: 'Select an active class division from Class Structure.' })
+      entry.classDivision = selected._id
+      entry.className = selected.displayName
+      entry.standard = selected.standard
+      entry.division = selected.division
+    }
     if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
     if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
-    if (req.body.className !== undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(entry.className).standard
-    if (req.body.className !== undefined && req.body.division === undefined) entry.division = parseClassPlacement(entry.className).division
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(req.body.className).standard
+    if (req.body.className !== undefined && req.body.classDivisionId === undefined && req.body.division === undefined) entry.division = parseClassPlacement(req.body.className).division
     for (const field of fields) if (req.body[field] !== undefined && !(field === 'className' && req.body.classDivisionId !== undefined)) entry[field] = String(req.body[field]).trim()
 
     if (!isValidDate(entry.date) || !isValidTime(entry.startTime) || !isValidTime(entry.endTime) || !entry.subject || !entry.className) {
@@ -197,13 +212,17 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
       const startTime = String(slot.startTime || '').trim()
       const endTime = String(slot.endTime || '').trim()
       const subject = String(slot.subject || '').trim()
-      const className = String(slot.className || '').trim()
-      const parsedPlacement = parseClassPlacement(className)
-      const standard = Number(slot.standard) || parsedPlacement.standard
-      const division = String(slot.division || parsedPlacement.division || 'A').toUpperCase()
-      if (!Number.isInteger(standard) || standard < 1 || standard > 12 || !['A', 'B', 'C'].includes(division)) {
-        return res.status(400).json({ success: false, message: `Select a valid standard and division for weekly lecture ${index + 1}.` })
+      let className = String(slot.className || '').trim()
+      const classDivisionId = String(slot.classDivisionId || '').trim()
+      let classDivision = null
+      if (classDivisionId) {
+        classDivision = await ClassDivision.findOne({ _id: classDivisionId, active: true })
+        if (!classDivision) return res.status(400).json({ success: false, message: `Class division for weekly lecture ${index + 1} is not active.` })
+        className = classDivision.displayName
       }
+      const parsedPlacement = parseClassPlacement(className)
+      const standard = classDivision?.standard || Number(slot.standard) || parsedPlacement.standard
+      const division = classDivision?.division || String(slot.division || parsedPlacement.division || 'A').toUpperCase()
       const room = String(slot.room || '').trim()
       const notes = String(slot.notes || '').trim()
       const teacherId = String(slot.teacherId || '').trim()
