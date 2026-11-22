@@ -2,12 +2,67 @@ import { Router } from 'express'
 import mongoose from 'mongoose'
 import User from '../models/User.js'
 import DirectMessage from '../models/DirectMessage.js'
+import Chapter from '../models/Chapter.js'
+import TimetableEntry from '../models/TimetableEntry.js'
 import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
 router.use(requireAuth)
 
 const validId = value => mongoose.isValidObjectId(value)
+
+const parseClass = value => {
+  const match = String(value || '').match(/(?:class\\s*)?(1[0-2]|[1-9])(?:\\s*[-/]\\s*([a-z]))?/i)
+  return match ? { std: Number(match[1]), division: (match[2] || '').toUpperCase() } : null
+}
+
+const parentTeacherIds = async parent => {
+  const children = await User.find({ _id: { $in: parent.children || [] }, role: 'student' })
+    .select('_id std division className').lean()
+  if (!children.length) return []
+  const childIds = new Set(children.map(child => String(child._id)))
+  const teacherIds = new Set()
+  const chapters = await Chapter.find({ teacher: { $ne: null } }).select('teacher className').lean()
+  for (const chapter of chapters) {
+    const assignedClass = parseClass(chapter.className)
+    if (!assignedClass) continue
+    if (children.some(child => child.std === assignedClass.std &&
+      (!assignedClass.division || assignedClass.division === String(child.division || '').toUpperCase()))) {
+      teacherIds.add(String(chapter.teacher))
+    }
+  }
+  const timetableRows = await TimetableEntry.find({
+    teacher: { $ne: null },
+    standard: { $in: children.map(child => child.std).filter(Boolean) },
+  }).select('teacher standard division').lean()
+  for (const row of timetableRows) {
+    if (children.some(child => child.std === row.standard &&
+      String(child.division || 'A').toUpperCase() === String(row.division || 'A').toUpperCase())) {
+      teacherIds.add(String(row.teacher))
+    }
+  }
+  return [...teacherIds].filter(id => !childIds.has(id))
+}
+
+const canParentContact = async (parent, recipient) => {
+  if (recipient.role === 'principal') return true
+  if (recipient.role !== 'teacher') return false
+  const allowedTeacherIds = await parentTeacherIds(parent)
+  return allowedTeacherIds.includes(String(recipient._id))
+}
+
+const getAllowedContacts = async user => {
+  if (user.role !== 'parent') return User.find({ _id: { $ne: user._id } })
+    .select('name email role avatarUrl std division').sort({ name: 1 }).lean()
+  const allowedTeacherIds = await parentTeacherIds(user)
+  return User.find({
+    _id: { $ne: user._id },
+    $or: [
+      { role: 'principal' },
+      { role: 'teacher', _id: { $in: allowedTeacherIds } },
+    ],
+  }).select('name email role avatarUrl std division').sort({ role: 1, name: 1 }).lean()
+}
 const serialize = message => ({
   id: message._id.toString(),
   senderId: message.sender.toString(),
@@ -27,9 +82,7 @@ const serialize = message => ({
 
 router.get('/contacts', async (req, res, next) => {
   try {
-    const users = await User.find({ _id: { $ne: req.user._id } })
-      .select('name email role avatarUrl std division')
-      .sort({ name: 1 }).lean()
+    const users = await getAllowedContacts(req.user)
     res.json({ success: true, contacts: users.map(user => ({
       id: user._id.toString(), name: user.name, email: user.email, role: user.role,
       avatarUrl: user.avatarUrl || '', std: user.std ?? null, division: user.division || '',
@@ -40,8 +93,11 @@ router.get('/contacts', async (req, res, next) => {
 router.get('/:userId', async (req, res, next) => {
   try {
     if (!validId(req.params.userId)) return res.status(400).json({ success: false, message: 'Invalid contact.' })
-    const contact = await User.findById(req.params.userId).select('_id')
+    const contact = await User.findById(req.params.userId).select('_id role')
     if (!contact) return res.status(404).json({ success: false, message: 'User not found.' })
+    if (req.user.role === 'parent' && !(await canParentContact(req.user, contact))) {
+      return res.status(403).json({ success: false, message: 'You can only chat with your child’s teachers or the principal.' })
+    }
     const messages = await DirectMessage.find({
       $or: [
         { sender: req.user._id, recipient: contact._id },
@@ -56,8 +112,11 @@ router.post('/:userId', async (req, res, next) => {
   try {
     if (!validId(req.params.userId)) return res.status(400).json({ success: false, message: 'Invalid recipient.' })
     if (String(req.user._id) === req.params.userId) return res.status(400).json({ success: false, message: 'You cannot message yourself.' })
-    const recipient = await User.findById(req.params.userId).select('_id')
+    const recipient = await User.findById(req.params.userId).select('_id role')
     if (!recipient) return res.status(404).json({ success: false, message: 'Recipient not found.' })
+    if (req.user.role === 'parent' && !(await canParentContact(req.user, recipient))) {
+      return res.status(403).json({ success: false, message: 'You can only message your child’s teachers or the principal.' })
+    }
 
     const text = String(req.body.text || '').trim()
     let attachment = null
