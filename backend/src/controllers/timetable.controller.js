@@ -24,7 +24,7 @@ const studentPlacement = user => {
 const placementQuery = user => {
   const placement = studentPlacement(user)
   if (!placement.standard) return { _id: null }
-  if (user?.classDivision) return { $or: [{ classDivision: user.classDivision }, { standard: placement.standard, division: placement.division }] }
+  if (user?.classDivision) return { classDivision: user.classDivision }
   const className = 'Class ' + placement.standard + ' - Division ' + placement.division
   return { $or: [
     { standard: placement.standard, division: placement.division },
@@ -46,7 +46,10 @@ const timetableAccessFilter = async user => {
   const allowed = []
   for (const child of children) {
     const placement = studentPlacement(child)
-    if (child.classDivision) allowed.push({ classDivision: child.classDivision })
+    if (child.classDivision) {
+      allowed.push({ classDivision: child.classDivision })
+      continue
+    }
     if (placement.standard) {
       allowed.push({ standard: placement.standard, division: placement.division })
       allowed.push({
