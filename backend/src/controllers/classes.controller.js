@@ -67,12 +67,14 @@ async function seedFromLegacyData() {
   if (studentOps.length) await User.bulkWrite(studentOps)
   const teacherOps = teachers.map(teacher => {
     const ids = (teacher.teachingClasses || []).flatMap(value => {
-      const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*([a-z0-9_-]{1,8}))?/i)
+      const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*(?:division\s*)?([a-z0-9_-]{1,8}))?/i)
       if (!match) return []
-      const doc = byKey.get(`${Number(match[1])}:${(match[2] || 'A').toUpperCase()}`)
-      return doc ? [doc] : []
+      const standard = Number(match[1])
+      const divisionName = match[2] ? match[2].toUpperCase() : ''
+      return created.filter(doc => doc.standard === standard && (!divisionName || doc.division === divisionName))
     })
-    return { updateOne: { filter: { role: 'teacher', teachingClasses: { $exists: true }, _id: teacher._id }, update: { $set: { teachingClassDivisions: ids.map(item => item._id), teachingClasses: ids.map(item => item.displayName) } } }
+    const unique = [...new Map(ids.map(item => [String(item._id), item])).values()]
+    return { updateOne: { filter: { role: 'teacher', _id: teacher._id }, update: { $set: { teachingClassDivisions: unique.map(item => item._id), teachingClasses: unique.map(item => item.displayName) } } }
   })
   if (teacherOps.length) await User.bulkWrite(teacherOps)
   const timetableOps = timetable.flatMap(entry => {
