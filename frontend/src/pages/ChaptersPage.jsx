@@ -79,9 +79,11 @@ export default function ChaptersPage() {
   useEffect(() => {
     if (!token) return
     getTeacherClasses(token).then(response => {
-      const names = (response.classes || []).map(item => item.className)
+      const options = response.classes || []
+      const names = options.map(item => item.label || item.className)
+      setClassDivisionOptions(options)
       setClassOptions([...new Set(names)])
-      setForm(current => ({ ...current, className: current.className || names[0] || '' }))
+      setForm(current => ({ ...current, className: current.className || names[0] || '', classDivisionId: current.classDivisionId || options[0]?.classDivisionId || '' }))
     }).catch(err => setError(err.message || 'Unable to load assigned classes.'))
   }, [token])
 
