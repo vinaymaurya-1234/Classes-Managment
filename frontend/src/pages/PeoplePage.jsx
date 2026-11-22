@@ -366,7 +366,7 @@ export default function PeoplePage({ type, title }) {
             ) : (
               <>
                 <div className="person-detail-actions">
-                  {(type === "student" || type === "parent") && <button type="button" className="secondary" onClick={() => startProfileEdit(selectedPerson)}>Edit profile</button>
+                  {(type === "student" || type === "parent") && <button type="button" className="secondary" onClick={() => startProfileEdit(selectedPerson)}>Edit profile</button>}
                   {type === "student" && <button type="button" className="secondary" onClick={() => setEditingPlacement(value=>!value)}>Edit class and division</button>}
                   {type === "teacher" && <button type="button" className="secondary" onClick={() => setEditingAssignments(value=>!value)}>Edit teaching assignments</button>}
                 </div>
