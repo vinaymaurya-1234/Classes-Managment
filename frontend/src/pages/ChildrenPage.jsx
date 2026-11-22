@@ -1,4 +1,4 @@
-import { Users, GraduationCap } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { SectionIntro } from '../components/common/UI'
 import { useAuth } from '../context/AuthContext'
 
