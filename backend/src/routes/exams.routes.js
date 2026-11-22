@@ -319,6 +319,8 @@ router.put('/exams/:id', async (req, res, next) => {
       if (await ExamAttempt.exists({ exam: exam._id, status: 'in_progress' })) return fail(res, 409, 'Wait until all active attempts are submitted before publishing results.')
       if (await ExamResult.exists({ exam: exam._id, pendingManualCount: { $gt: 0 } })) return fail(res, 409, 'Teachers must finish grading descriptive answers before results can be published.')
       exam.resultsPublished = true
+      // Publishing results closes the online exam permanently.
+      exam.status = 'completed'
       await ExamResult.updateMany({ exam: exam._id }, { published: true })
     }
     await exam.save()
