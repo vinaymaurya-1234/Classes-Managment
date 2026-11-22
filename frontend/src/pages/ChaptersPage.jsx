@@ -9,6 +9,7 @@ import './ChaptersPage.css'
 const emptyForm = {
   subject: '',
   className: '',
+  classDivisionId: '',
   chapterNumber: '',
   title: '',
 }
