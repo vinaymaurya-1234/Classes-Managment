@@ -10,7 +10,8 @@ import {
   Wallet,
   Users,
 } from "lucide-react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useLocation, useNavigate } from "react-router-dom";
+import "./PeoplePage.css";
 import { Card, SectionIntro } from "../components/common/UI";
 import { useAuth } from "../context/AuthContext";
 import { createUserApi, listUsersApi, updateUserApi } from "../api/users.api";
@@ -36,6 +37,8 @@ const emptyForm = () => ({
 
 export default function PeoplePage({ type, title }) {
   const { search = "", role } = useOutletContext();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { token } = useAuth();
   const isManagedType = ["student", "teacher", "parent"].includes(type);
   const canManage = role === "principal" && isManagedType;
@@ -52,6 +55,7 @@ export default function PeoplePage({ type, title }) {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
+  const [linkedParents, setLinkedParents] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [classDivisions, setClassDivisions] = useState([]);
   const [teacherClasses, setTeacherClasses] = useState([]);
@@ -112,6 +116,7 @@ export default function PeoplePage({ type, title }) {
     setSelectedAttempt(null);
     setAttempts([]);
     setFeeRecords([]);
+    setLinkedParents([]);
     setTeacherClasses([]);
     setSelectedTeachingClass("");
     setError("");
@@ -119,17 +124,19 @@ export default function PeoplePage({ type, title }) {
     setDetailLoading(true);
     try {
       if (type === "student") {
-        const [result, fees] = await Promise.all([
+        const [result, fees, parentsResult] = await Promise.all([
           api.get(
             `/api/exams/students/${encodeURIComponent(person.id)}/attempts`,
             token,
           ),
           api.get("/api/fees/students", token).catch(() => ({ fees: [] })),
+          listUsersApi(token, "parent").catch(() => ({ users: [] })),
         ]);
         setAttempts(result.data || []);
         setFeeRecords(
           (fees.fees || []).filter((item) => item.student?.id === person.id),
         );
+        setLinkedParents((parentsResult.users || []).filter(parent => (parent.children || []).some(child => child.id === person.id)));
       } else if (type === "teacher") {
         const result = await api.get(
           `/api/teacher/classes?teacherId=${encodeURIComponent(person.id)}`,
@@ -229,6 +236,15 @@ export default function PeoplePage({ type, title }) {
   }
 
   const toggleAssignment = id => setAssignmentValues(current => current.includes(id) ? current.filter(value=>value!==id) : [...current,id])
+
+  useEffect(() => {
+    const parentId = location.state?.openPersonId;
+    if (type === "parent" && parentId && data.length && !selectedPerson) {
+      const parent = data.find(item => item.id === parentId);
+      if (parent) openPerson(parent);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [data, location.pathname, location.state, navigate, selectedPerson, type]);
 
   return (
     <>
@@ -436,6 +452,22 @@ export default function PeoplePage({ type, title }) {
                         No submitted test attempts found for this student.
                       </p>
                     )}
+                  </div>
+                )}
+                {type === "student" && (
+                  <div className="person-detail-section student-parents-section">
+                    <div className="person-detail-section-head">
+                      <h3><Users size={16} /> Parent / guardian</h3>
+                      <span>{linkedParents.length} linked</span>
+                    </div>
+                    {linkedParents.length ? linkedParents.map(parent => (
+                      <button type="button" className="linked-parent-card" key={parent.id}
+                        onClick={() => navigate(`/${role || "principal"}/parents`, { state: { openPersonId: parent.id } })}>
+                        <span className="linked-parent-avatar">{(parent.name || "P").slice(0,1).toUpperCase()}</span>
+                        <span className="linked-parent-info"><strong>{parent.name}</strong><small>{parent.email || "No email"} · {parent.phone || "No phone"}</small></span>
+                        <span className="linked-parent-link">View profile <ChevronRight size={16}/></span>
+                      </button>
+                    )) : <p className="person-detail-empty">No parent or guardian is linked to this student.</p>}
                   </div>
                 )}
                 {type === "student" && (
