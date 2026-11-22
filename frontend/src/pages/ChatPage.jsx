@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Image as ImageIcon, MessageCircle, MoreHorizontal, Paperclip, Search, Send, Trash2, Pencil, X } from 'lucide-react'
+import { FileText, MessageCircle, Paperclip, Search, Send, Trash2, Pencil, X } from 'lucide-react'
+import './ChatPage.css'
 import { useAuth } from '../context/AuthContext'
 import { deleteDirectMessageApi, editDirectMessageApi, getChatContactsApi, getDirectMessagesApi, sendDirectMessageApi } from '../api/chat.api'
 
@@ -18,7 +19,6 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState(null)
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
 
