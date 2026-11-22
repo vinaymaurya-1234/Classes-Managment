@@ -252,6 +252,7 @@ export default function PeoplePage({ type, title }) {
   };
 
   const startProfileEdit = person => {
+    setProfileTarget(person);
     setProfileForm({ name: person.name || "", email: person.email || "", phone: person.phone || "" });
     setProfileEditing(true);
     setError("");
@@ -260,16 +261,22 @@ export default function PeoplePage({ type, title }) {
   const saveProfile = async event => {
     event.preventDefault();
     if (!profileTarget || saving) return;
-    setSaving(true); setError("");
+    setSaving(true);
+    setError("");
     try {
       const response = await api.put(`/api/users/${encodeURIComponent(profileTarget.id)}/profile`, profileForm, token);
       const updated = response.user || {};
-      setSelectedPerson(current => ({ ...current, ...updated }));
-      setData(current => current.map(item => item.id === selectedPerson.id ? { ...item, ...updated } : item));
+      if (profileTarget.id === selectedPerson?.id) setSelectedPerson(current => ({ ...current, ...updated }));
+      setData(current => current.map(item => item.id === profileTarget.id ? { ...item, ...updated } : item));
+      setLinkedParents(current => current.map(item => item.id === profileTarget.id ? { ...item, ...updated } : item));
       setProfileEditing(false);
+      setProfileTarget(null);
       await loadUsers();
-    } catch (err) { setError(err.message || "Unable to update profile."); }
-    finally { setSaving(false); }
+    } catch (err) {
+      setError(err.message || "Unable to update profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveTeacherClasses = async () => {
@@ -813,7 +820,7 @@ export default function PeoplePage({ type, title }) {
         <div className="user-modal-backdrop" onMouseDown={() => !saving && setProfileEditing(false)}>
           <div className="user-modal" onMouseDown={event => event.stopPropagation()}>
             <div className="user-modal-head">
-              <div><span className="eyebrow">PROFILE EDIT</span><h3>Edit {type} details</h3><p>Update this account's contact information.</p></div>
+              <div><span className="eyebrow">PROFILE EDIT</span><h3>Edit {profileTarget?.role || type} details</h3><p>Update this account's contact information.</p></div>
               <button type="button" className="modal-close" onClick={() => !saving && setProfileEditing(false)} disabled={saving} aria-label="Close"><X size={18}/></button>
             </div>
             <form onSubmit={saveProfile}>
