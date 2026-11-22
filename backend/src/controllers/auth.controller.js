@@ -10,11 +10,11 @@ const publicUser = user => ({
   phone: user.phone || '',
   avatarUrl: user.avatarUrl || '',
   className: user.classDivision?.displayName || user.className || '',
-  classDivisionId: user.classDivision?.toString() || '',
-  std: user.std ?? null,
-  division: user.division || '',
-  teachingClasses: user.teachingClasses || [],
-  teachingClassDivisionIds: (user.teachingClassDivisions || []).map(id => id.toString()),
+  classDivisionId: user.classDivision?._id?.toString() || user.classDivision?.toString() || '',
+  std: user.classDivision?.standard ?? user.std ?? null,
+  division: user.classDivision?.division || user.division || '',
+  teachingClasses: user.teachingClassDivisions?.length ? user.teachingClassDivisions.map(item=>item.displayName) : (user.teachingClasses || []),
+  teachingClassDivisionIds: (user.teachingClassDivisions || []).map(item=>item?._id?.toString() || item.toString()),
 })
 
 export const login = async (req, res, next) => {
