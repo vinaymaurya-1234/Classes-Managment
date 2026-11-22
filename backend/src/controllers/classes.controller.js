@@ -415,17 +415,39 @@ export const saveClassStructure = async (req, res, next) => {
     const classes = await ClassDivision.find({ active: true })
       .sort({ standard: 1, division: 1 })
       .lean();
-    res.json({
-      success: true,
-      classes: classes.map((item) => ({
-        id: item._id.toString(),
-        standard: item.standard,
-        standardLabel: item.standardLabel,
-        division: item.division,
-        displayName: item.displayName,
-        active: item.active,
-      })),
-    });
+    const classesWithUsage = await Promise.all(
+      classes.map(async (item) => {
+        const [students, teachers, records] = await Promise.all([
+          User.countDocuments({ role: "student", classDivision: item._id }),
+          User.countDocuments({ teachingClassDivisions: item._id }),
+          Promise.all([
+            TimetableEntry.countDocuments({ classDivision: item._id }),
+            Homework.countDocuments({ classDivision: item._id }),
+            Chapter.countDocuments({ classDivision: item._id }),
+            Exam.countDocuments({ classDivision: item._id }),
+            QuestionPaper.countDocuments({ classDivision: item._id }),
+            Question.countDocuments({ classDivision: item._id }),
+            Notice.countDocuments({ classDivisionIds: item._id }),
+          ]),
+        ]);
+        const linkedRecords = records.reduce((total, count) => total + count, 0);
+        return {
+          id: item._id.toString(),
+          standard: item.standard,
+          standardLabel: item.standardLabel,
+          division: item.division,
+          displayName: item.displayName,
+          active: item.active,
+          usage: {
+            students,
+            teachers,
+            records: linkedRecords,
+            inUse: students > 0 || teachers > 0 || linkedRecords > 0,
+          },
+        };
+      }),
+    );
+    res.json({ success: true, classes: classesWithUsage });
   } catch (error) {
     next(error);
   }
