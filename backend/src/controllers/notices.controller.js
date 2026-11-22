@@ -26,6 +26,11 @@ const requirePrincipal = req => req.user?.role === 'principal'
 export const listNotices = async (req, res, next) => {
   try {
     const user = req.user
+    let classDivisionIds = user.role === 'student' && user.classDivision ? [user.classDivision] : user.role === 'teacher' ? (user.teachingClassDivisions || []) : []
+    if (user.role === 'parent') {
+      const children = await User.find({ _id: { $in: user.children || [] }, role: 'student' }).select('classDivision').lean()
+      classDivisionIds = children.map(child => child.classDivision).filter(Boolean)
+    }
     const query = user.role === 'principal'
       ? { createdBy: user._id }
       : {
@@ -33,6 +38,7 @@ export const listNotices = async (req, res, next) => {
             { audienceType: 'all' },
             { audienceType: 'role', audienceRole: user.role },
             { audienceType: 'users', recipientIds: user._id },
+            { audienceType: 'classes', classDivisionIds: { $in: classDivisionIds } },
           ],
         }
 
