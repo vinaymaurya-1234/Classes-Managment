@@ -65,3 +65,8 @@
 .linked-parent-actions .linked-parent-link{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--green-700,#176b45);font-weight:700;cursor:pointer;padding:8px}
 .linked-parent-edit{padding:8px 12px!important;min-height:34px}
 @media(max-width:700px){.linked-parent-actions-card{flex-wrap:wrap}.linked-parent-actions{width:100%;margin-left:0;justify-content:flex-end}}
+
+
+/* Parent relationship management */
+.parent-link-manage{margin-left:auto;padding:7px 12px!important;white-space:nowrap}
+.parent-link-warning{font-size:13px;line-height:1.5;color:#a45120;background:#fff8ee;border:1px solid #f0ddc5;border-radius:10px;padding:10px 12px;margin:12px 0}
