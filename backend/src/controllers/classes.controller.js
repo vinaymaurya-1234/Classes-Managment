@@ -13,7 +13,7 @@ const labelFor = standard => `Class ${standard}`
 async function seedFromLegacyData() {
   if (await ClassDivision.exists({})) return
   const standards = new Map()
-  const students = await User.find({ role: 'student' }).select('std division className').lean()
+  const students = await User.find({ role: 'student' }).select('std division className classDivision').lean()
   students.forEach(student => {
     const standard = Number(student.std || String(student.className || '').match(/\d+/)?.[0])
     if (!standard || standard < 1 || standard > 12) return
@@ -21,7 +21,7 @@ async function seedFromLegacyData() {
     divisions.add(String(student.division || 'A').toUpperCase())
     standards.set(standard, divisions)
   })
-  const teachers = await User.find({ role: 'teacher' }).select('teachingClasses').lean()
+  const teachers = await User.find({ role: 'teacher' }).select('teachingClasses teachingClassDivisions').lean()
   teachers.forEach(teacher => (teacher.teachingClasses || []).forEach(value => {
     const match = String(value).match(/(1[0-2]|[1-9])(?:\s*[-/]\s*(?:division\s*)?([a-z0-9_-]{1,8}))?/i)
     if (!match) return
@@ -39,7 +39,7 @@ async function seedFromLegacyData() {
   const papers = await QuestionPaper.find({}).select('className division').lean()
   const exams = await Exam.find({}).select('className division').lean()
   for (const record of [...questions,...papers,...exams]) { const standard=Number(String(record.className||'').match(/\d+/)?.[0]); if(!standard||standard<1||standard>12||!record.division)continue; const divisions=standards.get(standard)||new Set(); divisions.add(String(record.division).toUpperCase()); standards.set(standard,divisions) }
-  const timetable = await TimetableEntry.find({}).select('standard division className').lean()
+  const timetable = await TimetableEntry.find({}).select('standard division className classDivision').lean()
   timetable.forEach(entry => {
     const standard = Number(entry.standard || String(entry.className || '').match(/\d+/)?.[0])
     if (!standard || standard < 1 || standard > 12) return
