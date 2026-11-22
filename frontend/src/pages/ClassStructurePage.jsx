@@ -39,7 +39,11 @@ export default function ClassStructurePage() {
   const addStandard = () => setStandards(current=>[...current,makeStandard()])
   const removeStandard = id => {
     const item = standards.find(standard => standard.id === id)
-    if (item?.divisions.some(division => item.usageByDivision?.[division]?.inUse)) return
+    const usedDivision = item?.divisions.find(division => item.usageByDivision?.[division]?.inUse)
+    if (usedDivision) {
+      setDeleteNotice(`${item.label || `Class ${item.standard}`} - ${usedDivision} is already in use and cannot be deleted.`)
+      return
+    }
     setStandards(current=>current.filter(standard=>standard.id!==id))
   }
   const addDivision = id => updateStandard(id,{divisions:[...(standards.find(item=>item.id===id)?.divisions||[]),'']})
