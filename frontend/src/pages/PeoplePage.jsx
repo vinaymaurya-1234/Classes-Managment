@@ -33,48 +33,6 @@ const emptyForm = () => ({
   teachingClassDivisionIds: [],
   childIds: [],
 });
-mport { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ArrowLeft,
-  ChevronRight,
-  LoaderCircle,
-  UserPlus,
-  X,
-  BookOpen,
-  Trophy,
-  Wallet,
-  Users,
-} from "lucide-react";
-import { useOutletContext } from "react-router-dom";
-import { Card, SectionIntro } from "../components/common/UI";
-import { useAuth } from "../context/AuthContext";
-import { createUserApi, listUsersApi, updateUserApi } from "../api/users.api";
-import { api } from "../api/client";
-import { students, teachers } from "../data/mockData";
-import { listClassDivisionsApi } from "../api/classes.api";
-
-const labels = { student: "Students", teacher: "Teachers", parent: "Parents" };
-const descriptions = {
-  student: "Manage student records, class and optional division.",
-  teacher: "Manage faculty and assign their teaching classes.",
-  parent: "Manage parent accounts and family contacts.",
-};
-const emptyForm = () => ({
-  name: "",
-  email: "",
-  password: "",
-  phone: "",
-  classDivisionId: "",
-  teachingClassDivisionIds: [],
-  childIds: [],
-});
-const teacherClassOptions = [11, 12].flatMap((std) => [
-  { value: `Class ${std}`, label: `Class ${std} · Any division` },
-  ...["A", "B", "C"].map((division) => ({
-    value: `Class ${std} - ${division}`,
-    label: `Class ${std} · Division ${division}`,
-  })),
-]);
 
 export default function PeoplePage({ type, title }) {
   const { search = "", role } = useOutletContext();
@@ -908,7 +866,7 @@ export default function PeoplePage({ type, title }) {
                   className="primary"
                   disabled={
                     saving ||
-                    (type === "teacher" && !form.teachingClasses.length)
+                    (type === "teacher" && !form.teachingClassDivisionIds.length)
                   }
                 >
                   {saving && <LoaderCircle size={15} className="spin" />}
