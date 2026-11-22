@@ -1184,3 +1184,6 @@
 .parent-link-existing .teacher-assignment-options{max-height:220px;overflow:auto;display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff}
 .parent-link-existing .teacher-assignment-options label{display:flex;align-items:center;gap:8px;font-size:11px}
 .parent-link-existing>button{justify-self:start}
+
+.parent-password-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}
+.parent-password-actions button{font-size:11px}
