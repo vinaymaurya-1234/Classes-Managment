@@ -44,6 +44,7 @@ const publicEntry = entry => ({
   division: entry.division || parseClassPlacement(entry.className).division,
   room: entry.room || '',
   notes: entry.notes || '',
+  temporary: Boolean(entry.temporary),
   teacher: entry.teacher ? {
     id: entry.teacher._id.toString(),
     name: entry.teacher.name,
@@ -118,7 +119,8 @@ export const createTimetableEntry = async (req, res, next) => {
       if (!teacher) return res.status(400).json({ success: false, message: 'Selected teacher was not found.' })
     }
 
-    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard: placement.standard, division: placement.division, room, notes, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
+    const temporary = Boolean(req.body.temporary)
+    const entry = await TimetableEntry.create({ date, startTime, endTime, subject, className, classDivision: classDivision?._id || null, standard: placement.standard, division: placement.division, room, notes, temporary, teacher: teacher?._id || null, teacherName: teacher ? '' : teacherName, createdBy: req.user._id })
     await entry.populate('teacher', 'name email avatarUrl'); await entry.populate('classDivision')
 
     return res.status(201).json({ success: true, message: 'Lecture added to the timetable.', entry: publicEntry(entry) })
@@ -142,6 +144,7 @@ export const updateTimetableEntry = async (req, res, next) => {
       entry.standard = selected.standard
       entry.division = selected.division
     }
+    if (req.body.temporary !== undefined) entry.temporary = Boolean(req.body.temporary)
     if (req.body.standard !== undefined) entry.standard = Number(req.body.standard) || null
     if (req.body.division !== undefined) entry.division = String(req.body.division || 'A').toUpperCase()
     if (req.body.className !== undefined && req.body.classDivisionId === undefined && req.body.standard === undefined) entry.standard = parseClassPlacement(req.body.className).standard
@@ -262,7 +265,7 @@ export const createWeeklyTimetableTemplate = async (req, res, next) => {
         occurrences.push({
           date: dateString, startTime: slot.startTime, endTime: slot.endTime,
           subject: slot.subject, className: slot.className, classDivision: slot.classDivision, standard: slot.standard, division: slot.division, room: slot.room,
-          notes: slot.notes, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
+          notes: slot.notes, temporary: false, teacher: slot.teacher, teacherName: slot.teacherName, createdBy: req.user._id,
         })
       }
     }
