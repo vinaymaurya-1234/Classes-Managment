@@ -5,7 +5,7 @@ const noticeSchema = new mongoose.Schema({
   message: { type: String, required: true, trim: true, maxlength: 5000 },
   audienceType: {
     type: String,
-    enum: ['all', 'role', 'users'],
+    enum: ['all', 'role', 'users', 'classes'],
     required: true,
   },
   audienceRole: {
@@ -13,6 +13,7 @@ const noticeSchema = new mongoose.Schema({
     enum: ['teacher', 'student', 'parent'],
     default: null,
   },
+  classDivisionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ClassDivision' }],
   recipientIds: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
