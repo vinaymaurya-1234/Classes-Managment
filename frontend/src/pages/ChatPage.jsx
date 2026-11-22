@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, MessageCircle, Paperclip, Search, Send, Trash2, Pencil, X } from 'lucide-react'
+import { FileText, MessageCircle, Paperclip, Search, Send, Trash2, Pencil, X, MoreHorizontal } from 'lucide-react'
 import './ChatPage.css'
 import { useAuth } from '../context/AuthContext'
 import { deleteDirectMessageApi, editDirectMessageApi, getChatContactsApi, getDirectMessagesApi, sendDirectMessageApi } from '../api/chat.api'
@@ -19,6 +19,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [openMessageMenuId, setOpenMessageMenuId] = useState(null)
+  const [editingMessageId, setEditingMessageId] = useState(null)
+  const [editingText, setEditingText] = useState('')
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
 
@@ -81,15 +84,23 @@ export default function ChatPage() {
     } catch (err) { setError(err.message) }
     finally { setSending(false) }
   }
+  const startEdit = message => {
+    setEditingMessageId(message.id)
+    setEditingText(message.text)
+    setOpenMessageMenuId(null)
+  }
   const saveEdit = async message => {
-    const next = window.prompt('Edit your message', message.text)
-    if (next === null || !next.trim()) return
+    const next = editingText.trim()
+    if (!next || next === message.text) { setEditingMessageId(null); return }
     try {
       const result = await editDirectMessageApi(token, message.id, next)
       setMessages(current => current.map(item => item.id === message.id ? result.message : item))
+      setEditingMessageId(null)
+      setEditingText('')
     } catch (err) { setError(err.message) }
   }
   const removeMessage = async message => {
+    setOpenMessageMenuId(null)
     if (!window.confirm('Delete this message for both users?')) return
     try {
       const result = await deleteDirectMessageApi(token, message.id)
@@ -124,10 +135,10 @@ export default function ChatPage() {
               return <div key={message.id}>{showDate && <div className="chat-date"><span>{dateLabel(message.createdAt)}</span></div>}
                 <div className={'chat-message-row ' + (mine ? 'mine' : '')}><article className="chat-bubble">
                   {message.deleted ? <em>This message was deleted</em> : <>
-                    {message.text && <p>{message.text}</p>}
+                    {editingMessageId === message.id ? <div className="chat-edit-form"><input autoFocus value={editingText} maxLength={5000} onChange={event => setEditingText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); saveEdit(message) } if (event.key === 'Escape') setEditingMessageId(null) }}/><div><button type="button" onClick={() => setEditingMessageId(null)}>Cancel</button><button type="button" onClick={() => saveEdit(message)} disabled={!editingText.trim()}>Save</button></div></div> : message.text && <p>{message.text}</p>}
                     {message.attachment && (message.attachment.mimeType.startsWith('image/') ? <a href={message.attachment.dataUrl} target="_blank" rel="noreferrer" className="chat-image-link"><img src={message.attachment.dataUrl} alt={message.attachment.name}/></a> : <a className="chat-file" href={message.attachment.dataUrl} download={message.attachment.name}><FileText size={20}/><span>{message.attachment.name}<small>PDF attachment</small></span></a>)}
                   </>}
-                  <footer><small>{timeLabel(message.createdAt)}{message.edited ? ' · edited' : ''}</small>{mine && !message.deleted && <span className="chat-message-actions"><button title="Edit" onClick={() => saveEdit(message)}><Pencil size={12}/></button><button title="Delete" onClick={() => removeMessage(message)}><Trash2 size={12}/></button></span>}</footer>
+                  <footer><small>{timeLabel(message.createdAt)}{message.edited ? ' · edited' : ''}</small>{mine && !message.deleted && <div className="chat-message-menu-wrap"><button type="button" className="chat-message-menu-trigger" title="Message options" aria-label="Message options" aria-expanded={openMessageMenuId === message.id} onClick={() => setOpenMessageMenuId(current => current === message.id ? null : message.id)}><MoreHorizontal size={17}/></button>{openMessageMenuId === message.id && <div className="chat-message-menu"><button type="button" onClick={() => startEdit(message)}><Pencil size={14}/>Edit</button><button type="button" className="delete" onClick={() => removeMessage(message)}><Trash2 size={14}/>Delete message</button></div>}</div>}</footer>
                 </article></div>
               </div>
             })}
